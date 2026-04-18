@@ -1,0 +1,1868 @@
+<?php
+/**
+ * Bricks Element: Vergleich (Wrapper)
+ *
+ * Zeigt Produkte als Spalten statt als Zeilen.
+ * Nestable: enthält beliebige "Vergleich-Zeile" Kinder.
+ * Query Loop auf diesem Element loopt die Produkte (= Spalten).
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+class Element_Vergleich extends \Bricks\Element {
+
+    public $category     = 'vergleich';
+    public $name         = 'vergleich';
+    public $icon         = 'ti-layout-column3-alt';
+    public $css_selector = '';
+    public $scripts      = [];
+    public $nestable     = true;
+
+    public function get_label() {
+        return esc_html__( 'Vergleich (Spalten)', 'bricks-vergleich' );
+    }
+
+    /**
+     * Erlaubte Kinder im Nestable-Modus
+     */
+    public function get_nestable_children() {
+        return [
+            [
+                'name'     => 'vergleich-zeile',
+                'label'    => esc_html__( 'Bild', 'bricks-vergleich' ),
+                'settings' => [ 'label' => esc_html__( 'Bild', 'bricks-vergleich' ) ],
+                'children' => [
+                    [
+                        'name'     => 'image',
+                        'settings' => [
+                            'image' => [
+                                'useDynamicData' => '{featured_image}',
+                                'size'           => 'medium',
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'name'     => 'vergleich-zeile',
+                'label'    => esc_html__( 'Name', 'bricks-vergleich' ),
+                'settings' => [ 'label' => esc_html__( 'Name', 'bricks-vergleich' ) ],
+                'children' => [
+                    [
+                        'name'     => 'text-basic',
+                        'settings' => [
+                            'text' => '{post_title}',
+                            'tag'  => 'h3',
+                        ],
+                    ],
+                ],
+            ],
+            [
+                'name'     => 'vergleich-zeile',
+                'label'    => esc_html__( 'Preis', 'bricks-vergleich' ),
+                'settings' => [ 'label' => esc_html__( 'Preis', 'bricks-vergleich' ) ],
+                'children' => [
+                    [
+                        'name'     => 'text-basic',
+                        'settings' => [
+                            'text' => '{woo_product_price}',
+                            'tag'  => 'p',
+                        ],
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    public function set_control_groups() {
+        $this->control_groups['query'] = [
+            'title' => esc_html__( 'Query Loop', 'bricks-vergleich' ),
+            'tab'   => 'content',
+        ];
+
+        $this->control_groups['layout'] = [
+            'title' => esc_html__( 'Layout', 'bricks-vergleich' ),
+            'tab'   => 'content',
+        ];
+
+        $this->control_groups['images'] = [
+            'title' => esc_html__( 'Bilder', 'bricks-vergleich' ),
+            'tab'   => 'content',
+        ];
+
+        $this->control_groups['expand'] = [
+            'title' => esc_html__( 'Aufklappen', 'bricks-vergleich' ),
+            'tab'   => 'content',
+        ];
+
+        $this->control_groups['style'] = [
+            'title' => esc_html__( 'Styling', 'bricks-vergleich' ),
+            'tab'   => 'content',
+        ];
+    }
+
+    public function set_controls() {
+
+        // === QUERY GROUP ===
+        // Native Bricks Loop-Builder-Controls: liefert exakt die gleiche UI
+        // (Popup, Post Types, Sortierung, Meta-Query, Tax-Query, …) wie Bricks'
+        // eigene Elemente und damit die, die JetEngine & Co. ebenfalls nutzen.
+        // Erzeugt die beiden Controls 'hasLoop' (Checkbox) und 'query' (Typ 'query'
+        // mit Popup-UI). Ohne 'hasLoop' aktiv wird der Query-Control ausgeblendet.
+        $this->controls = array_replace_recursive(
+            $this->controls,
+            $this->get_loop_builder_controls( 'query' )
+        );
+
+        // Optional: Kurzer Hinweistext oben in der Gruppe
+        $this->controls['queryInfo'] = [
+            'tab'     => 'content',
+            'group'   => 'query',
+            'type'    => 'info',
+            'content' => esc_html__( 'Aktiviere den Query-Loop, um pro Iteration eine neue Produkt-Spalte zu erzeugen.', 'bricks-vergleich' ),
+        ];
+
+        // === LAYOUT GROUP ===
+        $this->controls['labelWidth'] = [
+            'tab'         => 'content',
+            'group'       => 'layout',
+            'label'       => esc_html__( 'Breite Label-Spalte', 'bricks-vergleich' ),
+            'type'        => 'number',
+            'units'       => true,
+            'default'     => 220,
+            'placeholder' => '220px',
+        ];
+
+        $this->controls['columnWidth'] = [
+            'tab'         => 'content',
+            'group'       => 'layout',
+            'label'       => esc_html__( 'Breite Produkt-Spalte', 'bricks-vergleich' ),
+            'type'        => 'number',
+            'units'       => true,
+            'default'     => 220,
+            'placeholder' => '220px',
+        ];
+
+        $this->controls['rowMinHeight'] = [
+            'tab'         => 'content',
+            'group'       => 'layout',
+            'label'       => esc_html__( 'Min-Höhe pro Zeile', 'bricks-vergleich' ),
+            'type'        => 'number',
+            'units'       => true,
+            'default'     => 80,
+            'placeholder' => '80px',
+        ];
+
+        $this->controls['stickyLabels'] = [
+            'tab'     => 'content',
+            'group'   => 'layout',
+            'label'   => esc_html__( 'Label-Spalte sticky', 'bricks-vergleich' ),
+            'type'    => 'checkbox',
+            'default' => true,
+        ];
+
+        $this->controls['showDivider'] = [
+            'tab'     => 'content',
+            'group'   => 'layout',
+            'label'   => esc_html__( 'Trennlinien zwischen Zeilen', 'bricks-vergleich' ),
+            'type'    => 'checkbox',
+            'default' => true,
+        ];
+
+        $this->controls['textAlign'] = [
+            'tab'     => 'content',
+            'group'   => 'layout',
+            'label'   => esc_html__( 'Textausrichtung Cards', 'bricks-vergleich' ),
+            'type'    => 'select',
+            'options' => [
+                'left'   => esc_html__( 'Links', 'bricks-vergleich' ),
+                'center' => esc_html__( 'Zentriert', 'bricks-vergleich' ),
+                'right'  => esc_html__( 'Rechts', 'bricks-vergleich' ),
+            ],
+            'default' => 'center',
+        ];
+
+        // === IMAGE GROUP ===
+        $this->controls['imageEnforce'] = [
+            'tab'         => 'content',
+            'group'       => 'images',
+            'label'       => esc_html__( 'Einheitliche Bildgröße erzwingen', 'bricks-vergleich' ),
+            'type'        => 'checkbox',
+            'default'     => true,
+            'description' => esc_html__( 'Sorgt dafür, dass Produktbilder in allen Spalten die gleiche Größe haben.', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['imageWidth'] = [
+            'tab'         => 'content',
+            'group'       => 'images',
+            'label'       => esc_html__( 'Bildbreite', 'bricks-vergleich' ),
+            'type'        => 'number',
+            'units'       => true,
+            'default'     => 200,
+            'placeholder' => '200px',
+            'description' => esc_html__( 'Verwende "%" für responsive Größen, z.B. 100%.', 'bricks-vergleich' ),
+            'required'    => [ 'imageEnforce', '=', true ],
+        ];
+
+        $this->controls['imageHeight'] = [
+            'tab'         => 'content',
+            'group'       => 'images',
+            'label'       => esc_html__( 'Bildhöhe', 'bricks-vergleich' ),
+            'type'        => 'number',
+            'units'       => true,
+            'default'     => 200,
+            'placeholder' => '200px',
+            'required'    => [ 'imageEnforce', '=', true ],
+        ];
+
+        $this->controls['imageObjectFit'] = [
+            'tab'         => 'content',
+            'group'       => 'images',
+            'label'       => esc_html__( 'Bildanpassung (object-fit)', 'bricks-vergleich' ),
+            'type'        => 'select',
+            'options'     => [
+                'cover'      => esc_html__( 'Füllen & zuschneiden (cover)', 'bricks-vergleich' ),
+                'contain'    => esc_html__( 'Komplett zeigen (contain)', 'bricks-vergleich' ),
+                'fill'       => esc_html__( 'Verzerren (fill)', 'bricks-vergleich' ),
+                'scale-down' => esc_html__( 'Nicht hochskalieren (scale-down)', 'bricks-vergleich' ),
+                'none'       => esc_html__( 'Originalgröße (none)', 'bricks-vergleich' ),
+            ],
+            'default'     => 'cover',
+            'required'    => [ 'imageEnforce', '=', true ],
+        ];
+
+        $this->controls['imageBorderRadius'] = [
+            'tab'         => 'content',
+            'group'       => 'images',
+            'label'       => esc_html__( 'Ecken-Radius', 'bricks-vergleich' ),
+            'type'        => 'number',
+            'units'       => true,
+            'default'     => 0,
+            'placeholder' => '0px',
+            'required'    => [ 'imageEnforce', '=', true ],
+        ];
+
+        // === EXPAND / COLLAPSE GROUP ===
+        $this->controls['expandEnabled'] = [
+            'tab'         => 'content',
+            'group'       => 'expand',
+            'label'       => esc_html__( 'Aufklapp-Button aktivieren', 'bricks-vergleich' ),
+            'type'        => 'checkbox',
+            'default'     => false,
+            'description' => esc_html__( 'Zeilen, die in den jeweiligen Vergleich-Zeilen als "aufklappbar" markiert sind, werden bis zum Klick auf den Button verborgen.', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['expandLabel'] = [
+            'tab'         => 'content',
+            'group'       => 'expand',
+            'label'       => esc_html__( 'Button-Text (eingeklappt)', 'bricks-vergleich' ),
+            'type'        => 'text',
+            'default'     => esc_html__( 'Alle Kriterien anzeigen', 'bricks-vergleich' ),
+            'required'    => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['collapseLabel'] = [
+            'tab'         => 'content',
+            'group'       => 'expand',
+            'label'       => esc_html__( 'Button-Text (ausgeklappt)', 'bricks-vergleich' ),
+            'type'        => 'text',
+            'default'     => esc_html__( 'Weniger anzeigen', 'bricks-vergleich' ),
+            'required'    => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandButtonStyle'] = [
+            'tab'      => 'content',
+            'group'    => 'expand',
+            'label'    => esc_html__( 'Button-Stil', 'bricks-vergleich' ),
+            'type'     => 'select',
+            'options'  => [
+                'outlined' => esc_html__( 'Umrandet (wie Finanztip)', 'bricks-vergleich' ),
+                'filled'   => esc_html__( 'Gefüllt', 'bricks-vergleich' ),
+                'link'     => esc_html__( 'Als Link', 'bricks-vergleich' ),
+            ],
+            'default'  => 'outlined',
+            'required' => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandButtonColor'] = [
+            'tab'      => 'content',
+            'group'    => 'expand',
+            'label'    => esc_html__( 'Button-Farbe', 'bricks-vergleich' ),
+            'type'     => 'color',
+            'default'  => [ 'hex' => '#6366f1' ],
+            'required' => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandAlign'] = [
+            'tab'      => 'content',
+            'group'    => 'expand',
+            'label'    => esc_html__( 'Button-Ausrichtung', 'bricks-vergleich' ),
+            'type'     => 'select',
+            'options'  => [
+                'left'   => esc_html__( 'Links', 'bricks-vergleich' ),
+                'center' => esc_html__( 'Zentriert', 'bricks-vergleich' ),
+                'right'  => esc_html__( 'Rechts', 'bricks-vergleich' ),
+            ],
+            'default'  => 'center',
+            'required' => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandBtnSizeSep'] = [
+            'tab'      => 'content',
+            'group'    => 'expand',
+            'type'     => 'separator',
+            'label'    => esc_html__( 'Button-Größe & Abstand', 'bricks-vergleich' ),
+            'required' => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandBtnPadding'] = [
+            'tab'      => 'content',
+            'group'    => 'expand',
+            'label'    => esc_html__( 'Innenabstand (Padding)', 'bricks-vergleich' ),
+            'type'     => 'spacing',
+            'placeholder' => [
+                'top'    => '10px',
+                'right'  => '20px',
+                'bottom' => '10px',
+                'left'   => '20px',
+            ],
+            'required' => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandBtnFontSize'] = [
+            'tab'         => 'content',
+            'group'       => 'expand',
+            'label'       => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
+            'type'        => 'number',
+            'units'       => true,
+            'placeholder' => '16px',
+            'required'    => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandBtnFontWeight'] = [
+            'tab'      => 'content',
+            'group'    => 'expand',
+            'label'    => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
+            'type'     => 'select',
+            'options'  => [
+                '400' => esc_html__( 'Normal (400)', 'bricks-vergleich' ),
+                '500' => esc_html__( 'Medium (500)', 'bricks-vergleich' ),
+                '600' => esc_html__( 'Semibold (600)', 'bricks-vergleich' ),
+                '700' => esc_html__( 'Bold (700)', 'bricks-vergleich' ),
+                '800' => esc_html__( 'Extra Bold (800)', 'bricks-vergleich' ),
+            ],
+            'default'  => '600',
+            'required' => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandBtnRadius'] = [
+            'tab'         => 'content',
+            'group'       => 'expand',
+            'label'       => esc_html__( 'Ecken-Radius', 'bricks-vergleich' ),
+            'type'        => 'number',
+            'units'       => true,
+            'placeholder' => '9999px',
+            'description' => esc_html__( 'Leer lassen für Pill-Form. 0 = eckig.', 'bricks-vergleich' ),
+            'required'    => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandBtnBorderWidth'] = [
+            'tab'         => 'content',
+            'group'       => 'expand',
+            'label'       => esc_html__( 'Rahmen-Stärke', 'bricks-vergleich' ),
+            'type'        => 'number',
+            'units'       => true,
+            'placeholder' => '2px',
+            'required'    => [ 'expandEnabled', '=', true, 'expandButtonStyle', '!=', 'link' ],
+        ];
+
+        $this->controls['expandContainerPadding'] = [
+            'tab'         => 'content',
+            'group'       => 'expand',
+            'label'       => esc_html__( 'Außenabstand (Container)', 'bricks-vergleich' ),
+            'type'        => 'spacing',
+            'description' => esc_html__( 'Abstand um den Button herum (innerhalb der Tabelle).', 'bricks-vergleich' ),
+            'placeholder' => [
+                'top'    => '16px',
+                'right'  => '16px',
+                'bottom' => '16px',
+                'left'   => '16px',
+            ],
+            'required'    => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandGap'] = [
+            'tab'         => 'content',
+            'group'       => 'expand',
+            'label'       => esc_html__( 'Abstand Text ↔ Pfeil', 'bricks-vergleich' ),
+            'type'        => 'number',
+            'units'       => true,
+            'placeholder' => '8px',
+            'required'    => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandShowIcon'] = [
+            'tab'      => 'content',
+            'group'    => 'expand',
+            'label'    => esc_html__( 'Pfeil-Icon zeigen', 'bricks-vergleich' ),
+            'type'     => 'checkbox',
+            'default'  => true,
+            'required' => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandHoverBgColor'] = [
+            'tab'      => 'content',
+            'group'    => 'expand',
+            'label'    => esc_html__( 'Hover-Hintergrund', 'bricks-vergleich' ),
+            'type'     => 'color',
+            'required' => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandHoverTextColor'] = [
+            'tab'      => 'content',
+            'group'    => 'expand',
+            'label'    => esc_html__( 'Hover-Textfarbe', 'bricks-vergleich' ),
+            'type'     => 'color',
+            'required' => [ 'expandEnabled', '=', true ],
+        ];
+
+        // === STYLE GROUP ===
+        $this->controls['labelBgColor'] = [
+            'tab'     => 'content',
+            'group'   => 'style',
+            'label'   => esc_html__( 'Hintergrund Label-Spalte', 'bricks-vergleich' ),
+            'type'    => 'color',
+            'default' => [ 'hex' => '#f3f4f6' ],
+            'css'     => [
+                [
+                    'property' => 'background-color',
+                    'selector' => '.vergleich-labels',
+                ],
+            ],
+        ];
+
+        $this->controls['labelColor'] = [
+            'tab'   => 'content',
+            'group' => 'style',
+            'label' => esc_html__( 'Textfarbe Labels', 'bricks-vergleich' ),
+            'type'  => 'color',
+            'css'   => [
+                [
+                    'property' => 'color',
+                    'selector' => '.vergleich-label',
+                ],
+            ],
+        ];
+
+        $this->controls['cardBgColor'] = [
+            'tab'     => 'content',
+            'group'   => 'style',
+            'label'   => esc_html__( 'Hintergrund Produkt-Spalten', 'bricks-vergleich' ),
+            'type'    => 'color',
+            'default' => [ 'hex' => '#ffffff' ],
+            'css'     => [
+                [
+                    'property' => 'background-color',
+                    'selector' => '.vergleich-card',
+                ],
+            ],
+        ];
+
+        $this->controls['borderColor'] = [
+            'tab'     => 'content',
+            'group'   => 'style',
+            'label'   => esc_html__( 'Rahmenfarbe', 'bricks-vergleich' ),
+            'type'    => 'color',
+            'default' => [ 'hex' => '#e5e7eb' ],
+            'css'     => [
+                [
+                    'property' => 'border-color',
+                    'selector' => '',
+                ],
+                [
+                    'property' => 'border-color',
+                    'selector' => '.vergleich-card',
+                ],
+                [
+                    'property' => 'border-color',
+                    'selector' => '.vergleich-label',
+                ],
+                [
+                    'property' => 'border-color',
+                    'selector' => '.vergleich-zelle',
+                ],
+            ],
+        ];
+
+        $this->controls['borderRadius'] = [
+            'tab'     => 'content',
+            'group'   => 'style',
+            'label'   => esc_html__( 'Eckenradius', 'bricks-vergleich' ),
+            'type'    => 'number',
+            'units'   => true,
+            'default' => 12,
+            'css'     => [
+                [
+                    'property' => 'border-radius',
+                    'selector' => '',
+                ],
+            ],
+        ];
+
+    }
+
+    public function render() {
+        // WICHTIG: Vor allem anderen sicherstellen, dass Frontend::$elements und
+        // $this->children in isolierten AJAX-Partial-Renders bestückt sind.
+        // Ohne das bricht render_children() ein und liefert nur den Placeholder.
+        $this->hydrate_frontend_elements();
+
+        $settings = isset( $this->settings ) && is_array( $this->settings ) ? $this->settings : [];
+
+        $label_width    = $this->get_css_value( $settings['labelWidth'] ?? null, '220px' );
+        $column_width   = $this->get_css_value( $settings['columnWidth'] ?? null, '220px' );
+        $row_min_height = $this->get_css_value( $settings['rowMinHeight'] ?? null, '80px' );
+        $sticky         = ! empty( $settings['stickyLabels'] );
+        $divider        = ! empty( $settings['showDivider'] );
+        $text_align     = $settings['textAlign'] ?? 'center';
+
+        // Bilder: Einheitsgrößen (wenn aktiviert)
+        $enforce_img    = ! empty( $settings['imageEnforce'] ) || ! isset( $settings['imageEnforce'] );
+        $img_width      = $this->get_css_value( $settings['imageWidth'] ?? null, '200px' );
+        $img_height     = $this->get_css_value( $settings['imageHeight'] ?? null, '200px' );
+        $img_fit        = $settings['imageObjectFit'] ?? 'cover';
+        $img_radius     = $this->get_css_value( $settings['imageBorderRadius'] ?? null, '0px' );
+
+        // Expand / Collapse Feature
+        $expand_enabled    = ! empty( $settings['expandEnabled'] );
+        $expand_label      = isset( $settings['expandLabel'] )   && $settings['expandLabel']   !== '' ? (string) $settings['expandLabel']   : esc_html__( 'Alle Kriterien anzeigen', 'bricks-vergleich' );
+        $collapse_label    = isset( $settings['collapseLabel'] ) && $settings['collapseLabel'] !== '' ? (string) $settings['collapseLabel'] : esc_html__( 'Weniger anzeigen', 'bricks-vergleich' );
+        $expand_btn_style  = $settings['expandButtonStyle'] ?? 'outlined';
+        $expand_btn_color  = $this->resolve_color( $settings['expandButtonColor'] ?? null );
+        if ( $expand_btn_color === '' ) {
+            $expand_btn_color = '#6366f1';
+        }
+        $expand_align      = $settings['expandAlign'] ?? 'center';
+        $expand_show_icon  = ! isset( $settings['expandShowIcon'] ) || ! empty( $settings['expandShowIcon'] );
+
+        // Button-Styling
+        $expand_btn_padding   = $this->format_spacing( $settings['expandBtnPadding']       ?? null, '10px 20px' );
+        $expand_cnt_padding   = $this->format_spacing( $settings['expandContainerPadding'] ?? null, '16px' );
+        $expand_font_size     = $this->get_css_value( $settings['expandBtnFontSize']       ?? null, 'inherit' );
+        $expand_font_weight   = $settings['expandBtnFontWeight'] ?? '600';
+        $expand_radius        = isset( $settings['expandBtnRadius'] ) && $settings['expandBtnRadius'] !== ''
+            ? $this->get_css_value( $settings['expandBtnRadius'], '9999px' )
+            : '9999px';
+        $expand_border_width  = isset( $settings['expandBtnBorderWidth'] ) && $settings['expandBtnBorderWidth'] !== ''
+            ? $this->get_css_value( $settings['expandBtnBorderWidth'], '2px' )
+            : '2px';
+        $expand_gap           = $this->get_css_value( $settings['expandGap'] ?? null, '8px' );
+        $expand_hover_bg      = $this->resolve_color( $settings['expandHoverBgColor']   ?? null );
+        $expand_hover_text    = $this->resolve_color( $settings['expandHoverTextColor'] ?? null );
+
+        // Labels aus den Kindern holen. Mehrstufige Strategie, damit es auch bei
+        // Canvas-Re-Renders (Viewport-Wechsel, Edits) und AJAX-Requests funktioniert.
+        $zeilen = $this->collect_zeilen();
+
+        $row_count = max( 1, count( $zeilen ) );
+
+        // Anzahl der im eingeklappten Zustand sichtbaren Zeilen berechnen
+        // (alle, die NICHT als 'collapsible' markiert sind).
+        $visible_row_count = 0;
+        foreach ( $zeilen as $z ) {
+            if ( empty( $z['settings']['collapsible'] ) ) {
+                $visible_row_count++;
+            }
+        }
+        // Mindestens 1 Zeile sichtbar, sonst kollabiert das Grid ins Nichts.
+        $visible_row_count = max( 1, $visible_row_count );
+
+        // CSS-Variablen am Root-Element setzen (inkl. Row-Count für Subgrid & Bildgrößen)
+        $inline_style = sprintf(
+            '--vgl-label-width: %s; --vgl-column-width: %s; --vgl-row-min: %s; --vgl-text-align: %s; --vgl-row-count: %d; --vgl-row-count-collapsed: %d; --vgl-img-width: %s; --vgl-img-height: %s; --vgl-img-fit: %s; --vgl-img-radius: %s; --vgl-expand-color: %s; --vgl-expand-btn-padding: %s; --vgl-expand-cnt-padding: %s; --vgl-expand-font-size: %s; --vgl-expand-font-weight: %s; --vgl-expand-radius: %s; --vgl-expand-border-width: %s; --vgl-expand-gap: %s;',
+            esc_attr( $label_width ),
+            esc_attr( $column_width ),
+            esc_attr( $row_min_height ),
+            esc_attr( $text_align ),
+            $row_count,
+            $visible_row_count,
+            esc_attr( $img_width ),
+            esc_attr( $img_height ),
+            esc_attr( $img_fit ),
+            esc_attr( $img_radius ),
+            esc_attr( $expand_btn_color ),
+            esc_attr( $expand_btn_padding ),
+            esc_attr( $expand_cnt_padding ),
+            esc_attr( $expand_font_size ),
+            esc_attr( $expand_font_weight ),
+            esc_attr( $expand_radius ),
+            esc_attr( $expand_border_width ),
+            esc_attr( $expand_gap )
+        );
+
+        // Hover-Farben als eigene CSS-Variablen anhängen (nur wenn gesetzt)
+        if ( $expand_hover_bg !== '' ) {
+            $inline_style .= ' --vgl-expand-hover-bg: ' . esc_attr( $expand_hover_bg ) . ';';
+        }
+        if ( $expand_hover_text !== '' ) {
+            $inline_style .= ' --vgl-expand-hover-text: ' . esc_attr( $expand_hover_text ) . ';';
+        }
+
+        $classes = [ 'vergleich-wrapper' ];
+        if ( $sticky )       $classes[] = 'has-sticky-labels';
+        if ( $divider )      $classes[] = 'has-dividers';
+        if ( $enforce_img )  $classes[] = 'has-enforced-images';
+        if ( $expand_enabled && $visible_row_count < $row_count ) {
+            // Nur aktivieren, wenn es tatsächlich aufklappbare Zeilen gibt
+            $classes[] = 'has-expand';
+            // Start-Zustand: eingeklappt
+            $classes[] = 'is-collapsed';
+        }
+
+        $this->set_attribute( '_root', 'class', $classes );
+        $this->set_attribute( '_root', 'style', $inline_style );
+        $this->set_attribute( '_root', 'data-row-count', (string) $row_count );
+
+        // Inline-CSS: einmal pro Request, aber bei AJAX-/Builder-Renders
+        // immer (damit auch Canvas-Re-Renders das CSS mitliefern).
+        static $css_printed = false;
+        $is_builder_request = ( defined( 'DOING_AJAX' ) && DOING_AJAX )
+            || ( function_exists( 'bricks_is_builder' ) && bricks_is_builder() )
+            || ( function_exists( 'bricks_is_builder_call' ) && bricks_is_builder_call() )
+            || ( isset( $_REQUEST['action'] ) && strpos( (string) $_REQUEST['action'], 'bricks' ) !== false );
+
+        if ( ! $css_printed || $is_builder_request ) {
+            echo $this->get_inline_css();
+            $css_printed = true;
+        }
+
+        echo "<div {$this->render_attributes( '_root' )}>";
+
+        // === LINKE LABELS-SPALTE ===
+        echo '<div class="vergleich-labels">';
+
+        if ( empty( $zeilen ) ) {
+            // Hilfe-Hinweis falls keine Zeilen vorhanden
+            echo '<div class="vergleich-label" style="color:#9ca3af;font-style:italic;">' . esc_html__( '(Vergleich-Zeilen hinzufügen)', 'bricks-vergleich' ) . '</div>';
+        }
+
+        foreach ( $zeilen as $idx => $child ) {
+            $label       = isset( $child['settings']['label'] ) ? trim( (string) $child['settings']['label'] ) : '';
+            $highlight   = ! empty( $child['settings']['highlight'] );
+            $collapsible = ! empty( $child['settings']['collapsible'] );
+            $row_id      = isset( $child['id'] ) ? (string) $child['id'] : '';
+
+            // Fallback: wenn leer, Merkmal + Nummer
+            if ( $label === '' ) {
+                $label = sprintf( esc_html__( 'Merkmal %d', 'bricks-vergleich' ), $idx + 1 );
+            }
+
+            $cls = 'vergleich-label';
+            if ( $highlight ) {
+                $cls .= ' is-highlighted';
+            }
+            if ( $collapsible ) {
+                $cls .= ' is-collapsible';
+            }
+
+            $extra_attr = '';
+            if ( $collapsible && $row_id !== '' ) {
+                $extra_attr = ' data-vergleich-row-id="' . esc_attr( $row_id ) . '"';
+            }
+
+            echo '<div class="' . esc_attr( $cls ) . '"' . $extra_attr . '>';
+            echo wp_kses_post( bricks_render_dynamic_data( $label ) );
+            echo '</div>';
+        }
+        echo '</div>';
+
+        // === RECHTE SCROLL-REGION ===
+        echo '<div class="vergleich-scroll">';
+        echo '<div class="vergleich-track">';
+
+        // Query-Loop: nutzt jetzt Bricks' nativen 'query'-Control (get_loop_builder_controls).
+        // Die Settings liegen bereits im nativen Bricks-Format unter $settings['query'] und
+        // werden 1:1 an \Bricks\Query übergeben — exakt so wie Container/Slider/… es tun.
+        $has_loop = isset( $settings['hasLoop'] ) && ! empty( $settings['hasLoop'] );
+
+        if ( $has_loop && class_exists( '\Bricks\Query' ) ) {
+            try {
+                $element_for_query = [
+                    'id'       => $this->id,
+                    'name'     => $this->name,
+                    'settings' => $this->settings,
+                ];
+
+                $query = new \Bricks\Query( $element_for_query );
+
+                // 2. Param muss ein Array sein (Bricks macht intern array_values() darauf)
+                $loop_output = $query->render( [ $this, 'render_card' ], [] );
+
+                if ( empty( trim( (string) $loop_output ) ) ) {
+                    echo '<div class="vergleich-card"><div class="vergleich-zelle" style="padding:2rem;color:#6b7280;">' . esc_html__( 'Keine Einträge gefunden. Passe die Query-Einstellungen an.', 'bricks-vergleich' ) . '</div></div>';
+                } else {
+                    echo $loop_output;
+                }
+
+                $query->destroy();
+                unset( $query );
+            } catch ( \Throwable $e ) {
+                echo '<div class="vergleich-card"><div class="vergleich-zelle" style="padding:2rem;color:#dc2626;">Query-Fehler: ' . esc_html( $e->getMessage() ) . '</div></div>';
+            }
+        } else {
+            // Kein Query-Loop aktiv: Eine Demo-Card mit aktuellem Post-Context.
+            // Hinweis zeigen wenn Loop komplett aus ist und wir im Builder sind.
+            $this->render_card();
+        }
+
+        echo '</div>'; // .vergleich-track
+        echo '</div>'; // .vergleich-scroll
+
+        // === AUFKLAPP-BUTTON ===
+        // Nur rendern, wenn das Feature eingeschaltet ist UND es aufklappbare Zeilen gibt.
+        if ( $expand_enabled && $visible_row_count < $row_count ) {
+            $btn_style_cls = 'is-style-' . preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $expand_btn_style ) );
+            $btn_align_cls = 'is-align-' . preg_replace( '/[^a-z0-9_-]/', '', strtolower( (string) $expand_align ) );
+
+            // Align → inline justify-content. Inline-Style gewinnt garantiert gegen alles
+            // außer externen !important-Regeln. Im Canvas ist das die zuverlässigste Variante,
+            // weil Bricks\' eigene Regeln mit hoher Spezifität sonst unsere Grid-Platzierung wegfressen.
+            $align_map = [
+                'is-align-left'   => 'flex-start',
+                'is-align-center' => 'center',
+                'is-align-right'  => 'flex-end',
+            ];
+            $justify = isset( $align_map[ $btn_align_cls ] ) ? $align_map[ $btn_align_cls ] : 'center';
+
+            // Container-Padding (aus spacing-Control) für den Inline-Style berechnen
+            $cnt_padding = ! empty( $expand_cnt_padding ) ? $expand_cnt_padding : '16px';
+
+            // Container-Style: die layout-kritischen Properties direkt am Element.
+            $container_inline = sprintf(
+                'grid-column:1 / -1;grid-row:auto;display:flex;align-items:center;justify-content:%s;box-sizing:border-box;width:100%%;padding:%s;border-top:1px solid #e5e7eb;background:#fff;margin:0;',
+                $justify,
+                $cnt_padding
+            );
+
+            echo '<div class="vergleich-expand ' . esc_attr( $btn_align_cls ) . '" style="' . esc_attr( $container_inline ) . '">';
+            $has_hover_colors = ( $expand_hover_bg !== '' || $expand_hover_text !== '' );
+
+            // Button-Style: ebenfalls inline, damit Theme- und Bricks-Regeln nicht greifen.
+            $btn_color        = $this->sanitize_css_value( $expand_btn_color );
+            $btn_color        = $btn_color !== '' ? $btn_color : '#6366f1';
+            $btn_radius       = $this->sanitize_css_value( $expand_radius );
+            $btn_radius       = $btn_radius !== '' ? $btn_radius : '9999px';
+            $btn_border_width = $this->sanitize_css_value( $expand_border_width );
+            $btn_border_width = $btn_border_width !== '' ? $btn_border_width : '2px';
+            $btn_pad          = $this->sanitize_css_value( $expand_btn_padding );
+            $btn_pad          = $btn_pad !== '' ? $btn_pad : '10px 20px';
+            $btn_fw           = $this->sanitize_css_value( $expand_font_weight );
+            $btn_fw           = $btn_fw !== '' ? $btn_fw : '600';
+            $btn_fs           = $this->sanitize_css_value( $expand_font_size );
+            $btn_gap          = $this->sanitize_css_value( $expand_gap );
+            $btn_gap          = $btn_gap !== '' ? $btn_gap : '8px';
+
+            // Stil-abhängige Defaults
+            $btn_bg     = 'transparent';
+            $btn_fg     = $btn_color;
+            $btn_border = $btn_border_width . ' solid ' . $btn_color;
+            $btn_deco   = 'none';
+            if ( $btn_style_cls === 'is-style-filled' ) {
+                $btn_bg = $btn_color;
+                $btn_fg = '#fff';
+            } elseif ( $btn_style_cls === 'is-style-link' ) {
+                $btn_bg     = 'transparent';
+                $btn_fg     = $btn_color;
+                $btn_border = 'none';
+                $btn_deco   = 'underline';
+            }
+
+            $button_inline = sprintf(
+                '-webkit-appearance:none;-moz-appearance:none;appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:%s;margin:0;font-family:inherit;%sfont-weight:%s;line-height:1.2;letter-spacing:0;text-transform:none;text-decoration:%s;text-shadow:none;padding:%s;border-radius:%s;cursor:pointer;background:%s;background-image:none;box-shadow:none;color:%s;border:%s;',
+                $btn_gap,
+                $btn_fs !== '' ? 'font-size:' . $btn_fs . ';' : '',
+                $btn_fw,
+                $btn_deco,
+                $btn_pad,
+                $btn_radius,
+                $btn_bg,
+                $btn_fg,
+                $btn_border
+            );
+
+            echo '<button type="button" class="vergleich-expand-btn ' . esc_attr( $btn_style_cls ) . '"'
+                . ' style="' . esc_attr( $button_inline ) . '"'
+                . ' data-label-expand="' . esc_attr( $expand_label ) . '"'
+                . ' data-label-collapse="' . esc_attr( $collapse_label ) . '"'
+                . ( $has_hover_colors ? ' data-has-hover-colors' : '' )
+                . ' aria-expanded="false">';
+            // Inner span: text-decoration explizit zurücksetzen
+            $text_deco = $btn_style_cls === 'is-style-link' ? 'underline' : 'none';
+            echo '<span class="vergleich-expand-text" style="text-decoration:' . esc_attr( $text_deco ) . ';color:inherit;">' . esc_html( $expand_label ) . '</span>';
+            if ( $expand_show_icon ) {
+                echo '<span class="vergleich-expand-icon" aria-hidden="true" style="display:inline-flex;align-items:center;justify-content:center;transition:transform .2s ease;">';
+                echo '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16"><polyline points="5 8 10 13 15 8"></polyline></svg>';
+                echo '</span>';
+            }
+            echo '</button>';
+            echo '</div>';
+        }
+
+        // Nestable-Children-Placeholder NUR im Builder-Canvas rendern.
+        // Grund: Bricks Vue sucht im Root-Node nach .brx-nestable-children-placeholder
+        // und injiziert die editierbaren Kind-Elemente exakt dort als Geschwister.
+        // Ohne Placeholder hängt Bricks die Kinder irgendwo an → sichtbare Geister-Spalte.
+        // Mit Placeholder in einem display:none-Sink landen Kinder dort und sind unsichtbar,
+        // während unser echter Loop-Output (PHP-Rendering) das Layout bestimmt.
+        $in_builder = ( function_exists( 'bricks_is_builder' ) && bricks_is_builder() )
+            || ( function_exists( 'bricks_is_builder_call' ) && bricks_is_builder_call() );
+        if ( $in_builder ) {
+            echo '<div class="vergleich-nestable-sink" aria-hidden="true">';
+            echo '<span class="brx-nestable-children-placeholder"></span>';
+            echo '</div>';
+        }
+
+        echo '</div>'; // .vergleich-wrapper
+
+        // Zeilen-Höhen zwischen Labels-Spalte und Cards synchronisieren
+        $this->print_sync_script();
+    }
+
+    /**
+     * Inline-JS: synchronisiert die Höhen pro Zeile (Labels + alle Card-Zellen)
+     */
+    private function print_sync_script() {
+        static $printed = false;
+        if ( $printed ) {
+            return;
+        }
+        $printed = true;
+        ?>
+<script id="bricks-vergleich-sync">
+(function(){
+    // Feature-Check: Browser mit Subgrid brauchen keinen JS-Sync
+    var supportsSubgrid = (function(){
+        try {
+            return CSS.supports("grid-template-rows", "subgrid");
+        } catch (e) {
+            return false;
+        }
+    })();
+
+    // Bricks-Builder-iframe: Hier wickelt Bricks Vue-Wrapper um unsere Elemente,
+    // die die Subgrid-Kette brechen. Deshalb IMMER JS-Sync – auch wenn der Browser
+    // Subgrid kann. Im Frontend bleibt Subgrid die erste Wahl (performanter,
+    // reaktiv ohne ResizeObserver-Overhead).
+    var isBricksBuilder = (function(){
+        try {
+            if (window === window.top) return false;
+            // Body-Klassen die Bricks im Builder-iframe setzt
+            var b = document.body;
+            if (b && (
+                b.classList.contains('brx-iframe') ||
+                b.classList.contains('bricks-is-frontend') === false && b.classList.contains('bricks-is-builder-iframe')
+            )) {
+                return true;
+            }
+            // Sichere Detection über Parent-Window
+            if (window.parent && (
+                typeof window.parent.bricksData !== 'undefined' ||
+                (window.parent.document && window.parent.document.getElementById('bricks-builder'))
+            )) {
+                return true;
+            }
+        } catch (e) {
+            // Cross-Origin-Fehler → kein Builder
+        }
+        return false;
+    })();
+
+    // Im Builder: Subgrid-Kette gilt als unzuverlässig → JS-Sync erzwingen
+    var useJsSync = ! supportsSubgrid || isBricksBuilder;
+
+    function debounce(fn, wait){
+        var t;
+        return function(){
+            clearTimeout(t);
+            t = setTimeout(fn, wait);
+        };
+    }
+
+    function syncRows(wrapper){
+        if (!wrapper || !wrapper.isConnected) return;
+        // Im Frontend mit Subgrid-Support: CSS erledigt alles – JS nicht stören
+        if (!useJsSync) return;
+
+        var labels = wrapper.querySelectorAll(':scope > .vergleich-labels > .vergleich-label');
+        var cards  = wrapper.querySelectorAll(':scope > .vergleich-scroll > .vergleich-track > .vergleich-card, :scope > .vergleich-scroll .vergleich-card');
+        var rowCount = labels.length;
+        if (!rowCount || !cards.length) return;
+
+        // Reset
+        labels.forEach(function(el){ el.style.minHeight = ''; });
+        cards.forEach(function(card){
+            card.querySelectorAll(':scope > .vergleich-zelle').forEach(function(el){ el.style.minHeight = ''; });
+        });
+
+        // Pro Zeile: max-Höhe finden (zwei Frames warten damit Reset wirkt)
+        for (var i = 0; i < rowCount; i++) {
+            var max = labels[i] ? labels[i].offsetHeight : 0;
+            cards.forEach(function(card){
+                var cells = card.querySelectorAll(':scope > .vergleich-zelle');
+                if (cells[i]) max = Math.max(max, cells[i].offsetHeight);
+            });
+            if (labels[i]) labels[i].style.minHeight = max + 'px';
+            cards.forEach(function(card){
+                var cells = card.querySelectorAll(':scope > .vergleich-zelle');
+                if (cells[i]) cells[i].style.minHeight = max + 'px';
+            });
+        }
+    }
+
+    // Speichert observierte Wrapper, damit wir nicht doppelt observieren
+    var observed = new WeakSet();
+
+    function attachObservers(wrapper){
+        if (!wrapper || observed.has(wrapper)) return;
+        observed.add(wrapper);
+
+        // Nur überspringen wenn wir weder im Builder sind noch JS-Sync brauchen
+        if (!useJsSync) {
+            return;
+        }
+
+        var resync = debounce(function(){ syncRows(wrapper); }, 50);
+
+        // Initial sync
+        syncRows(wrapper);
+
+        // Burst-Sync: 30 Frames lang (~500ms) erzwingen – fängt Canvas-Timing-Probleme
+        var burstCount = 0;
+        function burst(){
+            if (!wrapper.isConnected) return;
+            syncRows(wrapper);
+            if (++burstCount < 30) {
+                requestAnimationFrame(burst);
+            }
+        }
+        requestAnimationFrame(burst);
+
+        // Sicherheits-Polls bei 500ms, 1s, 2s
+        [500, 1000, 2000].forEach(function(ms){
+            setTimeout(function(){ if (wrapper.isConnected) syncRows(wrapper); }, ms);
+        });
+
+        // Bilder: bei Load nachsynchronisieren
+        wrapper.querySelectorAll('img').forEach(function(img){
+            if (!img.complete) {
+                img.addEventListener('load',  resync, { once: true });
+                img.addEventListener('error', resync, { once: true });
+            }
+        });
+
+        // ResizeObserver: reagiert auf jede Größenänderung der Kinder
+        if (window.ResizeObserver) {
+            var ro = new ResizeObserver(resync);
+            wrapper.querySelectorAll('.vergleich-label, .vergleich-zelle').forEach(function(el){
+                ro.observe(el);
+            });
+            // Neue Zellen/Labels automatisch observieren
+            var moRo = new MutationObserver(function(){
+                wrapper.querySelectorAll('.vergleich-label, .vergleich-zelle').forEach(function(el){
+                    try { ro.observe(el); } catch(e) {}
+                });
+            });
+            moRo.observe(wrapper, { childList: true, subtree: true });
+        }
+
+        // MutationObserver: neue Kinder (z.B. Bricks rendert Content nach)
+        if (window.MutationObserver) {
+            var mo = new MutationObserver(resync);
+            mo.observe(wrapper, { childList: true, subtree: true, characterData: true });
+        }
+    }
+
+    function initAll(root){
+        (root || document).querySelectorAll('.vergleich-wrapper').forEach(attachObservers);
+        (root || document).querySelectorAll('.vergleich-wrapper.has-expand').forEach(attachExpandButton);
+        // Re-sync auch bereits observierte (bei Bricks-Event)
+        if (!supportsSubgrid) {
+            (root || document).querySelectorAll('.vergleich-wrapper').forEach(syncRows);
+        }
+    }
+
+    // ==== Expand / Collapse Toggle ====
+    var expandBound = new WeakSet();
+    function attachExpandButton(wrapper){
+        if (!wrapper || expandBound.has(wrapper)) return;
+        var btn = wrapper.querySelector(':scope > .vergleich-expand > .vergleich-expand-btn');
+        if (!btn) return;
+        expandBound.add(wrapper);
+
+        var textEl = btn.querySelector('.vergleich-expand-text');
+        var labelExpand   = btn.getAttribute('data-label-expand')   || '';
+        var labelCollapse = btn.getAttribute('data-label-collapse') || '';
+
+        function updateState(){
+            var collapsed = wrapper.classList.contains('is-collapsed');
+            btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+            if (textEl) {
+                textEl.textContent = collapsed ? labelExpand : labelCollapse;
+            }
+            // Höhen neu berechnen, damit Sub-Pixel-Rundungen nach dem Umschalten stimmen
+            if (useJsSync) {
+                syncRows(wrapper);
+                // Bilder können nach Reveal-Animation laden
+                setTimeout(function(){ syncRows(wrapper); }, 50);
+                setTimeout(function(){ syncRows(wrapper); }, 250);
+            }
+        }
+
+        btn.addEventListener('click', function(e){
+            e.preventDefault();
+            wrapper.classList.toggle('is-collapsed');
+            updateState();
+        });
+
+        // Initialer Zustand (Server rendert ausschließlich mit is-collapsed aktiv)
+        updateState();
+    }
+
+    // Bei Initial-Load und sofort
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function(){ initAll(); });
+    } else {
+        initAll();
+    }
+
+    // Globaler MutationObserver: wenn Bricks neue Wrapper ins DOM einfügt (Canvas!)
+    if (window.MutationObserver) {
+        var globalMo = new MutationObserver(function(mutations){
+            mutations.forEach(function(m){
+                m.addedNodes.forEach(function(node){
+                    if (node.nodeType !== 1) return;
+                    if (node.classList && node.classList.contains('vergleich-wrapper')) {
+                        attachObservers(node);
+                        if (node.classList.contains('has-expand')) attachExpandButton(node);
+                    } else if (node.querySelectorAll) {
+                        node.querySelectorAll('.vergleich-wrapper').forEach(attachObservers);
+                        node.querySelectorAll('.vergleich-wrapper.has-expand').forEach(attachExpandButton);
+                    }
+                });
+            });
+        });
+        globalMo.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    }
+
+    // Resize
+    window.addEventListener('resize', debounce(function(){
+        if (supportsSubgrid) return;
+        document.querySelectorAll('.vergleich-wrapper').forEach(syncRows);
+    }, 100));
+
+    // Bricks-spezifisch: wenn Builder Elemente neu rendert
+    if (typeof document !== 'undefined') {
+        document.addEventListener('bricks/ajax/end',    function(){ initAll(); });
+        document.addEventListener('bricks/tabs/changed',function(){ initAll(); });
+    }
+})();
+</script>
+        <?php
+    }
+
+    /**
+     * Bricks ruft bei Builder-AJAX-Partial-Renders (z.B. nach jeder Setting-Änderung
+     * am Wrapper) unser Element isoliert via `new $element_class_name( $element )`
+     * auf — Frontend::$elements ist dann leer und $this->children nicht befüllt.
+     *
+     * Ergebnis ohne Hydration: render_children() liefert den Nestable-Placeholder,
+     * das Loop rendert "Tabelle" aus dem globalen $post und {woo_product_price}
+     * bleibt als literaler String.
+     *
+     * Diese Methode merged den kompletten Bricks-Element-Tree aus dem Post-Meta
+     * in Frontend::$elements (nur Einträge, die fehlen — keine überschreiben) und
+     * setzt $this->children aus dem DB-Tree. Damit funktioniert Bricks' normaler
+     * Render-Flow wieder vollständig.
+     *
+     * Idempotent und cached — mehrfacher Aufruf hat keine negativen Seiteneffekte.
+     */
+    private function hydrate_frontend_elements() {
+        if ( ! class_exists( '\Bricks\Frontend' ) ) {
+            return;
+        }
+
+        // 1) Children des Wrappers sicherstellen
+        $has_children = ( ! empty( $this->element['children'] ) && is_array( $this->element['children'] ) )
+            || ( ! empty( $this->children ) && is_array( $this->children ) );
+
+        // 2) Prüfen, ob Frontend::$elements schon befüllt ist UND unser Wrapper drin
+        $registry        = is_array( \Bricks\Frontend::$elements ) ? \Bricks\Frontend::$elements : [];
+        $wrapper_in_reg  = ! empty( $this->id ) && isset( $registry[ $this->id ] );
+
+        // Normaler Frontend-Render: alles schon da → nichts tun
+        if ( $has_children && $wrapper_in_reg ) {
+            return;
+        }
+
+        // 3) Tree aus der DB holen (gecached)
+        $tree = $this->get_bricks_element_tree();
+        if ( empty( $tree ) ) {
+            return;
+        }
+
+        // Tree ist ein sequentielles Array — in id => element umwandeln
+        foreach ( $tree as $el ) {
+            if ( ! is_array( $el ) || empty( $el['id'] ) ) {
+                continue;
+            }
+            // Bestehende Einträge NICHT überschreiben (z.B. Components)
+            if ( ! isset( \Bricks\Frontend::$elements[ $el['id'] ] ) ) {
+                \Bricks\Frontend::$elements[ $el['id'] ] = $el;
+            }
+        }
+
+        // 4) $this->children aus dem Tree übernehmen, falls leer
+        if ( ! $has_children && ! empty( $this->id ) ) {
+            $wrapper = \Bricks\Frontend::$elements[ $this->id ] ?? null;
+            if ( $wrapper && ! empty( $wrapper['children'] ) && is_array( $wrapper['children'] ) ) {
+                $this->children = $wrapper['children'];
+
+                // Auch $this->element synchronisieren (wird von manchen Bricks-Methoden gelesen)
+                if ( is_array( $this->element ) ) {
+                    $this->element['children'] = $wrapper['children'];
+                }
+            }
+        }
+    }
+
+    /**
+     * Sammelt alle Kind-Elemente vom Typ 'vergleich-zeile'.
+     * Mehrstufige Strategie für robuste Erkennung:
+     *  Tier 1: Frontend::$elements via Child-IDs (normaler Frontend-Render)
+     *  Tier 2: Frontend::$elements nach parent === $this->id scannen
+     *  Tier 3: Post-Meta direkt aus der Datenbank lesen (AJAX-Partial-Renders im Builder)
+     */
+    private function collect_zeilen() {
+        $zeilen = [];
+        $seen   = [];
+
+        // 1) Child-IDs aus der Element-Struktur ziehen
+        $child_ids = [];
+        if ( ! empty( $this->element['children'] ) && is_array( $this->element['children'] ) ) {
+            $child_ids = $this->element['children'];
+        } elseif ( ! empty( $this->children ) && is_array( $this->children ) ) {
+            $child_ids = $this->children;
+        }
+
+        // Tier 1: IDs → Frontend::$elements
+        if ( class_exists( '\Bricks\Frontend' ) && ! empty( $child_ids ) ) {
+            foreach ( $child_ids as $child_id ) {
+                $child_element = null;
+
+                if ( is_string( $child_id ) && isset( \Bricks\Frontend::$elements[ $child_id ] ) ) {
+                    $child_element = \Bricks\Frontend::$elements[ $child_id ];
+                } elseif ( is_array( $child_id ) ) {
+                    $child_element = $child_id;
+                }
+
+                if ( $child_element && ( $child_element['name'] ?? '' ) === 'vergleich-zeile' ) {
+                    $eid = $child_element['id'] ?? null;
+                    if ( $eid === null || ! isset( $seen[ $eid ] ) ) {
+                        $zeilen[] = $child_element;
+                        if ( $eid !== null ) {
+                            $seen[ $eid ] = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Tier 2: Frontend::$elements nach parent scannen
+        if ( empty( $zeilen ) && class_exists( '\Bricks\Frontend' ) && ! empty( $this->id ) && is_array( \Bricks\Frontend::$elements ) ) {
+            $scanned = [];
+            foreach ( \Bricks\Frontend::$elements as $el ) {
+                if ( ! is_array( $el ) ) {
+                    continue;
+                }
+                if ( ( $el['parent'] ?? '' ) === $this->id && ( $el['name'] ?? '' ) === 'vergleich-zeile' ) {
+                    $scanned[] = $el;
+                }
+            }
+            if ( ! empty( $scanned ) ) {
+                $zeilen = $this->order_zeilen_by_child_ids( $scanned, $child_ids );
+            }
+        }
+
+        // Tier 3: DB-Fallback für AJAX-Partial-Renders im Builder.
+        // Das ist der einzige Weg, der garantiert funktioniert wenn Bricks nur
+        // die Wrapper-Element-Daten isoliert via AJAX neu rendert.
+        if ( empty( $zeilen ) && ! empty( $this->id ) ) {
+            $tree = $this->get_bricks_element_tree();
+
+            if ( ! empty( $tree ) ) {
+                $tree_by_id = [];
+                foreach ( $tree as $el ) {
+                    if ( is_array( $el ) && ! empty( $el['id'] ) ) {
+                        $tree_by_id[ $el['id'] ] = $el;
+                    }
+                }
+
+                // Wrapper im Tree finden
+                $wrapper = $tree_by_id[ $this->id ] ?? null;
+                if ( $wrapper && ! empty( $wrapper['children'] ) && is_array( $wrapper['children'] ) ) {
+                    foreach ( $wrapper['children'] as $cid ) {
+                        if ( is_string( $cid ) && isset( $tree_by_id[ $cid ] ) ) {
+                            $el = $tree_by_id[ $cid ];
+                            if ( ( $el['name'] ?? '' ) === 'vergleich-zeile' ) {
+                                $zeilen[] = $el;
+                            }
+                        }
+                    }
+                }
+
+                // Falls der Wrapper-Lookup nichts ergab: nach parent scannen
+                if ( empty( $zeilen ) ) {
+                    foreach ( $tree as $el ) {
+                        if ( is_array( $el )
+                            && ( $el['parent'] ?? '' ) === $this->id
+                            && ( $el['name'] ?? '' ) === 'vergleich-zeile'
+                        ) {
+                            $zeilen[] = $el;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $zeilen;
+    }
+
+    /**
+     * Sortiert gefundene Zeilen nach der Reihenfolge von $child_ids.
+     */
+    private function order_zeilen_by_child_ids( $zeilen, $child_ids ) {
+        if ( empty( $child_ids ) ) {
+            return $zeilen;
+        }
+        $by_id = [];
+        foreach ( $zeilen as $el ) {
+            if ( ! empty( $el['id'] ) ) {
+                $by_id[ $el['id'] ] = $el;
+            }
+        }
+        $ordered = [];
+        foreach ( $child_ids as $cid ) {
+            if ( is_string( $cid ) && isset( $by_id[ $cid ] ) ) {
+                $ordered[] = $by_id[ $cid ];
+                unset( $by_id[ $cid ] );
+            }
+        }
+        foreach ( $by_id as $el ) {
+            $ordered[] = $el;
+        }
+        return $ordered;
+    }
+
+    /**
+     * Holt den kompletten Bricks-Element-Tree aus der DB.
+     * Versucht mehrere Quellen, damit es in jedem Kontext (Frontend, Builder-AJAX,
+     * REST-API, Template-Render) funktioniert.
+     *
+     * Cached pro Request, damit mehrere Vergleich-Elemente auf einer Seite
+     * nicht mehrfach die gleiche Meta-Query auslösen.
+     */
+    private function get_bricks_element_tree() {
+        static $cache = [];
+
+        $post_id = $this->detect_post_id();
+        if ( ! $post_id ) {
+            return [];
+        }
+
+        if ( isset( $cache[ $post_id ] ) ) {
+            return $cache[ $post_id ];
+        }
+
+        $meta_key = defined( 'BRICKS_DB_PAGE_CONTENT' ) ? BRICKS_DB_PAGE_CONTENT : '_bricks_page_content_2';
+        $data     = get_post_meta( $post_id, $meta_key, true );
+
+        if ( ! is_array( $data ) || empty( $data ) ) {
+            // Alternative Meta-Keys (Header/Footer-Templates)
+            foreach ( [ '_bricks_page_header_2', '_bricks_page_footer_2' ] as $alt ) {
+                $alt_data = get_post_meta( $post_id, $alt, true );
+                if ( is_array( $alt_data ) && ! empty( $alt_data ) ) {
+                    $data = array_merge( is_array( $data ) ? $data : [], $alt_data );
+                }
+            }
+        }
+
+        $cache[ $post_id ] = is_array( $data ) ? $data : [];
+        return $cache[ $post_id ];
+    }
+
+    /**
+     * Ermittelt die aktuelle Post-ID über mehrere mögliche Quellen.
+     */
+    private function detect_post_id() {
+        // AJAX-Payload (Builder Partial-Re-Renders)
+        if ( isset( $_POST['postId'] ) && (int) $_POST['postId'] > 0 ) {
+            return (int) $_POST['postId'];
+        }
+        if ( isset( $_REQUEST['post_id'] ) && (int) $_REQUEST['post_id'] > 0 ) {
+            return (int) $_REQUEST['post_id'];
+        }
+
+        // Bricks Database state
+        if ( class_exists( '\Bricks\Database' ) ) {
+            if ( isset( \Bricks\Database::$page_data['original_post_id'] ) && (int) \Bricks\Database::$page_data['original_post_id'] > 0 ) {
+                return (int) \Bricks\Database::$page_data['original_post_id'];
+            }
+            if ( isset( \Bricks\Database::$page_data['preview_or_post_id'] ) && (int) \Bricks\Database::$page_data['preview_or_post_id'] > 0 ) {
+                return (int) \Bricks\Database::$page_data['preview_or_post_id'];
+            }
+        }
+
+        // Standard WordPress-Kontext
+        if ( function_exists( 'get_the_ID' ) ) {
+            $gid = get_the_ID();
+            if ( $gid ) {
+                return (int) $gid;
+            }
+        }
+
+        // REST-API Context
+        global $post;
+        if ( $post && ! empty( $post->ID ) ) {
+            return (int) $post->ID;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Rendert eine einzelne Produkt-Card (Spalte) und gibt den HTML als String zurück.
+     * Bricks\Query::render() erwartet zurückgegebenes HTML — echo funktioniert nicht korrekt,
+     * weil der Output im Builder-Iframe anders verarbeitet wird.
+     */
+    public function render_card( ...$args ) {
+        // Post-Context explizit aus Bricks\Query ziehen und den globalen $post,
+        // setup_postdata() sowie den WooCommerce-$product-Global setzen.
+        // Ohne das fallback bricks_render_dynamic_data() im Builder-AJAX-Render
+        // auf den globalen Seiten-Post zurück -> {post_title}, {featured_image},
+        // {woo_product_price} werden nicht korrekt aufgelöst.
+        $loop_post    = null;
+        $loop_post_id = 0;
+
+        if ( class_exists( '\Bricks\Query' ) ) {
+            // get_loop_object() kann WP_Post, WP_Term, WP_User, WC_Product uvm. liefern
+            if ( method_exists( '\Bricks\Query', 'get_loop_object' ) ) {
+                $loop_obj = \Bricks\Query::get_loop_object();
+                if ( $loop_obj instanceof \WP_Post ) {
+                    $loop_post    = $loop_obj;
+                    $loop_post_id = (int) $loop_obj->ID;
+                } elseif ( is_object( $loop_obj ) && method_exists( $loop_obj, 'get_id' ) ) {
+                    // WC_Product oder ähnlich
+                    $maybe_id = (int) $loop_obj->get_id();
+                    if ( $maybe_id > 0 ) {
+                        $loop_post_id = $maybe_id;
+                        $loop_post    = get_post( $maybe_id );
+                    }
+                }
+            }
+        }
+
+        // Fallback: Bricks\Query setzt i.d.R. auch $wp_query->post → globalen $post
+        if ( ! $loop_post_id && function_exists( 'get_the_ID' ) ) {
+            $maybe = (int) get_the_ID();
+            if ( $maybe > 0 ) {
+                $loop_post_id = $maybe;
+                $loop_post    = get_post( $maybe );
+            }
+        }
+
+        // Context sichern und neu setzen
+        $prev_post    = isset( $GLOBALS['post'] ) ? $GLOBALS['post'] : null;
+        $prev_product = isset( $GLOBALS['product'] ) ? $GLOBALS['product'] : null;
+
+        if ( $loop_post instanceof \WP_Post ) {
+            $GLOBALS['post'] = $loop_post;
+            setup_postdata( $loop_post );
+
+            // WooCommerce: wenn das Loop-Object ein Produkt ist, $product global setzen
+            if ( function_exists( 'wc_get_product' ) && $loop_post->post_type === 'product' ) {
+                $wc_product = wc_get_product( $loop_post_id );
+                if ( $wc_product ) {
+                    $GLOBALS['product'] = $wc_product;
+                }
+            }
+        }
+
+        ob_start();
+        echo '<div class="vergleich-card">';
+        if ( class_exists( '\Bricks\Frontend' ) ) {
+            echo \Bricks\Frontend::render_children( $this );
+        }
+        echo '</div>';
+        $html = ob_get_clean();
+
+        // Context zurücksetzen, damit wir nachfolgende Renders nicht kontaminieren
+        if ( $prev_post !== null ) {
+            $GLOBALS['post'] = $prev_post;
+            setup_postdata( $prev_post );
+        } else {
+            wp_reset_postdata();
+        }
+        if ( $prev_product !== null ) {
+            $GLOBALS['product'] = $prev_product;
+        } else {
+            unset( $GLOBALS['product'] );
+        }
+
+        return $html;
+    }
+
+    /**
+     * Bricks-Color-Control liefert Array (hex, rgb, hsl, oder theme-variable).
+     * Gibt einen CSS-Farbstring zurück oder '' wenn keine Farbe gesetzt.
+     */
+    private function resolve_color( $color ) {
+        if ( is_string( $color ) ) {
+            return $this->sanitize_css_value( $color );
+        }
+        if ( is_array( $color ) ) {
+            if ( ! empty( $color['rgb'] ) )  return $this->sanitize_css_value( $color['rgb'] );
+            if ( ! empty( $color['hsl'] ) )  return $this->sanitize_css_value( $color['hsl'] );
+            if ( ! empty( $color['hex'] ) )  return $this->sanitize_css_value( $color['hex'] );
+            if ( ! empty( $color['raw'] ) )  return $this->sanitize_css_value( $color['raw'] );
+        }
+        return '';
+    }
+
+    /**
+     * Sichere CSS-Werte (nur Buchstaben, Bindestriche, Zahlen, Leerzeichen, Klammern, #, %, Komma).
+     */
+    private function sanitize_css_value( $value ) {
+        if ( ! is_string( $value ) ) {
+            return '';
+        }
+        return preg_replace( '/[^a-zA-Z0-9\-_\s.%,#()]/', '', $value );
+    }
+
+    /**
+     * Spacing-Control (top/right/bottom/left) → CSS-Shorthand "10px 20px 10px 20px".
+     * Leere Werte fallen auf 0 zurück. Wenn gar nichts gesetzt ist, wird der Default zurückgegeben.
+     */
+    private function format_spacing( $value, $default ) {
+        if ( ! is_array( $value ) || empty( array_filter( $value, function( $v ) { return $v !== '' && $v !== null; } ) ) ) {
+            return $default;
+        }
+        $sides = [];
+        foreach ( [ 'top', 'right', 'bottom', 'left' ] as $side ) {
+            $raw = $value[ $side ] ?? '';
+            $sides[] = ( $raw === '' || $raw === null ) ? '0' : $this->format_length( $raw );
+        }
+        return implode( ' ', $sides );
+    }
+
+    /**
+     * Einzelne Länge (Zahl, String oder Array) → CSS-Value mit Unit.
+     */
+    private function format_length( $value ) {
+        if ( is_array( $value ) ) {
+            $number = isset( $value['number'] ) ? $value['number'] : ( $value[0] ?? '' );
+            $unit   = isset( $value['unit'] )   ? $value['unit']   : ( $value[1] ?? 'px' );
+            if ( $number === '' || $number === null ) return '0';
+            return $this->sanitize_css_value( (string) $number . $unit );
+        }
+        if ( is_numeric( $value ) ) {
+            return $value . 'px';
+        }
+        if ( is_string( $value ) ) {
+            if ( preg_match( '/^[0-9.]+$/', $value ) ) {
+                return $value . 'px';
+            }
+            return $this->sanitize_css_value( $value );
+        }
+        return '0';
+    }
+
+    /**
+     * Hilfsfunktion: Bricks speichert number+unit als array oder string
+     */
+    private function get_css_value( $value, $default ) {
+        if ( empty( $value ) && $value !== 0 && $value !== '0' ) {
+            return $default;
+        }
+        if ( is_numeric( $value ) ) {
+            return $value . 'px';
+        }
+        if ( is_string( $value ) ) {
+            // Wenn nur Zahl, px anhängen
+            if ( preg_match( '/^[0-9.]+$/', $value ) ) {
+                return $value . 'px';
+            }
+            return $value;
+        }
+        return $default;
+    }
+
+    /**
+     * Inline-CSS für den Vergleich – funktioniert auch im Builder-iframe
+     * unabhängig davon ob das externe Stylesheet geladen wurde.
+     */
+    private function get_inline_css() {
+        return '<style id="bricks-vergleich-inline-css">
+        /* Wrapper: explizites Grid mit definierten Rows, damit Subgrid in Labels funktioniert */
+        .vergleich-wrapper {
+            display: grid !important;
+            grid-template-columns: var(--vgl-label-width, 220px) 1fr !important;
+            grid-template-rows: repeat(var(--vgl-row-count, 3), minmax(var(--vgl-row-min, 80px), auto)) !important;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fff;
+            position: relative;
+        }
+        /* Sink für den Bricks-Nestable-Placeholder: unsichtbar, nimmt keinen Platz ein,
+           nimmt aber Bricks\' Vue-injizierte Kinder in sich auf (statt als Geister-Spalte). */
+        .vergleich-wrapper > .vergleich-nestable-sink {
+            position: absolute !important;
+            width: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            grid-column: 1 / -1 !important;
+            grid-row: 1 !important;
+            clip: rect(0 0 0 0) !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: 0 !important;
+        }
+        .vergleich-wrapper > .vergleich-nestable-sink * {
+            display: none !important;
+        }
+        /* Defensive: jedes unerwartete direkte Kind des Wrappers (z.B. Bricks-Ghost-Render
+           außerhalb des Placeholders) wird visuell deaktiviert, damit das Grid nicht aufbläht. */
+        .vergleich-wrapper > *:not(.vergleich-labels):not(.vergleich-scroll):not(.vergleich-expand):not(.vergleich-nestable-sink) {
+            display: none !important;
+        }
+        /* Labels-Spalte: Subgrid erbt Row-Höhen vom Wrapper → perfekte Sync */
+        .vergleich-labels {
+            display: grid !important;
+            grid-column: 1 !important;
+            grid-row: 1 / -1 !important;
+            grid-template-rows: subgrid;
+            /* Fallback falls Browser kein Subgrid unterstützt */
+            grid-auto-rows: minmax(var(--vgl-row-min, 80px), auto);
+            background: #f3f4f6;
+            z-index: 3;
+        }
+        .vergleich-wrapper.has-sticky-labels .vergleich-labels {
+            position: sticky;
+            left: 0;
+        }
+        .vergleich-label {
+            padding: 16px;
+            font-weight: 600;
+            color: #111;
+            display: flex;
+            align-items: center;
+            line-height: 1.3;
+            min-height: var(--vgl-row-min, 80px);
+        }
+        .vergleich-wrapper.has-dividers .vergleich-label {
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .vergleich-wrapper.has-dividers .vergleich-label:last-child {
+            border-bottom: none;
+        }
+        .vergleich-label.is-highlighted {
+            background-color: #fef3c7;
+            color: #92400e;
+        }
+        /* Scroll-Region: spannt alle Rows im Wrapper-Grid */
+        .vergleich-scroll {
+            grid-column: 2 !important;
+            grid-row: 1 / -1 !important;
+            overflow-x: auto;
+            /* WICHTIG: min-width: 0 damit Grid-Child nicht von Content aufgebläht wird */
+            min-width: 0;
+            /* Eigenes Grid-Context für Track + Subgrid-Weitergabe */
+            display: grid !important;
+            grid-template-rows: subgrid;
+            grid-auto-rows: minmax(var(--vgl-row-min, 80px), auto);
+            grid-template-columns: max-content;
+        }
+        .vergleich-track {
+            display: grid !important;
+            grid-auto-flow: column !important;
+            grid-auto-columns: var(--vgl-column-width, 220px);
+            /* Subgrid durchreichen: alle Cards teilen Rows mit Wrapper */
+            grid-template-rows: subgrid;
+            grid-row: 1 / -1;
+            min-width: 0;
+        }
+        .vergleich-card {
+            display: grid !important;
+            /* Subgrid: Zellen erben Row-Höhen vom Wrapper über den gesamten Grid-Pfad */
+            grid-template-rows: subgrid;
+            grid-row: 1 / -1;
+            /* Fallback falls Subgrid nicht unterstützt wird */
+            grid-auto-rows: minmax(var(--vgl-row-min, 80px), auto);
+            border-left: 1px solid #e5e7eb;
+            background: #fff;
+            /* WICHTIG: verhindert, dass große Bilder die Card-Spalte aufblähen */
+            min-width: 0;
+            max-width: var(--vgl-column-width, 220px);
+            width: var(--vgl-column-width, 220px);
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        .vergleich-card:first-child {
+            border-left: none;
+        }
+        .vergleich-zelle {
+            padding: 16px;
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 8px;
+            line-height: 1.4;
+            min-height: var(--vgl-row-min, 80px);
+            /* Schutz gegen Grid-Item-Aufblähung */
+            min-width: 0;
+            max-width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .vergleich-wrapper.has-dividers .vergleich-zelle {
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .vergleich-wrapper.has-dividers .vergleich-zelle:last-child {
+            border-bottom: none;
+        }
+        .vergleich-zelle.is-highlighted {
+            background-color: #fef3c7;
+        }
+        /* Bilder – Default (ohne Einheits-Erzwingung): skalieren frei, aber nie Card aufblähen */
+        .vergleich-zelle img,
+        .vergleich-zelle picture,
+        .vergleich-zelle figure,
+        .vergleich-zelle picture img {
+            max-width: 100% !important;
+            height: auto !important;
+            width: auto !important;
+            object-fit: contain;
+        }
+        .vergleich-zelle > * {
+            margin: 0 !important;
+            max-width: 100%;
+            min-width: 0;
+        }
+        .vergleich-zelle .brxe-image,
+        .vergleich-zelle .brxe-image img {
+            max-width: 100% !important;
+            width: auto !important;
+            height: auto !important;
+        }
+
+        /* Bilder mit aktivierter Einheits-Erzwingung: feste Dimensionen + object-fit
+           Override der Default-Regeln oben via spezifischerer Selektor + !important. */
+        .vergleich-wrapper.has-enforced-images .vergleich-zelle img,
+        .vergleich-wrapper.has-enforced-images .vergleich-zelle picture,
+        .vergleich-wrapper.has-enforced-images .vergleich-zelle picture img,
+        .vergleich-wrapper.has-enforced-images .vergleich-zelle .brxe-image,
+        .vergleich-wrapper.has-enforced-images .vergleich-zelle .brxe-image img,
+        .vergleich-wrapper.has-enforced-images .vergleich-zelle figure {
+            width: var(--vgl-img-width, 200px) !important;
+            height: var(--vgl-img-height, 200px) !important;
+            max-width: 100% !important;
+            object-fit: var(--vgl-img-fit, cover) !important;
+            border-radius: var(--vgl-img-radius, 0) !important;
+            display: block;
+        }
+        /* figure/picture sind Wrapper: die sollen Größe setzen, das innere <img> dann 100% */
+        .vergleich-wrapper.has-enforced-images .vergleich-zelle figure > img,
+        .vergleich-wrapper.has-enforced-images .vergleich-zelle picture > img,
+        .vergleich-wrapper.has-enforced-images .vergleich-zelle .brxe-image > img {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: var(--vgl-img-fit, cover) !important;
+            border-radius: var(--vgl-img-radius, 0) !important;
+        }
+        /* Labels: ebenfalls schützen gegen Grid-Aufblähung */
+        .vergleich-label {
+            min-width: 0;
+            box-sizing: border-box;
+        }
+        /* === Expand / Collapse === */
+        /* Wrapper im eingeklappten Zustand: Grid auf sichtbare Zeilen reduzieren,
+           damit die Scroll-Region & Label-Spalte nicht leere Rows anzeigen. */
+        .vergleich-wrapper.has-expand.is-collapsed {
+            grid-template-rows: repeat(var(--vgl-row-count-collapsed, 1), minmax(var(--vgl-row-min, 80px), auto)) !important;
+        }
+        /* Collapsible-Zeilen verstecken: Label + alle zugehörigen Zellen.
+           Die Zellen werden über :nth-child nicht angesprochen — stattdessen
+           verlassen wir uns auf das gemeinsame .is-collapsible Flag, das bei
+           Label und Zelle via render() gesetzt wird. */
+        .vergleich-wrapper.has-expand.is-collapsed .vergleich-label.is-collapsible,
+        .vergleich-wrapper.has-expand.is-collapsed .vergleich-zelle.is-collapsible {
+            display: none !important;
+        }
+        /* Der Expand-Button selbst: immer volle Breite des Wrappers.
+           !important ist hier zwingend, weil Bricks\' frontend.min.css und manche Themes
+           generische Regeln auf div-Kinder eines brxe-* Elements anwenden und die Grid-
+           Platzierung sonst wegfrisst. */
+        .vergleich-wrapper > .vergleich-expand,
+        .vergleich-expand {
+            grid-column: 1 / -1 !important;
+            grid-row: auto !important;
+            display: flex !important;
+            align-items: center !important;
+            box-sizing: border-box !important;
+            width: 100% !important;
+            padding: var(--vgl-expand-cnt-padding, 16px) !important;
+            border-top: 1px solid #e5e7eb !important;
+            background: #fff !important;
+            margin: 0 !important;
+        }
+        .vergleich-expand.is-align-left   { justify-content: flex-start !important; }
+        .vergleich-expand.is-align-center { justify-content: center !important; }
+        .vergleich-expand.is-align-right  { justify-content: flex-end !important; }
+        /* Harter Reset gegen Theme-/Bricks-Button-Styles:
+           text-decoration, appearance, box-shadow, background-image, text-transform
+           werden von vielen Themes vererbt und überschreiben sonst unsere Optik. */
+        .vergleich-expand-btn,
+        .vergleich-wrapper .vergleich-expand-btn {
+            -webkit-appearance: none !important;
+            -moz-appearance: none !important;
+            appearance: none !important;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            gap: var(--vgl-expand-gap, 8px);
+            margin: 0;
+            font-family: inherit;
+            font-size: var(--vgl-expand-font-size, inherit);
+            font-weight: var(--vgl-expand-font-weight, 600);
+            line-height: 1.2;
+            letter-spacing: 0;
+            text-transform: none;
+            text-decoration: none !important;
+            text-shadow: none;
+            padding: var(--vgl-expand-btn-padding, 10px 20px);
+            border-radius: var(--vgl-expand-radius, 9999px);
+            cursor: pointer;
+            transition: background-color .15s ease, color .15s ease, border-color .15s ease, opacity .15s ease;
+            background: transparent;
+            background-image: none !important;
+            box-shadow: none !important;
+            color: var(--vgl-expand-color, #6366f1);
+            border: var(--vgl-expand-border-width, 2px) solid var(--vgl-expand-color, #6366f1);
+        }
+        .vergleich-expand-btn:hover,
+        .vergleich-expand-btn:focus,
+        .vergleich-expand-btn:active {
+            text-decoration: none !important;
+        }
+        .vergleich-expand-btn .vergleich-expand-text,
+        .vergleich-expand-btn:hover .vergleich-expand-text,
+        .vergleich-expand-btn:focus .vergleich-expand-text {
+            text-decoration: none !important;
+            color: inherit;
+        }
+        .vergleich-expand-btn:hover {
+            background-color: var(--vgl-expand-hover-bg, var(--vgl-expand-color, #6366f1)) !important;
+            color: var(--vgl-expand-hover-text, #fff) !important;
+        }
+        /* Wenn keine expliziten Hover-Farben gesetzt sind: einfach opacity-Fade */
+        .vergleich-expand-btn:not([data-has-hover-colors]):hover { opacity: .85 !important; }
+        .vergleich-expand-btn:focus-visible {
+            outline: 2px solid var(--vgl-expand-color, #6366f1);
+            outline-offset: 2px;
+        }
+        .vergleich-expand-btn.is-style-outlined {
+            background: transparent;
+            color: var(--vgl-expand-color, #6366f1);
+            border: var(--vgl-expand-border-width, 2px) solid var(--vgl-expand-color, #6366f1);
+        }
+        .vergleich-expand-btn.is-style-outlined:hover {
+            background-color: var(--vgl-expand-hover-bg, var(--vgl-expand-color, #6366f1));
+            color: var(--vgl-expand-hover-text, #fff);
+        }
+        .vergleich-expand-btn.is-style-filled {
+            background: var(--vgl-expand-color, #6366f1);
+            color: #fff;
+            border: var(--vgl-expand-border-width, 2px) solid var(--vgl-expand-color, #6366f1);
+        }
+        .vergleich-expand-btn.is-style-filled:hover {
+            background-color: var(--vgl-expand-hover-bg, var(--vgl-expand-color, #6366f1)) !important;
+            color: var(--vgl-expand-hover-text, #fff) !important;
+            opacity: .9 !important;
+        }
+        .vergleich-expand-btn.is-style-link {
+            background: transparent;
+            border: none;
+            color: var(--vgl-expand-color, #6366f1);
+            /* Link-Style ist die einzige Variante, in der Underline gewollt ist */
+            text-decoration: underline !important;
+        }
+        .vergleich-expand-btn.is-style-link .vergleich-expand-text {
+            text-decoration: underline !important;
+        }
+        .vergleich-expand-btn.is-style-link:hover {
+            background: transparent;
+            color: var(--vgl-expand-hover-text, var(--vgl-expand-color, #6366f1));
+            opacity: .8;
+        }
+        /* Pfeil-Animation: zeigt Richtung an, rotiert wenn ausgeklappt */
+        .vergleich-expand-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform .2s ease;
+        }
+        .vergleich-expand-btn[aria-expanded="true"] .vergleich-expand-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Browser ohne Subgrid-Support: fallback auf unabhängige Grids,
+           JS übernimmt die Höhen-Sync */
+        @supports not (grid-template-rows: subgrid) {
+            .vergleich-wrapper {
+                grid-template-rows: auto !important;
+            }
+            .vergleich-labels,
+            .vergleich-scroll,
+            .vergleich-track,
+            .vergleich-card {
+                grid-template-rows: none !important;
+                grid-row: auto !important;
+            }
+            .vergleich-labels {
+                grid-column: auto !important;
+            }
+            .vergleich-scroll {
+                display: block !important;
+                grid-column: auto !important;
+            }
+        }
+        @media (max-width: 767px) {
+            .vergleich-wrapper {
+                grid-template-columns: 140px 1fr !important;
+            }
+            .vergleich-label, .vergleich-zelle {
+                padding: 12px 10px;
+                font-size: 0.875rem;
+            }
+            .vergleich-track {
+                grid-auto-columns: 180px !important;
+            }
+        }
+        </style>';
+    }
+}

@@ -1,0 +1,178 @@
+/* ==========================================================================
+   Bricks Vergleich – Styles
+   ========================================================================== */
+
+.vergleich-wrapper {
+    display: grid;
+    grid-template-columns: var(--vgl-label-width, 220px) 1fr;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #fff;
+    position: relative;
+}
+
+/* === LINKE LABEL-SPALTE === */
+.vergleich-labels {
+    display: grid;
+    grid-auto-rows: minmax(var(--vgl-row-min, 80px), auto);
+    background: #f3f4f6;
+    z-index: 3;
+}
+
+.vergleich-wrapper.has-sticky-labels .vergleich-labels {
+    position: sticky;
+    left: 0;
+}
+
+.vergleich-label {
+    padding: 16px;
+    font-weight: 600;
+    color: #111;
+    display: flex;
+    align-items: center;
+    line-height: 1.3;
+}
+
+.vergleich-wrapper.has-dividers .vergleich-label {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.vergleich-wrapper.has-dividers .vergleich-label:last-child {
+    border-bottom: none;
+}
+
+.vergleich-label.is-highlighted {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+/* === RECHTE SCROLL-REGION === */
+.vergleich-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.vergleich-track {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: var(--vgl-column-width, 220px);
+}
+
+/* === PRODUKT-CARDS === */
+.vergleich-card {
+    display: grid;
+    grid-auto-rows: minmax(var(--vgl-row-min, 80px), auto);
+    border-left: 1px solid #e5e7eb;
+    background: #fff;
+}
+
+.vergleich-card:first-child {
+    border-left: none;
+}
+
+/* === ZELLEN INNERHALB DER CARDS === */
+.vergleich-zelle {
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: var(--vgl-justify, center);
+    text-align: var(--vgl-text-align, center);
+    gap: 8px;
+    line-height: 1.4;
+}
+
+.vergleich-wrapper.has-dividers .vergleich-zelle {
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.vergleich-wrapper.has-dividers .vergleich-zelle:last-child {
+    border-bottom: none;
+}
+
+.vergleich-zelle.is-highlighted {
+    background-color: #fef3c7;
+}
+
+/* Bilder in Zellen */
+.vergleich-zelle img {
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
+/* Buttons etc. nicht stretchen */
+.vergleich-zelle .brxe-button,
+.vergleich-zelle .button {
+    flex: 0 0 auto;
+}
+
+/* Inhaltselemente: Zeilenhöhe gut, kein unnötiges Stretching */
+.vergleich-zelle > * {
+    margin: 0;
+    max-width: 100%;
+}
+
+/* === SCROLLBAR STYLING === */
+.vergleich-scroll::-webkit-scrollbar {
+    height: 8px;
+}
+
+.vergleich-scroll::-webkit-scrollbar-track {
+    background: #f3f4f6;
+}
+
+.vergleich-scroll::-webkit-scrollbar-thumb {
+    background: #9ca3af;
+    border-radius: 4px;
+}
+
+.vergleich-scroll::-webkit-scrollbar-thumb:hover {
+    background: #6b7280;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 767px) {
+    .vergleich-wrapper {
+        grid-template-columns: 140px 1fr;
+    }
+
+    .vergleich-label,
+    .vergleich-zelle {
+        padding: 12px 10px;
+        font-size: 0.875rem;
+    }
+
+    .vergleich-track {
+        grid-auto-columns: 180px;
+    }
+}
+
+@media (max-width: 479px) {
+    .vergleich-wrapper {
+        grid-template-columns: 120px 1fr;
+    }
+
+    .vergleich-track {
+        grid-auto-columns: 160px;
+    }
+
+    .vergleich-label,
+    .vergleich-zelle {
+        padding: 10px 8px;
+        font-size: 0.8rem;
+    }
+}
+
+/* === BRICKS BUILDER SPEZIFISCH === */
+/* Im Builder sollen die Zellen sichtbar sein, auch wenn leer */
+.bricks-builder-edit .vergleich-zelle:empty::after {
+    content: "Inhalt hier ablegen";
+    color: #9ca3af;
+    font-size: 0.75rem;
+    font-style: italic;
+}
+
+.bricks-builder-edit .vergleich-wrapper {
+    min-height: 200px;
+}
