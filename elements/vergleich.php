@@ -1199,6 +1199,12 @@ class Element_Vergleich extends \Bricks\Element {
             ],
 
             // ───── COMMON ─────
+            'labelTooltip' => [
+                'label'          => esc_html__( 'Label-Tooltip', 'bricks-vergleich' ),
+                'type'           => 'textarea',
+                'hasDynamicData' => 'text',
+                'placeholder'    => esc_html__( 'Optionaler Erklärtext, erscheint als Tooltip beim Hover auf das Info-Icon.', 'bricks-vergleich' ),
+            ],
             'highlight' => [
                 'label' => esc_html__( 'Zeile hervorheben', 'bricks-vergleich' ),
                 'type'  => 'checkbox',
@@ -1544,7 +1550,22 @@ class Element_Vergleich extends \Bricks\Element {
             }
 
             echo '<div class="' . esc_attr( $cls ) . '"' . $extra . '>';
-            echo wp_kses_post( $this->dd_string( $label ) );
+            echo '<span class="vergleich-label__text">' . wp_kses_post( $this->dd_string( $label ) ) . '</span>';
+
+            // Optionaler Tooltip-Text: rendert ein kleines Info-Icon mit
+            // data-tooltip-Attribut. Inhalt per DD aufgeloest, als text (keine
+            // HTML-Tags, damit CSS-Tooltip mit content: attr() arbeitet).
+            $tip_raw = isset( $row['labelTooltip'] ) ? trim( (string) $row['labelTooltip'] ) : '';
+            if ( $tip_raw !== '' ) {
+                $tip_text = $this->dd_string( $tip_raw );
+                $tip_text = wp_strip_all_tags( (string) $tip_text );
+                if ( $tip_text !== '' ) {
+                    echo '<button type="button" class="vergleich-tooltip" data-tooltip="' . esc_attr( $tip_text ) . '" aria-label="' . esc_attr( $tip_text ) . '" title="' . esc_attr( $tip_text ) . '">';
+                    echo '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+                    echo '</button>';
+                }
+            }
+
             echo '</div>';
         }
         echo '</div>';
@@ -2546,10 +2567,64 @@ class Element_Vergleich extends \Bricks\Element {
             color: #111;
             display: flex;
             align-items: center;
+            gap: 6px;
             line-height: 1.3;
             min-width: 0;
             min-height: var(--vgl-row-min, 20px);
             box-sizing: border-box;
+        }
+        .vergleich-label__text { min-width: 0; }
+        /* Info-Icon-Button + Tooltip via ::after (content: attr()). Erscheint
+           rechts vom Icon, schmal, mit Umbruch. Uebersteht auch laengere Texte. */
+        .vergleich-tooltip {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.15em;
+            height: 1.15em;
+            padding: 0;
+            margin: 0;
+            border: 0;
+            background: transparent;
+            color: currentColor;
+            opacity: .55;
+            cursor: help;
+            font-size: .95em;
+            line-height: 1;
+            position: relative;
+            transition: opacity .12s ease;
+        }
+        .vergleich-tooltip:hover,
+        .vergleich-tooltip:focus-visible { opacity: 1; outline: none; }
+        .vergleich-tooltip svg { width: 1em; height: 1em; display: block; }
+        .vergleich-tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            left: calc(100% + 10px);
+            top: 50%;
+            transform: translateY(-50%);
+            min-width: 180px;
+            max-width: 280px;
+            padding: 8px 12px;
+            background: #111827;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 400;
+            line-height: 1.4;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,.18);
+            white-space: normal;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            z-index: 20;
+            transition: opacity .12s ease;
+        }
+        .vergleich-tooltip:hover::after,
+        .vergleich-tooltip:focus-visible::after {
+            opacity: 1;
+            visibility: visible;
         }
         .vergleich-wrapper.has-dividers .vergleich-label { border-bottom: 1px solid #e5e7eb; }
         .vergleich-wrapper.has-dividers .vergleich-label:last-child { border-bottom: none; }

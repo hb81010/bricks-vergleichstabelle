@@ -32,7 +32,75 @@
     color: #111;
     display: flex;
     align-items: center;
+    gap: 6px;
     line-height: 1.3;
+}
+
+.vergleich-label__text {
+    min-width: 0;
+}
+
+/* Info-Icon neben dem Label, Tooltip per CSS (::after mit attr()) */
+.vergleich-tooltip {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.15em;
+    height: 1.15em;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    color: currentColor;
+    opacity: .55;
+    cursor: help;
+    font-size: .95em;
+    line-height: 1;
+    position: relative;
+    transition: opacity .12s ease;
+}
+
+.vergleich-tooltip:hover,
+.vergleich-tooltip:focus-visible {
+    opacity: 1;
+    outline: none;
+}
+
+.vergleich-tooltip svg {
+    width: 1em;
+    height: 1em;
+    display: block;
+}
+
+.vergleich-tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    min-width: 180px;
+    max-width: 280px;
+    padding: 8px 12px;
+    background: #111827;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .18);
+    white-space: normal;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 20;
+    transition: opacity .12s ease;
+}
+
+.vergleich-tooltip:hover::after,
+.vergleich-tooltip:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
 }
 
 .vergleich-wrapper.has-dividers .vergleich-label {
