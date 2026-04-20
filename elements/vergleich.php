@@ -27,7 +27,7 @@ class Element_Vergleich extends \Bricks\Element {
     public $_score_runtime = null;
 
     public function get_label() {
-        return esc_html__( 'Vergleich (Spalten)', 'bricks-vergleich' );
+        return esc_html__( 'Produkt-Vergleichstabelle', 'bricks-vergleich' );
     }
 
     public function set_control_groups() {
@@ -691,6 +691,85 @@ class Element_Vergleich extends \Bricks\Element {
             'required' => [ 'navEnabled', '=', true ],
         ];
 
+        $this->controls['navCounterEnabled'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Zähler anzeigen (z.B. „1–4 von 80")', 'bricks-vergleich' ),
+            'type' => 'checkbox', 'default' => false,
+            'description' => esc_html__( 'Kleine Anzeige, die zeigt, welche Spalten gerade sichtbar sind. Besonders hilfreich auf Mobil.', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['navCounterPosition'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Zähler-Position', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [
+                'above' => esc_html__( 'Über der Tabelle', 'bricks-vergleich' ),
+                'below' => esc_html__( 'Unter der Tabelle', 'bricks-vergleich' ),
+            ],
+            'default' => 'above',
+            'required' => [ 'navCounterEnabled', '=', true ],
+        ];
+
+        $this->controls['navCounterFormat'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Zähler-Format', 'bricks-vergleich' ),
+            'type' => 'text',
+            'default' => '{start}–{end} von {total}',
+            'description' => esc_html__( 'Platzhalter: {start}, {end}, {total}.', 'bricks-vergleich' ),
+            'required' => [ 'navCounterEnabled', '=', true ],
+        ];
+
+        $this->controls['navCounterAlign'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Zähler-Ausrichtung', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [
+                'left'   => esc_html__( 'Links', 'bricks-vergleich' ),
+                'center' => esc_html__( 'Zentriert', 'bricks-vergleich' ),
+                'right'  => esc_html__( 'Rechts', 'bricks-vergleich' ),
+            ],
+            'default' => 'right',
+            'required' => [ 'navCounterEnabled', '=', true ],
+        ];
+
+        $this->controls['navCounterFontSize'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true, 'default' => 14, 'placeholder' => '14px',
+            'required' => [ 'navCounterEnabled', '=', true ],
+            'css' => [ [ 'property' => 'font-size', 'selector' => '.vergleich-counter' ] ],
+        ];
+
+        $this->controls['navCounterFontWeight'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [
+                '400' => '400', '500' => '500', '600' => '600', '700' => '700',
+            ],
+            'default' => '400',
+            'required' => [ 'navCounterEnabled', '=', true ],
+            'css' => [ [ 'property' => 'font-weight', 'selector' => '.vergleich-counter' ] ],
+        ];
+
+        $this->controls['navCounterColor'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
+            'type' => 'color',
+            'default' => [ 'hex' => '#6b7280' ],
+            'required' => [ 'navCounterEnabled', '=', true ],
+            'css' => [ [ 'property' => 'color', 'selector' => '.vergleich-counter' ] ],
+        ];
+
+        $this->controls['navCounterPadding'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+            'type' => 'spacing',
+            'placeholder' => [ 'top' => '8px', 'right' => '4px', 'bottom' => '8px', 'left' => '4px' ],
+            'required' => [ 'navCounterEnabled', '=', true ],
+            'css' => [ [ 'property' => 'padding', 'selector' => '.vergleich-counter' ] ],
+        ];
+
         // ======================================================================
         // STYLE
         // ======================================================================
@@ -699,6 +778,65 @@ class Element_Vergleich extends \Bricks\Element {
             'label' => esc_html__( 'Hintergrund Label-Spalte', 'bricks-vergleich' ),
             'type' => 'color', 'default' => [ 'hex' => '#f3f4f6' ],
             'css' => [ [ 'property' => 'background-color', 'selector' => '.vergleich-labels' ] ],
+        ];
+
+        $this->controls['highlightShadow'] = [
+            'tab' => 'content', 'group' => 'style',
+            'label' => esc_html__( 'Schatten hervorgehobener Zeile', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [
+                'soft'     => esc_html__( 'Weich', 'bricks-vergleich' ),
+                'medium'   => esc_html__( 'Mittel', 'bricks-vergleich' ),
+                'strong'   => esc_html__( 'Stark', 'bricks-vergleich' ),
+            ],
+            'default' => 'medium',
+            'description' => esc_html__( 'Wird verwendet, wenn der Hervorhebungs-Stil „Schatten" oder „Beides" ist.', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['rowBgOdd'] = [
+            'tab' => 'content', 'group' => 'style',
+            'label' => esc_html__( 'Zebra: Hintergrund ungerade Zeilen', 'bricks-vergleich' ),
+            'type' => 'color',
+            'description' => esc_html__( 'Leer lassen, um Zebra-Effekt zu deaktivieren. Gilt für 1., 3., 5. Zeile.', 'bricks-vergleich' ),
+            'css' => [ [ 'property' => '--vgl-row-bg-odd', 'selector' => '' ] ],
+        ];
+
+        $this->controls['rowBgEven'] = [
+            'tab' => 'content', 'group' => 'style',
+            'label' => esc_html__( 'Zebra: Hintergrund gerade Zeilen', 'bricks-vergleich' ),
+            'type' => 'color',
+            'description' => esc_html__( 'Leer lassen = kein Zebra. Gilt für 2., 4., 6. Zeile.', 'bricks-vergleich' ),
+            'css' => [ [ 'property' => '--vgl-row-bg-even', 'selector' => '' ] ],
+        ];
+
+        $this->controls['rowColorOdd'] = [
+            'tab' => 'content', 'group' => 'style',
+            'label' => esc_html__( 'Zebra: Textfarbe ungerade Zeilen', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => '--vgl-row-color-odd', 'selector' => '' ] ],
+        ];
+
+        $this->controls['rowColorEven'] = [
+            'tab' => 'content', 'group' => 'style',
+            'label' => esc_html__( 'Zebra: Textfarbe gerade Zeilen', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => '--vgl-row-color-even', 'selector' => '' ] ],
+        ];
+
+        $this->controls['rowHoverEnabled'] = [
+            'tab' => 'content', 'group' => 'style',
+            'label' => esc_html__( 'Zeilen-Hover-Effekt', 'bricks-vergleich' ),
+            'type' => 'checkbox', 'default' => false,
+            'description' => esc_html__( 'Färbt die gesamte Zeile leicht ein, wenn die Maus drüber fährt.', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['rowHoverBg'] = [
+            'tab' => 'content', 'group' => 'style',
+            'label' => esc_html__( 'Hover-Hintergrundfarbe', 'bricks-vergleich' ),
+            'type' => 'color',
+            'default' => [ 'rgb' => 'rgba(0,0,0,.04)' ],
+            'required' => [ 'rowHoverEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-row-hover-bg', 'selector' => '' ] ],
         ];
 
         $this->controls['labelColor'] = [
@@ -805,6 +943,21 @@ class Element_Vergleich extends \Bricks\Element {
                 'label'       => esc_html__( 'Verlinken (optional)', 'bricks-vergleich' ),
                 'type'        => 'link',
                 'description' => esc_html__( 'Leer = kein Link. Z.B. Dynamic Data "{post_url}" um zum Produkt zu verlinken.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'image' ],
+            ],
+            'imageBlendMode' => [
+                'label'       => esc_html__( 'Mischmodus (Blend Mode)', 'bricks-vergleich' ),
+                'type'        => 'select',
+                'options'     => [
+                    ''           => esc_html__( 'Normal', 'bricks-vergleich' ),
+                    'multiply'   => esc_html__( 'Multiply', 'bricks-vergleich' ),
+                    'darken'     => esc_html__( 'Darken', 'bricks-vergleich' ),
+                    'screen'     => esc_html__( 'Screen', 'bricks-vergleich' ),
+                    'overlay'    => esc_html__( 'Overlay', 'bricks-vergleich' ),
+                    'luminosity' => esc_html__( 'Luminosity', 'bricks-vergleich' ),
+                ],
+                'default'     => '',
+                'description' => esc_html__( 'Multiply entfernt weiße Hintergründe bei Produktbildern visuell.', 'bricks-vergleich' ),
                 'required'    => [ 'type', '=', 'image' ],
             ],
 
@@ -1057,6 +1210,27 @@ class Element_Vergleich extends \Bricks\Element {
                 'label' => esc_html__( 'Zeile hervorheben', 'bricks-vergleich' ),
                 'type'  => 'checkbox',
             ],
+            'highlightStyle' => [
+                'label'   => esc_html__( 'Hervorhebungs-Stil', 'bricks-vergleich' ),
+                'type'    => 'select',
+                'options' => [
+                    'background' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
+                    'shadow'     => esc_html__( 'Schatten', 'bricks-vergleich' ),
+                    'both'       => esc_html__( 'Beides', 'bricks-vergleich' ),
+                ],
+                'default'  => 'background',
+                'required' => [ 'highlight', '=', true ],
+            ],
+            'highlightBg' => [
+                'label'    => esc_html__( 'Hintergrundfarbe (Hervorhebung)', 'bricks-vergleich' ),
+                'type'     => 'color',
+                'required' => [ 'highlight', '=', true ],
+            ],
+            'highlightTextColor' => [
+                'label'    => esc_html__( 'Textfarbe Label (Hervorhebung)', 'bricks-vergleich' ),
+                'type'     => 'color',
+                'required' => [ 'highlight', '=', true ],
+            ],
             'collapsible' => [
                 'label' => esc_html__( 'Zur Aufklapp-Zone', 'bricks-vergleich' ),
                 'type'  => 'checkbox',
@@ -1212,6 +1386,14 @@ class Element_Vergleich extends \Bricks\Element {
         $nav_scroll_step = $settings['navScrollStep'] ?? 'card';
         if ( $nav_scroll_step !== 'view' ) $nav_scroll_step = 'card';
 
+        $nav_counter_enabled  = ! empty( $settings['navCounterEnabled'] );
+        $nav_counter_position = ( $settings['navCounterPosition'] ?? 'above' ) === 'below' ? 'below' : 'above';
+        $nav_counter_format   = isset( $settings['navCounterFormat'] ) && $settings['navCounterFormat'] !== ''
+            ? (string) $settings['navCounterFormat']
+            : '{start}–{end} von {total}';
+        $nav_counter_align = $settings['navCounterAlign'] ?? 'right';
+        if ( ! in_array( $nav_counter_align, [ 'left', 'center', 'right' ], true ) ) $nav_counter_align = 'right';
+
         // Rows
         $rows = $this->get_rows();
         $row_count = max( 1, count( $rows ) );
@@ -1284,6 +1466,14 @@ class Element_Vergleich extends \Bricks\Element {
             $inline_style .= ' --vgl-nav-shadow:' . esc_attr( $nav_shadow ) . ';';
         }
 
+        $highlight_shadow_map = [
+            'soft'   => '0 2px 6px -1px rgba(0,0,0,.05), 0 -2px 6px -1px rgba(0,0,0,.05)',
+            'medium' => '0 3px 10px -2px rgba(0,0,0,.09), 0 -3px 10px -2px rgba(0,0,0,.09)',
+            'strong' => '0 6px 16px -4px rgba(0,0,0,.15), 0 -6px 16px -4px rgba(0,0,0,.15)',
+        ];
+        $highlight_shadow_key = $settings['highlightShadow'] ?? 'medium';
+        $inline_style .= ' --vgl-highlight-shadow:' . esc_attr( $highlight_shadow_map[ $highlight_shadow_key ] ?? $highlight_shadow_map['medium'] ) . ';';
+
         // Struktur: _root = neutraler Container mit CSS-Variablen,
         //           .vergleich-wrapper = bordertes Table-Grid (innen),
         //           .vergleich-expand  = Aufklapp-Button (außen, Geschwister der Wrapper).
@@ -1309,6 +1499,9 @@ class Element_Vergleich extends \Bricks\Element {
             $wrapper_classes[] = 'has-nav';
             $wrapper_classes[] = 'vgl-nav-step-' . $nav_scroll_step;
         }
+        if ( ! empty( $settings['rowHoverEnabled'] ) ) {
+            $wrapper_classes[] = 'has-row-hover';
+        }
         if ( $expand_enabled && $visible_row_count < $row_count ) {
             $wrapper_classes[] = 'has-expand';
             $wrapper_classes[] = 'is-collapsed';
@@ -1330,8 +1523,32 @@ class Element_Vergleich extends \Bricks\Element {
 
         echo "<div {$this->render_attributes( '_root' )}>";
 
+        // Counter-Element: zeigt "X–Y von Z" an. Wird per JS aktualisiert, der
+        // Initialtext ist ein Fallback falls kein JS. Position: über oder unter
+        // dem Table-Wrapper. data-format steuert die Darstellung via JS.
+        $counter_id   = 'vgl-counter-' . (string) $this->id;
+        $counter_html = '';
+        if ( $nav_counter_enabled ) {
+            // Initialtext: zeigt "…" als Placeholder bis JS echte Werte
+            // einfuegt. So bleibt das Element auch im Canvas sichtbar, wo
+            // das Sync-Script u.U. erst verzoegert laeuft.
+            $counter_html = sprintf(
+                '<div id="%s" class="vergleich-counter is-align-%s" data-vgl-counter data-format="%s" aria-live="polite">&hellip;</div>',
+                esc_attr( $counter_id ),
+                esc_attr( $nav_counter_align ),
+                esc_attr( $nav_counter_format )
+            );
+        }
+        if ( $nav_counter_enabled && $nav_counter_position === 'above' ) {
+            echo $counter_html;
+        }
+
         // Innerer Table-Wrapper (Bordered, enthält Labels + Cards)
-        echo '<div class="' . esc_attr( implode( ' ', $wrapper_classes ) ) . '" data-row-count="' . (int) $row_count . '">';
+        $wrapper_data_attrs = 'data-row-count="' . (int) $row_count . '"';
+        if ( $nav_counter_enabled ) {
+            $wrapper_data_attrs .= ' data-counter="' . esc_attr( $counter_id ) . '"';
+        }
+        echo '<div class="' . esc_attr( implode( ' ', $wrapper_classes ) ) . '" ' . $wrapper_data_attrs . '>';
 
         // ─── LABEL COLUMN ──────────────────────────────────────────────────
         echo '<div class="vergleich-labels">';
@@ -1351,12 +1568,27 @@ class Element_Vergleich extends \Bricks\Element {
             }
 
             $cls = 'vergleich-label';
-            if ( $highlight )   $cls .= ' is-highlighted';
+            $cls .= ' is-row-' . ( $idx % 2 === 0 ? 'odd' : 'even' );
+            $label_inline = '';
+            if ( $highlight ) {
+                $hl_style = $row['highlightStyle'] ?? 'background';
+                if ( $hl_style === 'shadow' || $hl_style === 'both' ) $cls .= ' is-highlight-shadow';
+                if ( $hl_style !== 'shadow' ) {
+                    $cls .= ' is-highlighted';
+                    $hl_bg   = $this->resolve_color( $row['highlightBg'] ?? null );
+                    $hl_text = $this->resolve_color( $row['highlightTextColor'] ?? null );
+                    if ( $hl_bg )   $label_inline .= 'background:' . $hl_bg . ';';
+                    if ( $hl_text ) $label_inline .= 'color:' . $hl_text . ';';
+                }
+            }
             if ( $collapsible ) $cls .= ' is-collapsible';
 
-            $extra = '';
+            $extra = ' data-row-index="' . (int) $idx . '"';
             if ( $collapsible ) {
-                $extra = ' data-vergleich-row-id="' . esc_attr( $row_key ) . '"';
+                $extra .= ' data-vergleich-row-id="' . esc_attr( $row_key ) . '"';
+            }
+            if ( $label_inline !== '' ) {
+                $extra .= ' style="' . esc_attr( $label_inline ) . '"';
             }
 
             echo '<div class="' . esc_attr( $cls ) . '"' . $extra . '>';
@@ -1412,6 +1644,10 @@ class Element_Vergleich extends \Bricks\Element {
         }
 
         echo '</div>'; // .vergleich-wrapper schließen — Expand-Button liegt außerhalb
+
+        if ( $nav_counter_enabled && $nav_counter_position === 'below' ) {
+            echo $counter_html;
+        }
 
         // ─── EXPAND BUTTON (außerhalb des Table-Wrappers, native Bricks-Klassen) ──
         if ( $expand_enabled && $visible_row_count < $row_count ) {
@@ -1638,11 +1874,19 @@ class Element_Vergleich extends \Bricks\Element {
         $row_key     = $this->row_key( $row, $idx );
 
         $classes = [ 'vergleich-zelle', 'vergleich-zelle--' . preg_replace( '/[^a-z0-9_-]/i', '', $type ) ];
-        if ( $highlight )   $classes[] = 'is-highlighted';
+        $classes[] = 'is-row-' . ( $idx % 2 === 0 ? 'odd' : 'even' );
+        $styles = [];
+        if ( $highlight ) {
+            $hl_style = $row['highlightStyle'] ?? 'background';
+            if ( $hl_style === 'shadow' || $hl_style === 'both' ) $classes[] = 'is-highlight-shadow';
+            if ( $hl_style !== 'shadow' ) {
+                $classes[] = 'is-highlighted';
+                $hl_bg = $this->resolve_color( $row['highlightBg'] ?? null );
+                if ( $hl_bg ) $styles[] = 'background:' . $hl_bg;
+            }
+        }
         if ( $collapsible ) $classes[] = 'is-collapsible';
         if ( $append_html !== '' ) $classes[] = 'has-score-anchor';
-
-        $styles = [];
         if ( $align ) {
             $map = [
                 'left'   => [ 'justify-content' => 'flex-start', 'text-align' => 'left' ],
@@ -1656,7 +1900,7 @@ class Element_Vergleich extends \Bricks\Element {
             }
         }
 
-        $extra = '';
+        $extra = ' data-row-index="' . (int) $idx . '"';
         if ( $collapsible ) $extra .= ' data-vergleich-row-id="' . esc_attr( $row_key ) . '"';
         if ( ! empty( $styles ) ) $extra .= ' style="' . esc_attr( implode( ';', $styles ) ) . '"';
 
@@ -1811,10 +2055,18 @@ class Element_Vergleich extends \Bricks\Element {
             return $this->maybe_wrap_link( $placeholder, $link, 'vergleich-image-link' );
         }
 
+        $blend = isset( $row['imageBlendMode'] ) ? (string) $row['imageBlendMode'] : '';
+        $allowed_blend = [ 'multiply', 'darken', 'screen', 'overlay', 'luminosity' ];
+        $style_attr = '';
+        if ( in_array( $blend, $allowed_blend, true ) ) {
+            $style_attr = ' style="mix-blend-mode:' . esc_attr( $blend ) . ';"';
+        }
+
         $img = sprintf(
-            '<img class="vergleich-image" src="%s" alt="%s" loading="lazy" />',
+            '<img class="vergleich-image" src="%s" alt="%s" loading="lazy"%s />',
             esc_url( $url ),
-            esc_attr( $alt )
+            esc_attr( $alt ),
+            $style_attr
         );
         return $this->maybe_wrap_link( $img, $link, 'vergleich-image-link' );
     }
@@ -2350,6 +2602,20 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-wrapper.has-dividers .vergleich-label { border-bottom: 1px solid #e5e7eb; }
         .vergleich-wrapper.has-dividers .vergleich-label:last-child { border-bottom: none; }
         .vergleich-label.is-highlighted { background: #fef3c7; color: #92400e; }
+        /* Schatten-Hervorhebung: bandartiger Schatten an Ober- und Unterkante
+           jeder Zelle der Reihe. Liegt per z-index ueber angrenzenden Zeilen
+           und ueberdeckt die Divider visuell an dieser Stelle. */
+        .vergleich-label.is-highlight-shadow,
+        .vergleich-zelle.is-highlight-shadow {
+            position: relative;
+            z-index: 2;
+            box-shadow: var(--vgl-highlight-shadow, 0 3px 10px -2px rgba(0,0,0,.09), 0 -3px 10px -2px rgba(0,0,0,.09));
+        }
+        .vergleich-wrapper.has-dividers .vergleich-label.is-highlight-shadow,
+        .vergleich-wrapper.has-dividers .vergleich-zelle.is-highlight-shadow {
+            border-top: 0;
+            border-bottom: 0;
+        }
 
         .vergleich-scroll {
             grid-column: 2 !important;
@@ -2641,6 +2907,45 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-nav--next {
             right: var(--vgl-nav-offset, 12px);
         }
+        /* Zebra-Streifen: nur auf den Card-Zellen, NICHT auf der Label-
+           Spalte — die behaelt ihre eigene Hintergrundfarbe. */
+        .vergleich-zelle.is-row-odd  { background-color: var(--vgl-row-bg-odd,  transparent); }
+        .vergleich-zelle.is-row-even { background-color: var(--vgl-row-bg-even, transparent); }
+        .vergleich-zelle.is-row-odd  { color: var(--vgl-row-color-odd,  inherit); }
+        .vergleich-zelle.is-row-even { color: var(--vgl-row-color-even, inherit); }
+
+        /* Zeilen-Hover: bei is-row-hover auf Label + allen Zellen derselben
+           Zeile (per JS geflaggt) leicht einfaerben. Respektiert bestehende
+           Hintergruende nicht vollstaendig — ueberschreibt nur ohne explizite
+           Hervorhebungs-Farbe. */
+        .vergleich-wrapper.has-row-hover .vergleich-label.is-row-hover,
+        .vergleich-wrapper.has-row-hover .vergleich-zelle.is-row-hover {
+            background-color: var(--vgl-row-hover-bg, rgba(0,0,0,.04));
+            transition: background-color .12s ease;
+        }
+
+        /* Counter-Element (z.B. "1–4 von 80") */
+        .vergleich-counter {
+            font-size: 0.875rem;
+            color: #6b7280;
+            padding: 8px 4px;
+            min-height: 1.75em;
+        }
+        .vergleich-counter.is-align-left   { text-align: left; }
+        .vergleich-counter.is-align-center { text-align: center; }
+        .vergleich-counter.is-align-right  { text-align: right; }
+
+        /* Wenn Nav-Pfeile aktiv sind, Scrollbar ausblenden — Scrollen bleibt
+           per Pfeil-Click, Wheel und Touch-Swipe moeglich. */
+        .vergleich-wrapper.has-nav .vergleich-scroll {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .vergleich-wrapper.has-nav .vergleich-scroll::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
+        }
 
         /* Root-Container: nimmt Wrapper + Expand-Button auf */
         .vergleich-root {
@@ -2743,49 +3048,127 @@ class Element_Vergleich extends \Bricks\Element {
         });
     }
 
-    function bindNav(wrapper){
-        if (!wrapper.classList.contains("has-nav")) return;
-        if (wrapper._vglNavBound) return;
-        wrapper._vglNavBound = true;
-
-        var scroll = wrapper.querySelector(".vergleich-scroll");
-        var prev   = wrapper.querySelector(".vergleich-nav--prev");
-        var next   = wrapper.querySelector(".vergleich-nav--next");
-        if (!scroll || !prev || !next) return;
-
-        var stepMode = wrapper.classList.contains("vgl-nav-step-view") ? "view" : "card";
-
-        function stepSize(){
-            if (stepMode === "view") return Math.max(scroll.clientWidth - 20, 100);
-            var card = scroll.querySelector(".vergleich-card");
-            return card ? card.getBoundingClientRect().width : 200;
+    // Re-queries child nodes bei jedem Call — robust gegen Canvas-Re-Renders,
+    // bei denen Bricks die Wrapper-Kinder austauscht und unsere Referenzen
+    // verwaist lassen wuerde.
+    function findCounter(wrapper){
+        // Primaer ueber Wrapper-Attribut data-counter (ID-Ref, sicher auch
+        // wenn Bricks die DOM-Struktur im Canvas anders verschachtelt).
+        var id = wrapper.getAttribute("data-counter");
+        if (id) {
+            var byId = document.getElementById(id);
+            if (byId) return byId;
         }
+        // Fallback: naechster Root-Container
+        var root = wrapper.closest(".vergleich-root") || wrapper.parentNode;
+        return root ? root.querySelector("[data-vgl-counter]") : null;
+    }
 
-        function update(){
-            var overflows = scroll.scrollWidth - scroll.clientWidth > 1;
-            var atStart   = scroll.scrollLeft <= 1;
-            var atEnd     = scroll.scrollLeft >= scroll.scrollWidth - scroll.clientWidth - 1;
+    function updateNav(wrapper){
+        var scroll = wrapper.querySelector(".vergleich-scroll");
+        if (!scroll) return;
+
+        var counter = findCounter(wrapper);
+        var prev    = wrapper.querySelector(".vergleich-nav--prev");
+        var next    = wrapper.querySelector(".vergleich-nav--next");
+
+        var overflows = scroll.scrollWidth - scroll.clientWidth > 1;
+        var atStart   = scroll.scrollLeft <= 1;
+        var atEnd     = scroll.scrollLeft >= scroll.scrollWidth - scroll.clientWidth - 1;
+
+        if (prev && next) {
             prev.hidden = !overflows || atStart;
             next.hidden = !overflows || atEnd;
         }
 
-        prev.addEventListener("click", function(){
-            scroll.scrollBy({ left: -stepSize(), behavior: "smooth" });
+        if (counter) {
+            var cards = scroll.querySelectorAll(".vergleich-card");
+            var total = cards.length;
+            if (total === 0) {
+                counter.textContent = "";
+            } else {
+                var firstCard = cards[0];
+                var cardW = firstCard ? firstCard.getBoundingClientRect().width : 0;
+                if (!cardW || cardW < 1) cardW = 1;
+                var cw = scroll.clientWidth || cardW;
+                var visible = Math.max(1, Math.round(cw / cardW));
+                var start = Math.floor(scroll.scrollLeft / cardW) + 1;
+                if (start < 1) start = 1;
+                if (start > total) start = total;
+                var end = Math.min(start + visible - 1, total);
+                var fmt = counter.getAttribute("data-format") || "{start}–{end} von {total}";
+                counter.textContent = fmt
+                    .replace("{start}", start)
+                    .replace("{end}",   end)
+                    .replace("{total}", total);
+            }
+        }
+    }
+
+    function bindNav(wrapper){
+        if (wrapper._vglNavBound) { updateNav(wrapper); return; }
+        wrapper._vglNavBound = true;
+
+        // Click-Events per Delegation am Wrapper — uebersteht, wenn Bricks
+        // die Nav-Buttons im Canvas gegen neue Nodes ersetzt.
+        wrapper.addEventListener("click", function(e){
+            var btn = e.target && e.target.closest ? e.target.closest("[data-vgl-nav]") : null;
+            if (!btn || !wrapper.contains(btn)) return;
+            var scroll = wrapper.querySelector(".vergleich-scroll");
+            if (!scroll) return;
+            var dir = btn.getAttribute("data-vgl-nav");
+            var card = scroll.querySelector(".vergleich-card");
+            var cardW = card ? card.getBoundingClientRect().width : 200;
+            var stepMode = wrapper.classList.contains("vgl-nav-step-view") ? "view" : "card";
+            var step = stepMode === "view" ? Math.max(scroll.clientWidth - 20, 100) : cardW;
+            scroll.scrollBy({ left: (dir === "prev" ? -step : step), behavior: "smooth" });
         });
-        next.addEventListener("click", function(){
-            scroll.scrollBy({ left:  stepSize(), behavior: "smooth" });
+
+        var handler = function(){ updateNav(wrapper); };
+        var scroll = wrapper.querySelector(".vergleich-scroll");
+        if (scroll) scroll.addEventListener("scroll", handler, { passive: true });
+        window.addEventListener("resize", handler);
+        if (typeof ResizeObserver !== "undefined") {
+            var ro = new ResizeObserver(handler);
+            if (scroll) ro.observe(scroll);
+            ro.observe(wrapper);
+        }
+        requestAnimationFrame(handler);
+        setTimeout(handler, 250);
+        setTimeout(handler, 800);
+    }
+
+    function bindRowHover(wrapper){
+        if (wrapper._vglRowHoverBound) return;
+        wrapper._vglRowHoverBound = true;
+
+        function rowEls(idx){
+            return wrapper.querySelectorAll(
+                '[data-row-index="' + idx + '"]'
+            );
+        }
+        function clearActive(){
+            var active = wrapper.querySelectorAll(".is-row-hover");
+            for (var i = 0; i < active.length; i++) active[i].classList.remove("is-row-hover");
+        }
+        wrapper.addEventListener("mouseover", function(e){
+            if (!wrapper.classList.contains("has-row-hover")) return;
+            var el = e.target && e.target.closest ? e.target.closest("[data-row-index]") : null;
+            if (!el || !wrapper.contains(el)) return;
+            var idx = el.getAttribute("data-row-index");
+            if (idx === null) return;
+            clearActive();
+            var els = rowEls(idx);
+            for (var i = 0; i < els.length; i++) els[i].classList.add("is-row-hover");
         });
-        scroll.addEventListener("scroll", update, { passive: true });
-        window.addEventListener("resize", update);
-        // Erst nach Layout-Stabilisierung korrekt messen
-        requestAnimationFrame(update);
-        setTimeout(update, 250);
+        wrapper.addEventListener("mouseleave", clearActive);
     }
 
     function init(wrapper){
         syncRows(wrapper);
         bindExpand(wrapper);
         bindNav(wrapper);
+        bindRowHover(wrapper);
         var burst = 0;
         (function tick(){
             if (!wrapper.isConnected) return;
@@ -2812,9 +3195,25 @@ class Element_Vergleich extends \Bricks\Element {
         boot();
     }
 
-    // Bricks-Builder re-renders: MutationObserver auf body
+    // Bricks-Builder re-renders: MutationObserver — reagiert NUR wenn neue
+    // .vergleich-wrapper-Elemente ins DOM kommen. Text- oder Attribut-Aenderungen
+    // innerhalb vorhandener Wrapper (z.B. vom Counter selbst) duerfen nicht
+    // erneut boot() triggern, sonst Endlosschleife.
     if (typeof MutationObserver !== "undefined") {
-        var mo = new MutationObserver(function(){ boot(); });
+        var mo = new MutationObserver(function(mutations){
+            for (var i = 0; i < mutations.length; i++) {
+                var added = mutations[i].addedNodes;
+                for (var j = 0; j < added.length; j++) {
+                    var n = added[j];
+                    if (!n || n.nodeType !== 1) continue;
+                    if ((n.classList && n.classList.contains("vergleich-wrapper")) ||
+                        (n.querySelector && n.querySelector(".vergleich-wrapper"))) {
+                        boot();
+                        return;
+                    }
+                }
+            }
+        });
         mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
     }
 })();

@@ -48,6 +48,22 @@
     color: #92400e;
 }
 
+/* Schatten-Hervorhebung: bandartiger Schatten ueber und unter der Reihe.
+   Gilt fuer Label und alle Card-Zellen der Reihe. z-index bringt die Zelle
+   ueber angrenzende Zeilen, damit der Schatten nicht abgeschnitten wirkt. */
+.vergleich-label.is-highlight-shadow,
+.vergleich-zelle.is-highlight-shadow {
+    position: relative;
+    z-index: 2;
+    box-shadow: var(--vgl-highlight-shadow, 0 3px 10px -2px rgba(0, 0, 0, .09), 0 -3px 10px -2px rgba(0, 0, 0, .09));
+}
+
+.vergleich-wrapper.has-dividers .vergleich-label.is-highlight-shadow,
+.vergleich-wrapper.has-dividers .vergleich-zelle.is-highlight-shadow {
+    border-top: 0;
+    border-bottom: 0;
+}
+
 /* === RECHTE SCROLL-REGION === */
 .vergleich-scroll {
     overflow-x: auto;
@@ -292,6 +308,46 @@
 
 .vergleich-nav--next {
     right: var(--vgl-nav-offset, 12px);
+}
+
+/* Zebra-Streifen — wirkt nur auf die Card-Zellen, nicht auf die linke
+   Label-Spalte (die behaelt ihre eigene Hintergrundfarbe). */
+.vergleich-zelle.is-row-odd  { background-color: var(--vgl-row-bg-odd,  transparent); }
+.vergleich-zelle.is-row-even { background-color: var(--vgl-row-bg-even, transparent); }
+.vergleich-zelle.is-row-odd  { color: var(--vgl-row-color-odd,  inherit); }
+.vergleich-zelle.is-row-even { color: var(--vgl-row-color-even, inherit); }
+
+/* Zeilen-Hover: JS setzt .is-row-hover auf Label + allen Zellen derselben
+   Zeile, CSS faerbt sie leicht ein. */
+.vergleich-wrapper.has-row-hover .vergleich-label.is-row-hover,
+.vergleich-wrapper.has-row-hover .vergleich-zelle.is-row-hover {
+    background-color: var(--vgl-row-hover-bg, rgba(0, 0, 0, .04));
+    transition: background-color .12s ease;
+}
+
+/* Counter-Element (zeigt z.B. "1–4 von 80") */
+.vergleich-counter {
+    font-size: 0.875rem;
+    color: #6b7280;
+    padding: 8px 4px;
+    min-height: 1.75em;
+}
+
+.vergleich-counter.is-align-left   { text-align: left; }
+.vergleich-counter.is-align-center { text-align: center; }
+.vergleich-counter.is-align-right  { text-align: right; }
+
+/* Scrollbar ausblenden, wenn Nav-Pfeile aktiv sind — Scrollen bleibt
+   moeglich per Pfeil, Mausrad und Touch-Swipe. */
+.vergleich-wrapper.has-nav .vergleich-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.vergleich-wrapper.has-nav .vergleich-scroll::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 /* === ZELLEN INNERHALB DER CARDS === */
