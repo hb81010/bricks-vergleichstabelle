@@ -23,6 +23,9 @@ class Element_Vergleich extends \Bricks\Element {
     /** Runtime-State für Ranking-Badge (von render() befüllt, von render_card() gelesen). */
     public $_ranking_runtime = null;
 
+    /** Runtime-State für Score-Badge (Bewertung aus Meta-Feld). */
+    public $_score_runtime = null;
+
     public function get_label() {
         return esc_html__( 'Vergleich (Spalten)', 'bricks-vergleich' );
     }
@@ -34,6 +37,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->control_groups['images']  = [ 'title' => esc_html__( 'Bilder', 'bricks-vergleich' ),    'tab' => 'content' ];
         $this->control_groups['expand']  = [ 'title' => esc_html__( 'Aufklappen', 'bricks-vergleich' ),'tab' => 'content' ];
         $this->control_groups['ranking'] = [ 'title' => esc_html__( 'Ranking-Badge', 'bricks-vergleich' ), 'tab' => 'content' ];
+        $this->control_groups['score']   = [ 'title' => esc_html__( 'Bewertungs-Badge', 'bricks-vergleich' ), 'tab' => 'content' ];
         $this->control_groups['style']   = [ 'title' => esc_html__( 'Styling', 'bricks-vergleich' ),   'tab' => 'content' ];
     }
 
@@ -429,6 +433,180 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         // ======================================================================
+        // SCORE / BEWERTUNGS-BADGE
+        // Zeigt den Wert eines Meta-Felds (z.B. Bewertungsnote) als Badge auf
+        // jeder Produkt-Spalte. Funktioniert unabhängig vom Ranking.
+        // ======================================================================
+        $this->controls['scoreEnabled'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Bewertungs-Badge anzeigen', 'bricks-vergleich' ),
+            'type' => 'checkbox', 'default' => false,
+            'description' => esc_html__( 'Zeigt einen Meta-Feld-Wert (z. B. Bewertungsnote) als Badge auf jeder Spalte.', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['scoreMetaKey'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Meta-Key oder Dynamic Data', 'bricks-vergleich' ),
+            'type' => 'text',
+            'default' => '',
+            'placeholder' => 'bewertung',
+            'hasDynamicData' => 'text',
+            'description' => esc_html__( 'Entweder reiner Meta-Key (z. B. bewertung) oder ein Dynamic-Data-Tag wie {acf:bewertung} / {je_product_bewertung}.', 'bricks-vergleich' ),
+            'required' => [ 'scoreEnabled', '=', true ],
+        ];
+
+        $this->controls['scoreDecimals'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Dezimalstellen', 'bricks-vergleich' ),
+            'type' => 'number', 'default' => 1, 'min' => 0, 'max' => 4,
+            'required' => [ 'scoreEnabled', '=', true ],
+        ];
+
+        $this->controls['scoreDecimalSeparator'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Dezimal-Trennzeichen', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [
+                ','  => esc_html__( 'Komma (1,5)', 'bricks-vergleich' ),
+                '.'  => esc_html__( 'Punkt (1.5)', 'bricks-vergleich' ),
+            ],
+            'default' => ',',
+            'required' => [ 'scoreEnabled', '=', true ],
+        ];
+
+        $this->controls['scorePrefix'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Präfix', 'bricks-vergleich' ),
+            'type' => 'text', 'default' => '',
+            'hasDynamicData' => 'text',
+            'placeholder' => esc_html__( 'z.B. Note', 'bricks-vergleich' ),
+            'required' => [ 'scoreEnabled', '=', true ],
+        ];
+
+        $this->controls['scoreSuffix'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Suffix', 'bricks-vergleich' ),
+            'type' => 'text', 'default' => '',
+            'hasDynamicData' => 'text',
+            'placeholder' => esc_html__( 'z.B. /5', 'bricks-vergleich' ),
+            'required' => [ 'scoreEnabled', '=', true ],
+        ];
+
+        $this->controls['scorePosition'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Position', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [
+                'top-left'      => esc_html__( 'Oben links', 'bricks-vergleich' ),
+                'top-center'    => esc_html__( 'Oben Mitte', 'bricks-vergleich' ),
+                'top-right'     => esc_html__( 'Oben rechts', 'bricks-vergleich' ),
+                'bottom-left'   => esc_html__( 'Unten links', 'bricks-vergleich' ),
+                'bottom-center' => esc_html__( 'Unten Mitte', 'bricks-vergleich' ),
+                'bottom-right'  => esc_html__( 'Unten rechts', 'bricks-vergleich' ),
+            ],
+            'default' => 'bottom-left',
+            'required' => [ 'scoreEnabled', '=', true ],
+        ];
+
+        $this->controls['scoreOffsetY'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Abstand oben/unten', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true, 'default' => 8, 'placeholder' => '8px',
+            'required' => [ 'scoreEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-score-offset-y', 'selector' => '' ] ],
+        ];
+
+        $this->controls['scoreOffsetX'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Abstand links/rechts', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true, 'default' => 8, 'placeholder' => '8px',
+            'required' => [ 'scoreEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-score-offset-x', 'selector' => '' ] ],
+        ];
+
+        $this->controls['scoreMinSize'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Mindestgröße', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true, 'default' => 36, 'placeholder' => '36px',
+            'required' => [ 'scoreEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-score-size', 'selector' => '' ] ],
+        ];
+
+        $this->controls['scorePadding'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+            'type' => 'spacing',
+            'placeholder' => [ 'top' => '6px', 'right' => '10px', 'bottom' => '6px', 'left' => '10px' ],
+            'required' => [ 'scoreEnabled', '=', true ],
+            'css'   => [ [ 'property' => 'padding', 'selector' => '.vergleich-score' ] ],
+        ];
+
+        $this->controls['scoreFontSize'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true, 'default' => 14, 'placeholder' => '14px',
+            'required' => [ 'scoreEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-score-font-size', 'selector' => '' ] ],
+        ];
+
+        $this->controls['scoreFontWeight'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [ '400' => '400', '500' => '500', '600' => '600', '700' => '700', '800' => '800' ],
+            'default' => '700',
+            'required' => [ 'scoreEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-score-font-weight', 'selector' => '' ] ],
+        ];
+
+        $this->controls['scoreBgColor'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
+            'type' => 'color',
+            'default' => [ 'hex' => '#111827' ],
+            'required' => [ 'scoreEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-score-bg', 'selector' => '' ] ],
+        ];
+
+        $this->controls['scoreTextColor'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
+            'type' => 'color',
+            'default' => [ 'hex' => '#ffffff' ],
+            'required' => [ 'scoreEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-score-color', 'selector' => '' ] ],
+        ];
+
+        $this->controls['scoreBorderRadius'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Ecken-Radius', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true, 'default' => 6, 'placeholder' => '6px',
+            'required' => [ 'scoreEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-score-radius', 'selector' => '' ] ],
+        ];
+
+        $this->controls['scoreShadow'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Schatten', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [
+                'none' => esc_html__( 'Kein', 'bricks-vergleich' ),
+                'small' => esc_html__( 'Klein', 'bricks-vergleich' ),
+                'medium' => esc_html__( 'Mittel', 'bricks-vergleich' ),
+                'large' => esc_html__( 'Groß', 'bricks-vergleich' ),
+            ],
+            'default' => 'medium',
+            'required' => [ 'scoreEnabled', '=', true ],
+        ];
+
+        $this->controls['scoreHideEmpty'] = [
+            'tab' => 'content', 'group' => 'score',
+            'label' => esc_html__( 'Badge verbergen, wenn Wert leer', 'bricks-vergleich' ),
+            'type' => 'checkbox', 'default' => true,
+            'required' => [ 'scoreEnabled', '=', true ],
+        ];
+
+        // ======================================================================
         // STYLE
         // ======================================================================
         $this->controls['labelBgColor'] = [
@@ -798,9 +976,7 @@ class Element_Vergleich extends \Bricks\Element {
                 'label' => esc_html__( 'Zur Aufklapp-Zone', 'bricks-vergleich' ),
                 'type'  => 'checkbox',
             ],
-            // Unsichtbares Marker-Feld, das nur im DOM erscheint wenn collapsible=true.
-            // Wird von unserem Builder-JS (assets/builder.js) erkannt, um das "Versteckt"-
-            // Badge anzuzeigen — gleicher Trick wie bei manualColumns/Manuell-Badge.
+            // Marker für Builder-Badge (siehe assets/builder.js)
             '_markerCollapsible' => [
                 'type'     => 'info',
                 'content'  => '',
@@ -901,6 +1077,40 @@ class Element_Vergleich extends \Bricks\Element {
             'total'         => 0,
         ];
 
+        // Score / Bewertung
+        $score_enabled     = ! empty( $settings['scoreEnabled'] );
+        $score_meta_key    = isset( $settings['scoreMetaKey'] ) ? trim( (string) $settings['scoreMetaKey'] ) : '';
+        $score_decimals    = isset( $settings['scoreDecimals'] ) && $settings['scoreDecimals'] !== '' ? max( 0, min( 4, (int) $settings['scoreDecimals'] ) ) : 1;
+        $score_dec_sep     = isset( $settings['scoreDecimalSeparator'] ) && $settings['scoreDecimalSeparator'] === '.' ? '.' : ',';
+        $score_prefix      = $this->dd_string( (string) ( $settings['scorePrefix'] ?? '' ) );
+        $score_suffix      = $this->dd_string( (string) ( $settings['scoreSuffix'] ?? '' ) );
+        $score_position    = $settings['scorePosition'] ?? 'bottom-left';
+        $score_offset_y    = $this->get_css_value( $settings['scoreOffsetY'] ?? null, '8px' );
+        $score_offset_x    = $this->get_css_value( $settings['scoreOffsetX'] ?? null, '8px' );
+        $score_min_size    = $this->get_css_value( $settings['scoreMinSize'] ?? null, '36px' );
+        $score_padding     = $this->format_spacing( $settings['scorePadding'] ?? null, '6px 10px' );
+        $score_font_size   = $this->get_css_value( $settings['scoreFontSize'] ?? null, '14px' );
+        $score_font_weight = $settings['scoreFontWeight'] ?? '700';
+        $score_bg_color    = $this->resolve_color( $settings['scoreBgColor'] ?? null ) ?: '#111827';
+        $score_text_color  = $this->resolve_color( $settings['scoreTextColor'] ?? null ) ?: '#ffffff';
+        $score_radius      = $this->get_css_value( $settings['scoreBorderRadius'] ?? null, '6px' );
+        $score_shadow_map  = [
+            'none' => 'none', 'small' => '0 1px 2px rgba(0,0,0,.12)',
+            'medium' => '0 2px 6px rgba(0,0,0,.18)', 'large' => '0 4px 12px rgba(0,0,0,.22)',
+        ];
+        $score_shadow = $score_shadow_map[ $settings['scoreShadow'] ?? 'medium' ] ?? $score_shadow_map['medium'];
+        $score_hide_empty = ! isset( $settings['scoreHideEmpty'] ) || ! empty( $settings['scoreHideEmpty'] );
+
+        $this->_score_runtime = [
+            'enabled'     => $score_enabled,
+            'meta_key'    => $score_meta_key,
+            'decimals'    => $score_decimals,
+            'dec_sep'     => $score_dec_sep,
+            'prefix'      => $score_prefix,
+            'suffix'      => $score_suffix,
+            'hide_empty'  => $score_hide_empty,
+        ];
+
         // Rows
         $rows = $this->get_rows();
         $row_count = max( 1, count( $rows ) );
@@ -950,6 +1160,19 @@ class Element_Vergleich extends \Bricks\Element {
             $inline_style .= ' --vgl-rank-shadow:' . esc_attr( $ranking_shadow ) . ';';
         }
 
+        if ( $score_enabled ) {
+            if ( empty( $settings['scoreOffsetY'] ) )      $inline_style .= ' --vgl-score-offset-y:'   . esc_attr( $score_offset_y ) . ';';
+            if ( empty( $settings['scoreOffsetX'] ) )      $inline_style .= ' --vgl-score-offset-x:'   . esc_attr( $score_offset_x ) . ';';
+            if ( empty( $settings['scoreMinSize'] ) )      $inline_style .= ' --vgl-score-size:'       . esc_attr( $score_min_size ) . ';';
+            if ( empty( $settings['scorePadding'] ) )      $inline_style .= ' --vgl-score-padding:'    . esc_attr( $score_padding ) . ';';
+            if ( empty( $settings['scoreFontSize'] ) )     $inline_style .= ' --vgl-score-font-size:'  . esc_attr( $score_font_size ) . ';';
+            if ( empty( $settings['scoreFontWeight'] ) )   $inline_style .= ' --vgl-score-font-weight:'. esc_attr( $score_font_weight ) . ';';
+            if ( empty( $settings['scoreBgColor'] ) )      $inline_style .= ' --vgl-score-bg:'         . esc_attr( $score_bg_color ) . ';';
+            if ( empty( $settings['scoreTextColor'] ) )    $inline_style .= ' --vgl-score-color:'      . esc_attr( $score_text_color ) . ';';
+            if ( empty( $settings['scoreBorderRadius'] ) ) $inline_style .= ' --vgl-score-radius:'     . esc_attr( $score_radius ) . ';';
+            $inline_style .= ' --vgl-score-shadow:' . esc_attr( $score_shadow ) . ';';
+        }
+
         // Struktur: _root = neutraler Container mit CSS-Variablen,
         //           .vergleich-wrapper = bordertes Table-Grid (innen),
         //           .vergleich-expand  = Aufklapp-Button (außen, Geschwister der Wrapper).
@@ -966,6 +1189,10 @@ class Element_Vergleich extends \Bricks\Element {
         if ( $ranking_enabled ) {
             $wrapper_classes[] = 'has-ranking';
             $wrapper_classes[] = 'has-ranking-pos-' . preg_replace( '/[^a-z\-]/', '', strtolower( (string) $ranking_position ) );
+        }
+        if ( $score_enabled ) {
+            $wrapper_classes[] = 'has-score';
+            $wrapper_classes[] = 'has-score-pos-' . preg_replace( '/[^a-z\-]/', '', strtolower( (string) $score_position ) );
         }
         if ( $expand_enabled && $visible_row_count < $row_count ) {
             $wrapper_classes[] = 'has-expand';
@@ -1186,12 +1413,74 @@ class Element_Vergleich extends \Bricks\Element {
             $rank_html .= '</div>';
         }
 
+        // Score-Badge (Bewertung aus Meta-Feld)
+        $score_html = '';
+        $score_cfg  = is_array( $this->_score_runtime ) ? $this->_score_runtime : null;
+        if ( $score_cfg && ! empty( $score_cfg['enabled'] ) && ! empty( $score_cfg['meta_key'] ) && $loop_post_id > 0 ) {
+            $key = (string) $score_cfg['meta_key'];
+            $raw_str = '';
+            // Enthält DD-Tag? → über Bricks auflösen (respektiert Loop-Kontext).
+            if ( strpos( $key, '{' ) !== false && function_exists( 'bricks_render_dynamic_data' ) ) {
+                $resolved = bricks_render_dynamic_data( $key, $loop_post_id );
+                $raw_str  = is_string( $resolved ) ? trim( $resolved ) : '';
+                // Wenn Bricks das Tag nicht auflösen konnte, bleibt der Roh-Tag
+                // stehen — dann werten wir als "leer".
+                if ( $raw_str === $key ) {
+                    $raw_str = '';
+                }
+            } else {
+                $raw = get_post_meta( $loop_post_id, $key, true );
+                if ( is_array( $raw ) ) {
+                    $raw = reset( $raw );
+                }
+                $raw_str = is_scalar( $raw ) ? trim( (string) $raw ) : '';
+            }
+
+            $is_empty = ( $raw_str === '' );
+            if ( ! ( $is_empty && ! empty( $score_cfg['hide_empty'] ) ) ) {
+                // Wert formatieren: als Zahl parsen (Komma→Punkt), dann mit
+                // Dezimalstellen ausgeben. Nicht-numerische Werte durchreichen.
+                $display = $raw_str;
+                $normalized = str_replace( ',', '.', $raw_str );
+                if ( $normalized !== '' && is_numeric( $normalized ) ) {
+                    $num     = (float) $normalized;
+                    $dec     = (int) $score_cfg['decimals'];
+                    $sep     = (string) $score_cfg['dec_sep'];
+                    $display = number_format( $num, $dec, $sep, '' );
+                }
+
+                $s_prefix = (string) $score_cfg['prefix'];
+                $s_suffix = (string) $score_cfg['suffix'];
+
+                $score_html  = '<div class="vergleich-score" aria-label="' . esc_attr__( 'Bewertung', 'bricks-vergleich' ) . '">';
+                if ( $s_prefix !== '' ) $score_html .= '<span class="vergleich-score__prefix">' . esc_html( $s_prefix ) . '</span>';
+                $score_html .= '<span class="vergleich-score__value">' . esc_html( $display ) . '</span>';
+                if ( $s_suffix !== '' ) $score_html .= '<span class="vergleich-score__suffix">' . esc_html( $s_suffix ) . '</span>';
+                $score_html .= '</div>';
+            }
+        }
+
+        // Anker-Index bestimmen: erste Bild-Zeile, sonst 0. Das Badge wird
+        // als Kind der entsprechenden Zelle gerendert, damit seine absolute
+        // Positionierung an der Zellen-Box klebt — nicht an der ganzen Card.
+        $score_anchor_idx = -1;
+        if ( $score_html !== '' ) {
+            $score_anchor_idx = 0;
+            foreach ( $rows as $ri => $rr ) {
+                if ( ( $rr['type'] ?? 'text' ) === 'image' ) {
+                    $score_anchor_idx = $ri;
+                    break;
+                }
+            }
+        }
+
         ob_start();
         echo '<div class="' . esc_attr( $card_class ) . '"' . $card_data . '>';
         echo $rank_html;
 
         foreach ( $rows as $idx => $row ) {
-            echo $this->render_cell( $row, $idx, $default_align );
+            $inject = ( $idx === $score_anchor_idx ) ? $score_html : '';
+            echo $this->render_cell( $row, $idx, $default_align, $inject );
         }
 
         echo '</div>';
@@ -1217,7 +1506,7 @@ class Element_Vergleich extends \Bricks\Element {
     // RENDER CELL (eine Zelle innerhalb einer Card)
     // ==========================================================================
 
-    private function render_cell( $row, $idx, $default_align ) {
+    private function render_cell( $row, $idx, $default_align, $append_html = '' ) {
         $type        = $row['type']       ?? 'text';
         $highlight   = ! empty( $row['highlight'] );
         $collapsible = ! empty( $row['collapsible'] );
@@ -1227,6 +1516,7 @@ class Element_Vergleich extends \Bricks\Element {
         $classes = [ 'vergleich-zelle', 'vergleich-zelle--' . preg_replace( '/[^a-z0-9_-]/i', '', $type ) ];
         if ( $highlight )   $classes[] = 'is-highlighted';
         if ( $collapsible ) $classes[] = 'is-collapsible';
+        if ( $append_html !== '' ) $classes[] = 'has-score-anchor';
 
         $styles = [];
         if ( $align ) {
@@ -1267,7 +1557,7 @@ class Element_Vergleich extends \Bricks\Element {
             $content = '';
         }
 
-        return '<div class="' . esc_attr( implode( ' ', $classes ) ) . '"' . $extra . '>' . $content . '</div>';
+        return '<div class="' . esc_attr( implode( ' ', $classes ) ) . '"' . $extra . '>' . $content . $append_html . '</div>';
     }
 
     /**
@@ -1897,7 +2187,10 @@ class Element_Vergleich extends \Bricks\Element {
         return '<style id="bricks-vergleich-inline-css">
         .vergleich-wrapper {
             display: grid !important;
-            grid-template-columns: var(--vgl-label-width, 200px) 1fr !important;
+            /* Scroll-Spalte: minmax(0, auto) = darf auf 0 schrumpfen (für
+               horizontales Scrolling bei Überlauf), wächst aber nur bis zur
+               Track-Breite — kein Leerraum rechts neben den Cards. */
+            grid-template-columns: var(--vgl-label-width, 200px) minmax(0, auto) !important;
             grid-template-rows: repeat(var(--vgl-row-count, 3), minmax(var(--vgl-row-min, 20px), auto)) !important;
             align-content: start !important;
             border: 1px solid #e5e7eb;
@@ -1905,6 +2198,7 @@ class Element_Vergleich extends \Bricks\Element {
             overflow: hidden;
             background: #fff;
             position: relative;
+            max-width: 100%;
         }
         .vergleich-labels {
             display: grid !important;
@@ -2096,6 +2390,87 @@ class Element_Vergleich extends \Bricks\Element {
             color: #fff !important;
         }
 
+        /* Score / Bewertungs-Badge
+           Das Badge wird als Kind der Bild-Zelle gerendert (siehe render_cell).
+           Die Zelle bekommt dann die Klasse .has-score-anchor und position:
+           relative — so klebt das absolute Badge an DIESER Zellen-Box statt
+           an der ganzen Card. */
+        .vergleich-zelle.has-score-anchor {
+            position: relative !important;
+        }
+        .vergleich-zelle.has-score-anchor > .vergleich-score,
+        .vergleich-score {
+            position: absolute !important;
+            bottom: var(--vgl-score-offset-y, 8px);
+            left: var(--vgl-score-offset-x, 8px);
+            z-index: 5;
+            display: inline-flex !important;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            box-sizing: border-box;
+            min-width: var(--vgl-score-size, 36px);
+            min-height: var(--vgl-score-size, 36px);
+            padding: var(--vgl-score-padding, 6px 10px);
+            font-size: var(--vgl-score-font-size, 14px);
+            font-weight: var(--vgl-score-font-weight, 700);
+            line-height: 1;
+            color: var(--vgl-score-color, #fff);
+            background: var(--vgl-score-bg, #111827);
+            border-radius: var(--vgl-score-radius, 6px);
+            box-shadow: var(--vgl-score-shadow, 0 2px 6px rgba(0,0,0,.18));
+            pointer-events: none;
+            white-space: nowrap;
+            margin: 0 !important;
+            flex: 0 0 auto !important;
+        }
+        .vergleich-wrapper.has-score-pos-top-left .vergleich-zelle.has-score-anchor > .vergleich-score {
+            top: var(--vgl-score-offset-y, 8px) !important;
+            right: auto !important;
+            left: var(--vgl-score-offset-x, 8px) !important;
+            bottom: auto !important;
+            transform: none !important;
+        }
+        .vergleich-wrapper.has-score-pos-top-right .vergleich-zelle.has-score-anchor > .vergleich-score {
+            top: var(--vgl-score-offset-y, 8px) !important;
+            left: auto !important;
+            right: var(--vgl-score-offset-x, 8px) !important;
+            bottom: auto !important;
+            transform: none !important;
+        }
+        .vergleich-wrapper.has-score-pos-top-center .vergleich-zelle.has-score-anchor > .vergleich-score {
+            top: var(--vgl-score-offset-y, 8px) !important;
+            left: 50% !important;
+            right: auto !important;
+            bottom: auto !important;
+            transform: translateX(-50%) !important;
+        }
+        .vergleich-wrapper.has-score-pos-bottom-left .vergleich-zelle.has-score-anchor > .vergleich-score {
+            top: auto !important;
+            right: auto !important;
+            left: var(--vgl-score-offset-x, 8px) !important;
+            bottom: var(--vgl-score-offset-y, 8px) !important;
+            transform: none !important;
+        }
+        .vergleich-wrapper.has-score-pos-bottom-center .vergleich-zelle.has-score-anchor > .vergleich-score {
+            top: auto !important;
+            left: 50% !important;
+            right: auto !important;
+            bottom: var(--vgl-score-offset-y, 8px) !important;
+            transform: translateX(-50%) !important;
+        }
+        .vergleich-wrapper.has-score-pos-bottom-right .vergleich-zelle.has-score-anchor > .vergleich-score {
+            top: auto !important;
+            left: auto !important;
+            right: var(--vgl-score-offset-x, 8px) !important;
+            bottom: var(--vgl-score-offset-y, 8px) !important;
+            transform: none !important;
+        }
+        .vergleich-score__prefix,
+        .vergleich-score__suffix {
+            opacity: .85;
+        }
+
         /* Root-Container: nimmt Wrapper + Expand-Button auf */
         .vergleich-root {
             display: block;
@@ -2128,10 +2503,8 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-expand.is-align-center { justify-content: center !important; }
         .vergleich-expand.is-align-right  { justify-content: flex-end !important; }
 
-        @media (max-width: 767px) {
-            .vergleich-wrapper { grid-template-columns: 140px 1fr !important; }
-            .vergleich-track   { grid-auto-columns: 180px !important; }
-        }
+        /* Breakpoint-Werte kommen ausschliesslich aus den User-Controls
+           labelWidth und columnWidth via Bricks reaktiver CSS-Pipeline. */
         </style>';
     }
 

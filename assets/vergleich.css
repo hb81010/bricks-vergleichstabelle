@@ -4,12 +4,13 @@
 
 .vergleich-wrapper {
     display: grid;
-    grid-template-columns: var(--vgl-label-width, 220px) 1fr;
+    grid-template-columns: var(--vgl-label-width, 220px) minmax(0, auto);
     border: 1px solid #e5e7eb;
     border-radius: 12px;
     overflow: hidden;
     background: #fff;
     position: relative;
+    max-width: 100%;
 }
 
 /* === LINKE LABEL-SPALTE === */
@@ -151,6 +152,93 @@
     opacity: .9;
 }
 
+/* === SCORE / BEWERTUNGS-BADGE ===
+   Wird als Kind der Bild-Zelle gerendert. Die Zelle bekommt
+   .has-score-anchor → position:relative, Badge ist absolut darin. */
+.vergleich-zelle.has-score-anchor {
+    position: relative !important;
+}
+
+.vergleich-zelle.has-score-anchor > .vergleich-score,
+.vergleich-score {
+    position: absolute !important;
+    bottom: var(--vgl-score-offset-y, 8px);
+    left: var(--vgl-score-offset-x, 8px);
+    z-index: 5;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    box-sizing: border-box;
+    min-width: var(--vgl-score-size, 36px);
+    min-height: var(--vgl-score-size, 36px);
+    padding: var(--vgl-score-padding, 6px 10px);
+    font-size: var(--vgl-score-font-size, 14px);
+    font-weight: var(--vgl-score-font-weight, 700);
+    line-height: 1;
+    color: var(--vgl-score-color, #fff);
+    background: var(--vgl-score-bg, #111827);
+    border-radius: var(--vgl-score-radius, 6px);
+    box-shadow: var(--vgl-score-shadow, 0 2px 6px rgba(0, 0, 0, .18));
+    pointer-events: none;
+    white-space: nowrap;
+    margin: 0 !important;
+    flex: 0 0 auto !important;
+}
+
+.vergleich-wrapper.has-score-pos-top-left .vergleich-zelle.has-score-anchor > .vergleich-score {
+    top: var(--vgl-score-offset-y, 8px) !important;
+    right: auto !important;
+    left: var(--vgl-score-offset-x, 8px) !important;
+    bottom: auto !important;
+    transform: none !important;
+}
+
+.vergleich-wrapper.has-score-pos-top-right .vergleich-zelle.has-score-anchor > .vergleich-score {
+    top: var(--vgl-score-offset-y, 8px) !important;
+    left: auto !important;
+    right: var(--vgl-score-offset-x, 8px) !important;
+    bottom: auto !important;
+    transform: none !important;
+}
+
+.vergleich-wrapper.has-score-pos-top-center .vergleich-zelle.has-score-anchor > .vergleich-score {
+    top: var(--vgl-score-offset-y, 8px) !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translateX(-50%) !important;
+}
+
+.vergleich-wrapper.has-score-pos-bottom-left .vergleich-zelle.has-score-anchor > .vergleich-score {
+    top: auto !important;
+    right: auto !important;
+    left: var(--vgl-score-offset-x, 8px) !important;
+    bottom: var(--vgl-score-offset-y, 8px) !important;
+    transform: none !important;
+}
+
+.vergleich-wrapper.has-score-pos-bottom-center .vergleich-zelle.has-score-anchor > .vergleich-score {
+    top: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: var(--vgl-score-offset-y, 8px) !important;
+    transform: translateX(-50%) !important;
+}
+
+.vergleich-wrapper.has-score-pos-bottom-right .vergleich-zelle.has-score-anchor > .vergleich-score {
+    top: auto !important;
+    left: auto !important;
+    right: var(--vgl-score-offset-x, 8px) !important;
+    bottom: var(--vgl-score-offset-y, 8px) !important;
+    transform: none !important;
+}
+
+.vergleich-score__prefix,
+.vergleich-score__suffix {
+    opacity: .85;
+}
+
 /* === ZELLEN INNERHALB DER CARDS === */
 .vergleich-zelle {
     padding: 16px;
@@ -211,32 +299,20 @@
     background: #6b7280;
 }
 
-/* === RESPONSIVE === */
+/* === RESPONSIVE ===
+   Hardcoded Breiten-Overrides entfernt — die Breakpoint-Werte für Label/
+   Spalte kommen aus den Bricks-Controls (labelWidth, columnWidth) und
+   müssen nicht zusätzlich überschrieben werden. Hier nur noch Padding/
+   Font-Size-Defaults für sehr kleine Viewports. */
 @media (max-width: 767px) {
-    .vergleich-wrapper {
-        grid-template-columns: 140px 1fr;
-    }
-
     .vergleich-label,
     .vergleich-zelle {
         padding: 12px 10px;
         font-size: 0.875rem;
     }
-
-    .vergleich-track {
-        grid-auto-columns: 180px;
-    }
 }
 
 @media (max-width: 479px) {
-    .vergleich-wrapper {
-        grid-template-columns: 120px 1fr;
-    }
-
-    .vergleich-track {
-        grid-auto-columns: 160px;
-    }
-
     .vergleich-label,
     .vergleich-zelle {
         padding: 10px 8px;

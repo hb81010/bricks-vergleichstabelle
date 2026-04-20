@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'BRICKS_VERGLEICH_VERSION', '2.0.0' );
+define( 'BRICKS_VERGLEICH_VERSION', '2.1.2' );
 define( 'BRICKS_VERGLEICH_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BRICKS_VERGLEICH_URL', plugin_dir_url( __FILE__ ) );
 
