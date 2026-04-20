@@ -239,6 +239,61 @@
     opacity: .85;
 }
 
+/* === NAVIGATIONS-PFEILE (Prev/Next) ===
+   Kreisrunde Buttons, vertikal mittig am Scroll-Bereich. Per JS ein-
+   und ausgeblendet je nach Scroll-Position. */
+.vergleich-nav {
+    position: absolute !important;
+    top: 50% !important;
+    transform: translateY(-50%);
+    z-index: 8;
+    width: var(--vgl-nav-size, 44px);
+    height: var(--vgl-nav-size, 44px);
+    padding: 0;
+    margin: 0;
+    border: 1px solid var(--vgl-nav-border, #e5e7eb);
+    background: var(--vgl-nav-bg, #ffffff);
+    color: var(--vgl-nav-color, #111827);
+    border-radius: 9999px;
+    box-shadow: var(--vgl-nav-shadow, 0 4px 12px rgba(0, 0, 0, .15));
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--vgl-nav-icon-size, 18px);
+    line-height: 1;
+    transition: opacity .15s ease, transform .15s ease, background-color .15s ease;
+    opacity: 1;
+}
+
+.vergleich-nav:hover {
+    transform: translateY(-50%) scale(1.05);
+    background: var(--vgl-nav-bg, #ffffff);
+}
+
+.vergleich-nav:focus-visible {
+    outline: 2px solid var(--vgl-nav-color, #111827);
+    outline-offset: 2px;
+}
+
+.vergleich-nav[hidden] {
+    display: none !important;
+}
+
+.vergleich-nav svg {
+    width: var(--vgl-nav-icon-size, 18px);
+    height: var(--vgl-nav-icon-size, 18px);
+    display: block;
+}
+
+.vergleich-nav--prev {
+    left: calc(var(--vgl-label-width, 200px) + var(--vgl-nav-offset, 12px));
+}
+
+.vergleich-nav--next {
+    right: var(--vgl-nav-offset, 12px);
+}
+
 /* === ZELLEN INNERHALB DER CARDS === */
 .vergleich-zelle {
     padding: 16px;

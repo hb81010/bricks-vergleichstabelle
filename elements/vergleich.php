@@ -38,6 +38,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->control_groups['expand']  = [ 'title' => esc_html__( 'Aufklappen', 'bricks-vergleich' ),'tab' => 'content' ];
         $this->control_groups['ranking'] = [ 'title' => esc_html__( 'Ranking-Badge', 'bricks-vergleich' ), 'tab' => 'content' ];
         $this->control_groups['score']   = [ 'title' => esc_html__( 'Bewertungs-Badge', 'bricks-vergleich' ), 'tab' => 'content' ];
+        $this->control_groups['nav']     = [ 'title' => esc_html__( 'Navigation (Pfeile)', 'bricks-vergleich' ), 'tab' => 'content' ];
         $this->control_groups['style']   = [ 'title' => esc_html__( 'Styling', 'bricks-vergleich' ),   'tab' => 'content' ];
     }
 
@@ -607,6 +608,90 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         // ======================================================================
+        // NAVIGATION (Prev/Next-Pfeile wie bei Finanztip)
+        // ======================================================================
+        $this->controls['navEnabled'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Navigations-Pfeile anzeigen', 'bricks-vergleich' ),
+            'type' => 'checkbox', 'default' => false,
+            'description' => esc_html__( 'Kreisrunde Pfeile links/rechts am Scroll-Bereich — nur sichtbar, wenn die Spalten tatsächlich überlaufen.', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['navSize'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Button-Größe', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true, 'default' => 44, 'placeholder' => '44px',
+            'required' => [ 'navEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-nav-size', 'selector' => '' ] ],
+        ];
+
+        $this->controls['navIconSize'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Icon-Größe', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true, 'default' => 18, 'placeholder' => '18px',
+            'required' => [ 'navEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-nav-icon-size', 'selector' => '' ] ],
+        ];
+
+        $this->controls['navOffset'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Abstand zum Rand', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true, 'default' => 12, 'placeholder' => '12px',
+            'required' => [ 'navEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-nav-offset', 'selector' => '' ] ],
+        ];
+
+        $this->controls['navBgColor'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
+            'type' => 'color', 'default' => [ 'hex' => '#ffffff' ],
+            'required' => [ 'navEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-nav-bg', 'selector' => '' ] ],
+        ];
+
+        $this->controls['navIconColor'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Icon-Farbe', 'bricks-vergleich' ),
+            'type' => 'color', 'default' => [ 'hex' => '#111827' ],
+            'required' => [ 'navEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-nav-color', 'selector' => '' ] ],
+        ];
+
+        $this->controls['navBorderColor'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Rahmenfarbe', 'bricks-vergleich' ),
+            'type' => 'color', 'default' => [ 'hex' => '#e5e7eb' ],
+            'required' => [ 'navEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-nav-border', 'selector' => '' ] ],
+        ];
+
+        $this->controls['navShadow'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Schatten', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [
+                'none'   => esc_html__( 'Kein', 'bricks-vergleich' ),
+                'small'  => esc_html__( 'Klein', 'bricks-vergleich' ),
+                'medium' => esc_html__( 'Mittel', 'bricks-vergleich' ),
+                'large'  => esc_html__( 'Groß', 'bricks-vergleich' ),
+            ],
+            'default' => 'medium',
+            'required' => [ 'navEnabled', '=', true ],
+        ];
+
+        $this->controls['navScrollStep'] = [
+            'tab' => 'content', 'group' => 'nav',
+            'label' => esc_html__( 'Scroll-Schrittweite', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [
+                'card' => esc_html__( 'Eine Spalte', 'bricks-vergleich' ),
+                'view' => esc_html__( 'Eine Bildschirmbreite', 'bricks-vergleich' ),
+            ],
+            'default' => 'card',
+            'required' => [ 'navEnabled', '=', true ],
+        ];
+
+        // ======================================================================
         // STYLE
         // ======================================================================
         $this->controls['labelBgColor'] = [
@@ -1111,6 +1196,22 @@ class Element_Vergleich extends \Bricks\Element {
             'hide_empty'  => $score_hide_empty,
         ];
 
+        // Navigation
+        $nav_enabled      = ! empty( $settings['navEnabled'] );
+        $nav_size         = $this->get_css_value( $settings['navSize']     ?? null, '44px' );
+        $nav_icon_size    = $this->get_css_value( $settings['navIconSize'] ?? null, '18px' );
+        $nav_offset       = $this->get_css_value( $settings['navOffset']   ?? null, '12px' );
+        $nav_bg_color     = $this->resolve_color( $settings['navBgColor']     ?? null ) ?: '#ffffff';
+        $nav_icon_color   = $this->resolve_color( $settings['navIconColor']   ?? null ) ?: '#111827';
+        $nav_border_color = $this->resolve_color( $settings['navBorderColor'] ?? null ) ?: '#e5e7eb';
+        $nav_shadow_map = [
+            'none' => 'none', 'small' => '0 1px 3px rgba(0,0,0,.12)',
+            'medium' => '0 4px 12px rgba(0,0,0,.15)', 'large' => '0 8px 24px rgba(0,0,0,.18)',
+        ];
+        $nav_shadow = $nav_shadow_map[ $settings['navShadow'] ?? 'medium' ] ?? $nav_shadow_map['medium'];
+        $nav_scroll_step = $settings['navScrollStep'] ?? 'card';
+        if ( $nav_scroll_step !== 'view' ) $nav_scroll_step = 'card';
+
         // Rows
         $rows = $this->get_rows();
         $row_count = max( 1, count( $rows ) );
@@ -1173,6 +1274,16 @@ class Element_Vergleich extends \Bricks\Element {
             $inline_style .= ' --vgl-score-shadow:' . esc_attr( $score_shadow ) . ';';
         }
 
+        if ( $nav_enabled ) {
+            if ( empty( $settings['navSize'] ) )        $inline_style .= ' --vgl-nav-size:'       . esc_attr( $nav_size ) . ';';
+            if ( empty( $settings['navIconSize'] ) )    $inline_style .= ' --vgl-nav-icon-size:'  . esc_attr( $nav_icon_size ) . ';';
+            if ( empty( $settings['navOffset'] ) )      $inline_style .= ' --vgl-nav-offset:'     . esc_attr( $nav_offset ) . ';';
+            if ( empty( $settings['navBgColor'] ) )     $inline_style .= ' --vgl-nav-bg:'         . esc_attr( $nav_bg_color ) . ';';
+            if ( empty( $settings['navIconColor'] ) )   $inline_style .= ' --vgl-nav-color:'      . esc_attr( $nav_icon_color ) . ';';
+            if ( empty( $settings['navBorderColor'] ) ) $inline_style .= ' --vgl-nav-border:'     . esc_attr( $nav_border_color ) . ';';
+            $inline_style .= ' --vgl-nav-shadow:' . esc_attr( $nav_shadow ) . ';';
+        }
+
         // Struktur: _root = neutraler Container mit CSS-Variablen,
         //           .vergleich-wrapper = bordertes Table-Grid (innen),
         //           .vergleich-expand  = Aufklapp-Button (außen, Geschwister der Wrapper).
@@ -1193,6 +1304,10 @@ class Element_Vergleich extends \Bricks\Element {
         if ( $score_enabled ) {
             $wrapper_classes[] = 'has-score';
             $wrapper_classes[] = 'has-score-pos-' . preg_replace( '/[^a-z\-]/', '', strtolower( (string) $score_position ) );
+        }
+        if ( $nav_enabled ) {
+            $wrapper_classes[] = 'has-nav';
+            $wrapper_classes[] = 'vgl-nav-step-' . $nav_scroll_step;
         }
         if ( $expand_enabled && $visible_row_count < $row_count ) {
             $wrapper_classes[] = 'has-expand';
@@ -1286,6 +1401,15 @@ class Element_Vergleich extends \Bricks\Element {
         }
 
         echo '</div></div>';
+
+        // Navigations-Pfeile (nur wenn aktiviert). Sitzen absolut innerhalb
+        // des Wrappers — JS aktiviert sie, wenn die Cards horizontal überlaufen.
+        if ( $nav_enabled ) {
+            $arrow_l = '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
+            $arrow_r = '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+            echo '<button type="button" class="vergleich-nav vergleich-nav--prev" aria-label="' . esc_attr__( 'Zurück', 'bricks-vergleich' ) . '" data-vgl-nav="prev" hidden>' . $arrow_l . '</button>';
+            echo '<button type="button" class="vergleich-nav vergleich-nav--next" aria-label="' . esc_attr__( 'Weiter', 'bricks-vergleich' ) . '" data-vgl-nav="next" hidden>' . $arrow_r . '</button>';
+        }
 
         echo '</div>'; // .vergleich-wrapper schließen — Expand-Button liegt außerhalb
 
@@ -2471,6 +2595,53 @@ class Element_Vergleich extends \Bricks\Element {
             opacity: .85;
         }
 
+        /* === Navigations-Pfeile === */
+        .vergleich-nav {
+            position: absolute !important;
+            top: 50% !important;
+            transform: translateY(-50%);
+            z-index: 8;
+            width: var(--vgl-nav-size, 44px);
+            height: var(--vgl-nav-size, 44px);
+            padding: 0;
+            margin: 0;
+            border: 1px solid var(--vgl-nav-border, #e5e7eb);
+            background: var(--vgl-nav-bg, #ffffff);
+            color: var(--vgl-nav-color, #111827);
+            border-radius: 9999px;
+            box-shadow: var(--vgl-nav-shadow, 0 4px 12px rgba(0,0,0,.15));
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--vgl-nav-icon-size, 18px);
+            line-height: 1;
+            transition: opacity .15s ease, transform .15s ease, background-color .15s ease;
+            opacity: 1;
+        }
+        .vergleich-nav:hover {
+            transform: translateY(-50%) scale(1.05);
+            background: var(--vgl-nav-bg, #ffffff);
+        }
+        .vergleich-nav:focus-visible {
+            outline: 2px solid var(--vgl-nav-color, #111827);
+            outline-offset: 2px;
+        }
+        .vergleich-nav[hidden] {
+            display: none !important;
+        }
+        .vergleich-nav svg {
+            width: var(--vgl-nav-icon-size, 18px);
+            height: var(--vgl-nav-icon-size, 18px);
+            display: block;
+        }
+        .vergleich-nav--prev {
+            left: calc(var(--vgl-label-width, 200px) + var(--vgl-nav-offset, 12px));
+        }
+        .vergleich-nav--next {
+            right: var(--vgl-nav-offset, 12px);
+        }
+
         /* Root-Container: nimmt Wrapper + Expand-Button auf */
         .vergleich-root {
             display: block;
@@ -2572,9 +2743,49 @@ class Element_Vergleich extends \Bricks\Element {
         });
     }
 
+    function bindNav(wrapper){
+        if (!wrapper.classList.contains("has-nav")) return;
+        if (wrapper._vglNavBound) return;
+        wrapper._vglNavBound = true;
+
+        var scroll = wrapper.querySelector(".vergleich-scroll");
+        var prev   = wrapper.querySelector(".vergleich-nav--prev");
+        var next   = wrapper.querySelector(".vergleich-nav--next");
+        if (!scroll || !prev || !next) return;
+
+        var stepMode = wrapper.classList.contains("vgl-nav-step-view") ? "view" : "card";
+
+        function stepSize(){
+            if (stepMode === "view") return Math.max(scroll.clientWidth - 20, 100);
+            var card = scroll.querySelector(".vergleich-card");
+            return card ? card.getBoundingClientRect().width : 200;
+        }
+
+        function update(){
+            var overflows = scroll.scrollWidth - scroll.clientWidth > 1;
+            var atStart   = scroll.scrollLeft <= 1;
+            var atEnd     = scroll.scrollLeft >= scroll.scrollWidth - scroll.clientWidth - 1;
+            prev.hidden = !overflows || atStart;
+            next.hidden = !overflows || atEnd;
+        }
+
+        prev.addEventListener("click", function(){
+            scroll.scrollBy({ left: -stepSize(), behavior: "smooth" });
+        });
+        next.addEventListener("click", function(){
+            scroll.scrollBy({ left:  stepSize(), behavior: "smooth" });
+        });
+        scroll.addEventListener("scroll", update, { passive: true });
+        window.addEventListener("resize", update);
+        // Erst nach Layout-Stabilisierung korrekt messen
+        requestAnimationFrame(update);
+        setTimeout(update, 250);
+    }
+
     function init(wrapper){
         syncRows(wrapper);
         bindExpand(wrapper);
+        bindNav(wrapper);
         var burst = 0;
         (function tick(){
             if (!wrapper.isConnected) return;
