@@ -85,21 +85,21 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['labelWidth'] = [
             'tab' => 'content', 'group' => 'layout',
             'label' => esc_html__( 'Breite Label-Spalte', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 200, 'placeholder' => '200px',
+            'type' => 'number', 'units' => true, 'placeholder' => '200px',
             'css'   => [ [ 'property' => '--vgl-label-width', 'selector' => '' ] ],
         ];
 
         $this->controls['columnWidth'] = [
             'tab' => 'content', 'group' => 'layout',
             'label' => esc_html__( 'Breite Produkt-Spalte', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 200, 'placeholder' => '200px',
+            'type' => 'number', 'units' => true, 'placeholder' => '200px',
             'css'   => [ [ 'property' => '--vgl-column-width', 'selector' => '' ] ],
         ];
 
         $this->controls['rowMinHeight'] = [
             'tab' => 'content', 'group' => 'layout',
             'label' => esc_html__( 'Min-Höhe pro Zeile', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 20, 'placeholder' => '20px',
+            'type' => 'number', 'units' => true, 'placeholder' => '20px',
             'css'   => [ [ 'property' => '--vgl-row-min', 'selector' => '' ] ],
         ];
 
@@ -107,7 +107,6 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'layout',
             'label' => esc_html__( 'Innenabstand Zellen & Labels', 'bricks-vergleich' ),
             'type' => 'spacing',
-            'default' => [ 'top' => '8px', 'right' => '12px', 'bottom' => '8px', 'left' => '12px' ],
             'placeholder' => [ 'top' => '8px', 'right' => '12px', 'bottom' => '8px', 'left' => '12px' ],
             'css'   => [
                 [ 'property' => 'padding', 'selector' => '.vergleich-zelle' ],
@@ -136,7 +135,7 @@ class Element_Vergleich extends \Bricks\Element {
                 'center' => esc_html__( 'Zentriert', 'bricks-vergleich' ),
                 'right' => esc_html__( 'Rechts', 'bricks-vergleich' ),
             ],
-            'default' => 'center',
+            'placeholder' => esc_html__( 'Zentriert', 'bricks-vergleich' ),
         ];
 
         // ======================================================================
@@ -151,7 +150,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['imageWidth'] = [
             'tab' => 'content', 'group' => 'images',
             'label' => esc_html__( 'Bildbreite', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 100, 'placeholder' => '100px',
+            'type' => 'number', 'units' => true, 'placeholder' => '100px',
             'required' => [ 'imageEnforce', '=', true ],
             'css'   => [ [ 'property' => '--vgl-img-width', 'selector' => '' ] ],
         ];
@@ -159,7 +158,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['imageHeight'] = [
             'tab' => 'content', 'group' => 'images',
             'label' => esc_html__( 'Bildhöhe', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 100, 'placeholder' => '100px',
+            'type' => 'number', 'units' => true, 'placeholder' => '100px',
             'required' => [ 'imageEnforce', '=', true ],
             'css'   => [ [ 'property' => '--vgl-img-height', 'selector' => '' ] ],
         ];
@@ -180,7 +179,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['imageBorderRadius'] = [
             'tab' => 'content', 'group' => 'images',
             'label' => esc_html__( 'Ecken-Radius', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 0, 'placeholder' => '0px',
+            'type' => 'number', 'units' => true, 'placeholder' => '0px',
             'required' => [ 'imageEnforce', '=', true ],
             'css'   => [ [ 'property' => '--vgl-img-radius', 'selector' => '' ] ],
         ];
@@ -285,21 +284,21 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['rankingEnabled'] = [
             'tab' => 'content', 'group' => 'ranking',
             'label' => esc_html__( 'Ranking-Badge anzeigen', 'bricks-vergleich' ),
-            'type' => 'checkbox', 'default' => false,
+            'type' => 'checkbox',
             'description' => esc_html__( 'Platzierungs-Plakette (1, 2, 3, …) auf jeder Produkt-Spalte.', 'bricks-vergleich' ),
         ];
 
         $this->controls['rankingStart'] = [
             'tab' => 'content', 'group' => 'ranking',
             'label' => esc_html__( 'Start-Nummer', 'bricks-vergleich' ),
-            'type' => 'number', 'default' => 1, 'placeholder' => '1', 'min' => 0,
+            'type' => 'number', 'placeholder' => '1', 'min' => 0,
             'required' => [ 'rankingEnabled', '=', true ],
         ];
 
         $this->controls['rankingReverse'] = [
             'tab' => 'content', 'group' => 'ranking',
             'label' => esc_html__( 'Reihenfolge umkehren', 'bricks-vergleich' ),
-            'type' => 'checkbox', 'default' => false,
+            'type' => 'checkbox',
             'description' => esc_html__( 'Letzte Spalte bekommt Platz 1.', 'bricks-vergleich' ),
             'required' => [ 'rankingEnabled', '=', true ],
         ];
@@ -307,7 +306,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['rankingPrefix'] = [
             'tab' => 'content', 'group' => 'ranking',
             'label' => esc_html__( 'Präfix', 'bricks-vergleich' ),
-            'type' => 'text', 'default' => '#',
+            'type' => 'text', 'placeholder' => '#',
             'hasDynamicData' => 'text',
             'required' => [ 'rankingEnabled', '=', true ],
         ];
@@ -315,7 +314,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['rankingSuffix'] = [
             'tab' => 'content', 'group' => 'ranking',
             'label' => esc_html__( 'Suffix', 'bricks-vergleich' ),
-            'type' => 'text', 'default' => '',
+            'type' => 'text',
             'hasDynamicData' => 'text',
             'required' => [ 'rankingEnabled', '=', true ],
         ];
@@ -331,14 +330,14 @@ class Element_Vergleich extends \Bricks\Element {
                 'bottom-left' => esc_html__( 'Unten links', 'bricks-vergleich' ),
                 'bottom-right' => esc_html__( 'Unten rechts', 'bricks-vergleich' ),
             ],
-            'default' => 'top-left',
+            'placeholder' => esc_html__( 'Oben links', 'bricks-vergleich' ),
             'required' => [ 'rankingEnabled', '=', true ],
         ];
 
         $this->controls['rankingOffsetY'] = [
             'tab' => 'content', 'group' => 'ranking',
             'label' => esc_html__( 'Abstand oben/unten', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 8, 'placeholder' => '8px',
+            'type' => 'number', 'units' => true, 'placeholder' => '8px',
             'required' => [ 'rankingEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-rank-offset-y', 'selector' => '' ] ],
         ];
@@ -346,7 +345,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['rankingOffsetX'] = [
             'tab' => 'content', 'group' => 'ranking',
             'label' => esc_html__( 'Abstand links/rechts', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 8, 'placeholder' => '8px',
+            'type' => 'number', 'units' => true, 'placeholder' => '8px',
             'required' => [ 'rankingEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-rank-offset-x', 'selector' => '' ] ],
         ];
@@ -354,7 +353,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['rankingSize'] = [
             'tab' => 'content', 'group' => 'ranking',
             'label' => esc_html__( 'Mindestgröße', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 36, 'placeholder' => '36px',
+            'type' => 'number', 'units' => true, 'placeholder' => '36px',
             'required' => [ 'rankingEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-rank-size', 'selector' => '' ] ],
         ];
@@ -371,7 +370,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['rankingFontSize'] = [
             'tab' => 'content', 'group' => 'ranking',
             'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 14, 'placeholder' => '14px',
+            'type' => 'number', 'units' => true, 'placeholder' => '14px',
             'required' => [ 'rankingEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-rank-font-size', 'selector' => '' ] ],
         ];
@@ -381,7 +380,7 @@ class Element_Vergleich extends \Bricks\Element {
             'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [ '400' => '400', '500' => '500', '600' => '600', '700' => '700', '800' => '800' ],
-            'default' => '700',
+            'placeholder' => '700',
             'required' => [ 'rankingEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-rank-font-weight', 'selector' => '' ] ],
         ];
@@ -390,7 +389,6 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'ranking',
             'label' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
             'type' => 'color',
-            'default' => [ 'hex' => '#f59e0b' ],
             'required' => [ 'rankingEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-rank-bg', 'selector' => '' ] ],
         ];
@@ -399,7 +397,6 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'ranking',
             'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
             'type' => 'color',
-            'default' => [ 'hex' => '#ffffff' ],
             'required' => [ 'rankingEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-rank-color', 'selector' => '' ] ],
         ];
@@ -407,7 +404,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['rankingBorderRadius'] = [
             'tab' => 'content', 'group' => 'ranking',
             'label' => esc_html__( 'Ecken-Radius', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 9999, 'placeholder' => '9999px',
+            'type' => 'number', 'units' => true, 'placeholder' => '9999px',
             'required' => [ 'rankingEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-rank-radius', 'selector' => '' ] ],
         ];
@@ -422,14 +419,14 @@ class Element_Vergleich extends \Bricks\Element {
                 'medium' => esc_html__( 'Mittel', 'bricks-vergleich' ),
                 'large' => esc_html__( 'Groß', 'bricks-vergleich' ),
             ],
-            'default' => 'medium',
+            'placeholder' => esc_html__( 'Mittel', 'bricks-vergleich' ),
             'required' => [ 'rankingEnabled', '=', true ],
         ];
 
         $this->controls['rankingHighlightTop'] = [
             'tab' => 'content', 'group' => 'ranking',
             'label' => esc_html__( 'Top-1 besonders hervorheben', 'bricks-vergleich' ),
-            'type' => 'checkbox', 'default' => true,
+            'type' => 'checkbox',
             'required' => [ 'rankingEnabled', '=', true ],
         ];
 
@@ -441,7 +438,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['scoreEnabled'] = [
             'tab' => 'content', 'group' => 'score',
             'label' => esc_html__( 'Bewertungs-Badge anzeigen', 'bricks-vergleich' ),
-            'type' => 'checkbox', 'default' => false,
+            'type' => 'checkbox',
             'description' => esc_html__( 'Zeigt einen Meta-Feld-Wert (z. B. Bewertungsnote) als Badge auf jeder Spalte.', 'bricks-vergleich' ),
         ];
 
@@ -449,7 +446,6 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'score',
             'label' => esc_html__( 'Meta-Key oder Dynamic Data', 'bricks-vergleich' ),
             'type' => 'text',
-            'default' => '',
             'placeholder' => 'bewertung',
             'hasDynamicData' => 'text',
             'description' => esc_html__( 'Entweder reiner Meta-Key (z. B. bewertung) oder ein Dynamic-Data-Tag wie {acf:bewertung} / {je_product_bewertung}.', 'bricks-vergleich' ),
@@ -459,7 +455,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['scoreDecimals'] = [
             'tab' => 'content', 'group' => 'score',
             'label' => esc_html__( 'Dezimalstellen', 'bricks-vergleich' ),
-            'type' => 'number', 'default' => 1, 'min' => 0, 'max' => 4,
+            'type' => 'number', 'placeholder' => '1', 'min' => 0, 'max' => 4,
             'required' => [ 'scoreEnabled', '=', true ],
         ];
 
@@ -471,14 +467,14 @@ class Element_Vergleich extends \Bricks\Element {
                 ','  => esc_html__( 'Komma (1,5)', 'bricks-vergleich' ),
                 '.'  => esc_html__( 'Punkt (1.5)', 'bricks-vergleich' ),
             ],
-            'default' => ',',
+            'placeholder' => esc_html__( 'Komma (1,5)', 'bricks-vergleich' ),
             'required' => [ 'scoreEnabled', '=', true ],
         ];
 
         $this->controls['scorePrefix'] = [
             'tab' => 'content', 'group' => 'score',
             'label' => esc_html__( 'Präfix', 'bricks-vergleich' ),
-            'type' => 'text', 'default' => '',
+            'type' => 'text',
             'hasDynamicData' => 'text',
             'placeholder' => esc_html__( 'z.B. Note', 'bricks-vergleich' ),
             'required' => [ 'scoreEnabled', '=', true ],
@@ -487,7 +483,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['scoreSuffix'] = [
             'tab' => 'content', 'group' => 'score',
             'label' => esc_html__( 'Suffix', 'bricks-vergleich' ),
-            'type' => 'text', 'default' => '',
+            'type' => 'text',
             'hasDynamicData' => 'text',
             'placeholder' => esc_html__( 'z.B. /5', 'bricks-vergleich' ),
             'required' => [ 'scoreEnabled', '=', true ],
@@ -505,14 +501,14 @@ class Element_Vergleich extends \Bricks\Element {
                 'bottom-center' => esc_html__( 'Unten Mitte', 'bricks-vergleich' ),
                 'bottom-right'  => esc_html__( 'Unten rechts', 'bricks-vergleich' ),
             ],
-            'default' => 'bottom-left',
+            'placeholder' => esc_html__( 'Unten links', 'bricks-vergleich' ),
             'required' => [ 'scoreEnabled', '=', true ],
         ];
 
         $this->controls['scoreOffsetY'] = [
             'tab' => 'content', 'group' => 'score',
             'label' => esc_html__( 'Abstand oben/unten', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 8, 'placeholder' => '8px',
+            'type' => 'number', 'units' => true, 'placeholder' => '8px',
             'required' => [ 'scoreEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-score-offset-y', 'selector' => '' ] ],
         ];
@@ -520,7 +516,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['scoreOffsetX'] = [
             'tab' => 'content', 'group' => 'score',
             'label' => esc_html__( 'Abstand links/rechts', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 8, 'placeholder' => '8px',
+            'type' => 'number', 'units' => true, 'placeholder' => '8px',
             'required' => [ 'scoreEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-score-offset-x', 'selector' => '' ] ],
         ];
@@ -528,7 +524,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['scoreMinSize'] = [
             'tab' => 'content', 'group' => 'score',
             'label' => esc_html__( 'Mindestgröße', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 36, 'placeholder' => '36px',
+            'type' => 'number', 'units' => true, 'placeholder' => '36px',
             'required' => [ 'scoreEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-score-size', 'selector' => '' ] ],
         ];
@@ -545,7 +541,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['scoreFontSize'] = [
             'tab' => 'content', 'group' => 'score',
             'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 14, 'placeholder' => '14px',
+            'type' => 'number', 'units' => true, 'placeholder' => '14px',
             'required' => [ 'scoreEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-score-font-size', 'selector' => '' ] ],
         ];
@@ -555,7 +551,7 @@ class Element_Vergleich extends \Bricks\Element {
             'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [ '400' => '400', '500' => '500', '600' => '600', '700' => '700', '800' => '800' ],
-            'default' => '700',
+            'placeholder' => '700',
             'required' => [ 'scoreEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-score-font-weight', 'selector' => '' ] ],
         ];
@@ -564,7 +560,6 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'score',
             'label' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
             'type' => 'color',
-            'default' => [ 'hex' => '#111827' ],
             'required' => [ 'scoreEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-score-bg', 'selector' => '' ] ],
         ];
@@ -573,7 +568,6 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'score',
             'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
             'type' => 'color',
-            'default' => [ 'hex' => '#ffffff' ],
             'required' => [ 'scoreEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-score-color', 'selector' => '' ] ],
         ];
@@ -581,7 +575,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['scoreBorderRadius'] = [
             'tab' => 'content', 'group' => 'score',
             'label' => esc_html__( 'Ecken-Radius', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 6, 'placeholder' => '6px',
+            'type' => 'number', 'units' => true, 'placeholder' => '6px',
             'required' => [ 'scoreEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-score-radius', 'selector' => '' ] ],
         ];
@@ -596,14 +590,15 @@ class Element_Vergleich extends \Bricks\Element {
                 'medium' => esc_html__( 'Mittel', 'bricks-vergleich' ),
                 'large' => esc_html__( 'Groß', 'bricks-vergleich' ),
             ],
-            'default' => 'medium',
+            'placeholder' => esc_html__( 'Mittel', 'bricks-vergleich' ),
             'required' => [ 'scoreEnabled', '=', true ],
         ];
 
         $this->controls['scoreHideEmpty'] = [
             'tab' => 'content', 'group' => 'score',
             'label' => esc_html__( 'Badge verbergen, wenn Wert leer', 'bricks-vergleich' ),
-            'type' => 'checkbox', 'default' => true,
+            'type' => 'checkbox',
+            'description' => esc_html__( 'Empfohlen: an. Badge wird ausgeblendet, wenn das Feld leer ist.', 'bricks-vergleich' ),
             'required' => [ 'scoreEnabled', '=', true ],
         ];
 
@@ -613,14 +608,14 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['navEnabled'] = [
             'tab' => 'content', 'group' => 'nav',
             'label' => esc_html__( 'Navigations-Pfeile anzeigen', 'bricks-vergleich' ),
-            'type' => 'checkbox', 'default' => false,
+            'type' => 'checkbox',
             'description' => esc_html__( 'Kreisrunde Pfeile links/rechts am Scroll-Bereich — nur sichtbar, wenn die Spalten tatsächlich überlaufen.', 'bricks-vergleich' ),
         ];
 
         $this->controls['navSize'] = [
             'tab' => 'content', 'group' => 'nav',
             'label' => esc_html__( 'Button-Größe', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 44, 'placeholder' => '44px',
+            'type' => 'number', 'units' => true, 'placeholder' => '44px',
             'required' => [ 'navEnabled', '=', true ],
             'css' => [ [ 'property' => '--vgl-nav-size', 'selector' => '' ] ],
         ];
@@ -628,7 +623,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['navIconSize'] = [
             'tab' => 'content', 'group' => 'nav',
             'label' => esc_html__( 'Icon-Größe', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 18, 'placeholder' => '18px',
+            'type' => 'number', 'units' => true, 'placeholder' => '18px',
             'required' => [ 'navEnabled', '=', true ],
             'css' => [ [ 'property' => '--vgl-nav-icon-size', 'selector' => '' ] ],
         ];
@@ -636,7 +631,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['navOffset'] = [
             'tab' => 'content', 'group' => 'nav',
             'label' => esc_html__( 'Abstand zum Rand', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 12, 'placeholder' => '12px',
+            'type' => 'number', 'units' => true, 'placeholder' => '12px',
             'required' => [ 'navEnabled', '=', true ],
             'css' => [ [ 'property' => '--vgl-nav-offset', 'selector' => '' ] ],
         ];
@@ -644,7 +639,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['navBgColor'] = [
             'tab' => 'content', 'group' => 'nav',
             'label' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
-            'type' => 'color', 'default' => [ 'hex' => '#ffffff' ],
+            'type' => 'color',
             'required' => [ 'navEnabled', '=', true ],
             'css' => [ [ 'property' => '--vgl-nav-bg', 'selector' => '' ] ],
         ];
@@ -652,7 +647,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['navIconColor'] = [
             'tab' => 'content', 'group' => 'nav',
             'label' => esc_html__( 'Icon-Farbe', 'bricks-vergleich' ),
-            'type' => 'color', 'default' => [ 'hex' => '#111827' ],
+            'type' => 'color',
             'required' => [ 'navEnabled', '=', true ],
             'css' => [ [ 'property' => '--vgl-nav-color', 'selector' => '' ] ],
         ];
@@ -660,7 +655,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['navBorderColor'] = [
             'tab' => 'content', 'group' => 'nav',
             'label' => esc_html__( 'Rahmenfarbe', 'bricks-vergleich' ),
-            'type' => 'color', 'default' => [ 'hex' => '#e5e7eb' ],
+            'type' => 'color',
             'required' => [ 'navEnabled', '=', true ],
             'css' => [ [ 'property' => '--vgl-nav-border', 'selector' => '' ] ],
         ];
@@ -675,7 +670,7 @@ class Element_Vergleich extends \Bricks\Element {
                 'medium' => esc_html__( 'Mittel', 'bricks-vergleich' ),
                 'large'  => esc_html__( 'Groß', 'bricks-vergleich' ),
             ],
-            'default' => 'medium',
+            'placeholder' => esc_html__( 'Mittel', 'bricks-vergleich' ),
             'required' => [ 'navEnabled', '=', true ],
         ];
 
@@ -687,14 +682,14 @@ class Element_Vergleich extends \Bricks\Element {
                 'card' => esc_html__( 'Eine Spalte', 'bricks-vergleich' ),
                 'view' => esc_html__( 'Eine Bildschirmbreite', 'bricks-vergleich' ),
             ],
-            'default' => 'card',
+            'placeholder' => esc_html__( 'Eine Spalte', 'bricks-vergleich' ),
             'required' => [ 'navEnabled', '=', true ],
         ];
 
         $this->controls['navCounterEnabled'] = [
             'tab' => 'content', 'group' => 'nav',
             'label' => esc_html__( 'Zähler anzeigen (z.B. „1–4 von 80")', 'bricks-vergleich' ),
-            'type' => 'checkbox', 'default' => false,
+            'type' => 'checkbox',
             'description' => esc_html__( 'Kleine Anzeige, die zeigt, welche Spalten gerade sichtbar sind. Besonders hilfreich auf Mobil.', 'bricks-vergleich' ),
         ];
 
@@ -706,7 +701,7 @@ class Element_Vergleich extends \Bricks\Element {
                 'above' => esc_html__( 'Über der Tabelle', 'bricks-vergleich' ),
                 'below' => esc_html__( 'Unter der Tabelle', 'bricks-vergleich' ),
             ],
-            'default' => 'above',
+            'placeholder' => esc_html__( 'Über der Tabelle', 'bricks-vergleich' ),
             'required' => [ 'navCounterEnabled', '=', true ],
         ];
 
@@ -714,7 +709,7 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'nav',
             'label' => esc_html__( 'Zähler-Format', 'bricks-vergleich' ),
             'type' => 'text',
-            'default' => '{start}–{end} von {total}',
+            'placeholder' => '{start}–{end} von {total}',
             'description' => esc_html__( 'Platzhalter: {start}, {end}, {total}.', 'bricks-vergleich' ),
             'required' => [ 'navCounterEnabled', '=', true ],
         ];
@@ -728,14 +723,14 @@ class Element_Vergleich extends \Bricks\Element {
                 'center' => esc_html__( 'Zentriert', 'bricks-vergleich' ),
                 'right'  => esc_html__( 'Rechts', 'bricks-vergleich' ),
             ],
-            'default' => 'right',
+            'placeholder' => esc_html__( 'Rechts', 'bricks-vergleich' ),
             'required' => [ 'navCounterEnabled', '=', true ],
         ];
 
         $this->controls['navCounterFontSize'] = [
             'tab' => 'content', 'group' => 'nav',
             'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 14, 'placeholder' => '14px',
+            'type' => 'number', 'units' => true, 'placeholder' => '14px',
             'required' => [ 'navCounterEnabled', '=', true ],
             'css' => [ [ 'property' => 'font-size', 'selector' => '.vergleich-counter' ] ],
         ];
@@ -747,7 +742,7 @@ class Element_Vergleich extends \Bricks\Element {
             'options' => [
                 '400' => '400', '500' => '500', '600' => '600', '700' => '700',
             ],
-            'default' => '400',
+            'placeholder' => '400',
             'required' => [ 'navCounterEnabled', '=', true ],
             'css' => [ [ 'property' => 'font-weight', 'selector' => '.vergleich-counter' ] ],
         ];
@@ -756,7 +751,6 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'nav',
             'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
             'type' => 'color',
-            'default' => [ 'hex' => '#6b7280' ],
             'required' => [ 'navCounterEnabled', '=', true ],
             'css' => [ [ 'property' => 'color', 'selector' => '.vergleich-counter' ] ],
         ];
@@ -776,7 +770,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['labelBgColor'] = [
             'tab' => 'content', 'group' => 'style',
             'label' => esc_html__( 'Hintergrund Label-Spalte', 'bricks-vergleich' ),
-            'type' => 'color', 'default' => [ 'hex' => '#f3f4f6' ],
+            'type' => 'color',
             'css' => [ [ 'property' => 'background-color', 'selector' => '.vergleich-labels' ] ],
         ];
 
@@ -789,7 +783,7 @@ class Element_Vergleich extends \Bricks\Element {
                 'medium'   => esc_html__( 'Mittel', 'bricks-vergleich' ),
                 'strong'   => esc_html__( 'Stark', 'bricks-vergleich' ),
             ],
-            'default' => 'medium',
+            'placeholder' => esc_html__( 'Mittel', 'bricks-vergleich' ),
             'description' => esc_html__( 'Wird verwendet, wenn der Hervorhebungs-Stil „Schatten" oder „Beides" ist.', 'bricks-vergleich' ),
         ];
 
@@ -826,7 +820,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['rowHoverEnabled'] = [
             'tab' => 'content', 'group' => 'style',
             'label' => esc_html__( 'Zeilen-Hover-Effekt', 'bricks-vergleich' ),
-            'type' => 'checkbox', 'default' => false,
+            'type' => 'checkbox',
             'description' => esc_html__( 'Färbt die gesamte Zeile leicht ein, wenn die Maus drüber fährt.', 'bricks-vergleich' ),
         ];
 
@@ -834,7 +828,6 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'style',
             'label' => esc_html__( 'Hover-Hintergrundfarbe', 'bricks-vergleich' ),
             'type' => 'color',
-            'default' => [ 'rgb' => 'rgba(0,0,0,.04)' ],
             'required' => [ 'rowHoverEnabled', '=', true ],
             'css' => [ [ 'property' => '--vgl-row-hover-bg', 'selector' => '' ] ],
         ];
@@ -849,14 +842,14 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['cardBgColor'] = [
             'tab' => 'content', 'group' => 'style',
             'label' => esc_html__( 'Hintergrund Produkt-Spalten', 'bricks-vergleich' ),
-            'type' => 'color', 'default' => [ 'hex' => '#ffffff' ],
+            'type' => 'color',
             'css' => [ [ 'property' => 'background-color', 'selector' => '.vergleich-card' ] ],
         ];
 
         $this->controls['borderColor'] = [
             'tab' => 'content', 'group' => 'style',
             'label' => esc_html__( 'Rahmenfarbe', 'bricks-vergleich' ),
-            'type' => 'color', 'default' => [ 'hex' => '#e5e7eb' ],
+            'type' => 'color',
             'css' => [
                 [ 'property' => 'border-color', 'selector' => '' ],
                 [ 'property' => 'border-color', 'selector' => '.vergleich-card' ],
@@ -868,7 +861,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['borderRadius'] = [
             'tab' => 'content', 'group' => 'style',
             'label' => esc_html__( 'Eckenradius', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'default' => 12,
+            'type' => 'number', 'units' => true, 'placeholder' => '12px',
             'css' => [ [ 'property' => 'border-radius', 'selector' => '' ] ],
         ];
     }
@@ -1403,66 +1396,25 @@ class Element_Vergleich extends \Bricks\Element {
         }
         $visible_row_count = max( 1, $visible_row_count );
 
-        // Inline-Style auf _root: NUR Runtime-berechnete Variablen.
-        // User-Controls (labelWidth, imageWidth, rankingBgColor, ...) haben
-        // bereits 'css'-Arrays und werden von Bricks reaktiv als eigene CSS-
-        // Regel gepatcht → wenn wir dieselben Properties hier inline setzen,
-        // würde Inline-Style (höhere Spezifität) die reaktive Regel blocken.
+        // Inline-Style auf _root: NUR Runtime-berechnete Werte, die nicht
+        // ueber Bricks' css-Array-Pipeline gesetzt werden koennen.
+        // Keine Fallback-Werte fuer User-Controls: inline-style hat Spezifi-
+        // taet 1000 und wuerde jede Klassen-/Global-Style-Regel ueberschreiben.
+        // Fehlende Controls werden durch var(--name, default) im CSS abgefangen.
         $inline_style = sprintf(
             '--vgl-row-count:%d; --vgl-row-count-collapsed:%d; --vgl-text-align:%s;',
             $row_count, $visible_row_count, esc_attr( $text_align )
         );
 
-        // Fallbacks nur setzen, falls der User-Controls-Wert LEER ist (Bricks
-        // generiert dann keine CSS-Regel; unser Fallback greift). Wenn gesetzt,
-        // überschreibt Bricks' reaktive Regel unseren Inline-Wert NICHT, weil
-        // wir ihn dann gar nicht schreiben.
-        if ( empty( $settings['labelWidth'] ) )   $inline_style .= ' --vgl-label-width:' . esc_attr( $label_width ) . ';';
-        if ( empty( $settings['columnWidth'] ) )  $inline_style .= ' --vgl-column-width:' . esc_attr( $column_width ) . ';';
-        if ( empty( $settings['rowMinHeight'] ) ) $inline_style .= ' --vgl-row-min:' . esc_attr( $row_min_height ) . ';';
-        if ( empty( $settings['imageWidth'] ) )   $inline_style .= ' --vgl-img-width:' . esc_attr( $img_width ) . ';';
-        if ( empty( $settings['imageHeight'] ) )  $inline_style .= ' --vgl-img-height:' . esc_attr( $img_height ) . ';';
-        if ( empty( $settings['imageObjectFit'] ) ) $inline_style .= ' --vgl-img-fit:' . esc_attr( $img_fit ) . ';';
-        if ( empty( $settings['imageBorderRadius'] ) ) $inline_style .= ' --vgl-img-radius:' . esc_attr( $img_radius ) . ';';
-
-        // Expand-Button nutzt native Bricks-Klassen (bricks-button + bricks-background-*).
-        // Keine Inline-CSS-Variablen mehr nötig — Size/Style/Outline/Circle werden
-        // via Klassen gesetzt und von Bricks' Theme-CSS gestaltet.
-
+        // Shadow-Presets (aus Select gemapt) — haben KEIN css-Array, daher
+        // inline notwendig. Gilt nur wenn Feature aktiv ist.
         if ( $ranking_enabled ) {
-            if ( empty( $settings['rankingOffsetY'] ) )      $inline_style .= ' --vgl-rank-offset-y:'   . esc_attr( $ranking_offset_y ) . ';';
-            if ( empty( $settings['rankingOffsetX'] ) )      $inline_style .= ' --vgl-rank-offset-x:'   . esc_attr( $ranking_offset_x ) . ';';
-            if ( empty( $settings['rankingSize'] ) )         $inline_style .= ' --vgl-rank-size:'       . esc_attr( $ranking_size ) . ';';
-            if ( empty( $settings['rankingPadding'] ) )      $inline_style .= ' --vgl-rank-padding:'    . esc_attr( $ranking_padding ) . ';';
-            if ( empty( $settings['rankingFontSize'] ) )     $inline_style .= ' --vgl-rank-font-size:'  . esc_attr( $ranking_font_size ) . ';';
-            if ( empty( $settings['rankingFontWeight'] ) )   $inline_style .= ' --vgl-rank-font-weight:'. esc_attr( $ranking_font_weight ) . ';';
-            if ( empty( $settings['rankingBgColor'] ) )      $inline_style .= ' --vgl-rank-bg:'         . esc_attr( $ranking_bg_color ) . ';';
-            if ( empty( $settings['rankingTextColor'] ) )    $inline_style .= ' --vgl-rank-color:'      . esc_attr( $ranking_text_color ) . ';';
-            if ( empty( $settings['rankingBorderRadius'] ) ) $inline_style .= ' --vgl-rank-radius:'     . esc_attr( $ranking_border_radius ) . ';';
-            // rankingShadow hat KEIN css-Array (Select-Mapping), deshalb immer inline.
             $inline_style .= ' --vgl-rank-shadow:' . esc_attr( $ranking_shadow ) . ';';
         }
-
         if ( $score_enabled ) {
-            if ( empty( $settings['scoreOffsetY'] ) )      $inline_style .= ' --vgl-score-offset-y:'   . esc_attr( $score_offset_y ) . ';';
-            if ( empty( $settings['scoreOffsetX'] ) )      $inline_style .= ' --vgl-score-offset-x:'   . esc_attr( $score_offset_x ) . ';';
-            if ( empty( $settings['scoreMinSize'] ) )      $inline_style .= ' --vgl-score-size:'       . esc_attr( $score_min_size ) . ';';
-            if ( empty( $settings['scorePadding'] ) )      $inline_style .= ' --vgl-score-padding:'    . esc_attr( $score_padding ) . ';';
-            if ( empty( $settings['scoreFontSize'] ) )     $inline_style .= ' --vgl-score-font-size:'  . esc_attr( $score_font_size ) . ';';
-            if ( empty( $settings['scoreFontWeight'] ) )   $inline_style .= ' --vgl-score-font-weight:'. esc_attr( $score_font_weight ) . ';';
-            if ( empty( $settings['scoreBgColor'] ) )      $inline_style .= ' --vgl-score-bg:'         . esc_attr( $score_bg_color ) . ';';
-            if ( empty( $settings['scoreTextColor'] ) )    $inline_style .= ' --vgl-score-color:'      . esc_attr( $score_text_color ) . ';';
-            if ( empty( $settings['scoreBorderRadius'] ) ) $inline_style .= ' --vgl-score-radius:'     . esc_attr( $score_radius ) . ';';
             $inline_style .= ' --vgl-score-shadow:' . esc_attr( $score_shadow ) . ';';
         }
-
         if ( $nav_enabled ) {
-            if ( empty( $settings['navSize'] ) )        $inline_style .= ' --vgl-nav-size:'       . esc_attr( $nav_size ) . ';';
-            if ( empty( $settings['navIconSize'] ) )    $inline_style .= ' --vgl-nav-icon-size:'  . esc_attr( $nav_icon_size ) . ';';
-            if ( empty( $settings['navOffset'] ) )      $inline_style .= ' --vgl-nav-offset:'     . esc_attr( $nav_offset ) . ';';
-            if ( empty( $settings['navBgColor'] ) )     $inline_style .= ' --vgl-nav-bg:'         . esc_attr( $nav_bg_color ) . ';';
-            if ( empty( $settings['navIconColor'] ) )   $inline_style .= ' --vgl-nav-color:'      . esc_attr( $nav_icon_color ) . ';';
-            if ( empty( $settings['navBorderColor'] ) ) $inline_style .= ' --vgl-nav-border:'     . esc_attr( $nav_border_color ) . ';';
             $inline_style .= ' --vgl-nav-shadow:' . esc_attr( $nav_shadow ) . ';';
         }
 
