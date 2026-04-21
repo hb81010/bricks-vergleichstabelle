@@ -195,12 +195,12 @@ class Element_Vergleich extends \Bricks\Element {
             'css'   => [ [ 'property' => '--vgl-img-fit', 'selector' => '' ] ],
         ];
 
-        $this->controls['imageBorderRadius'] = [
+        $this->controls['imageBorder'] = [
             'tab' => 'content', 'group' => 'images',
-            'label' => esc_html__( 'Ecken-Radius', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'placeholder' => '0px',
+            'label' => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+            'type' => 'border',
             'required' => [ 'imageEnforce', '=', true ],
-            'css'   => [ [ 'property' => '--vgl-img-radius', 'selector' => '' ] ],
+            'css'   => [ [ 'property' => 'border', 'selector' => '.vergleich-zelle--image .vergleich-image, .vergleich-zelle--image .vergleich-image-placeholder' ] ],
         ];
 
         // ======================================================================
@@ -478,12 +478,12 @@ class Element_Vergleich extends \Bricks\Element {
             'css'   => [ [ 'property' => '--vgl-rank-color', 'selector' => '' ] ],
         ];
 
-        $this->controls['rankingBorderRadius'] = [
+        $this->controls['rankingBorder'] = [
             'tab' => 'content', 'group' => 'badges',
-            'label' => esc_html__( 'Ecken-Radius', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'placeholder' => '9999px',
+            'label' => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+            'type' => 'border',
             'required' => [ 'rankingEnabled', '=', true ],
-            'css'   => [ [ 'property' => '--vgl-rank-radius', 'selector' => '' ] ],
+            'css'   => [ [ 'property' => 'border', 'selector' => '.vergleich-rank' ] ],
         ];
 
         $this->controls['rankingShadow'] = [
@@ -653,12 +653,12 @@ class Element_Vergleich extends \Bricks\Element {
             'css'   => [ [ 'property' => '--vgl-score-color', 'selector' => '' ] ],
         ];
 
-        $this->controls['scoreBorderRadius'] = [
+        $this->controls['scoreBorder'] = [
             'tab' => 'content', 'group' => 'badges',
-            'label' => esc_html__( 'Ecken-Radius', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'placeholder' => '6px',
+            'label' => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+            'type' => 'border',
             'required' => [ 'scoreEnabled', '=', true ],
-            'css'   => [ [ 'property' => '--vgl-score-radius', 'selector' => '' ] ],
+            'css'   => [ [ 'property' => 'border', 'selector' => '.vergleich-score' ] ],
         ];
 
         $this->controls['scoreShadow'] = [
@@ -1101,23 +1101,16 @@ class Element_Vergleich extends \Bricks\Element {
             'css' => [ [ 'property' => 'background-color', 'selector' => '.vergleich-card' ] ],
         ];
 
-        $this->controls['borderColor'] = [
+        $this->controls['border'] = [
             'tab' => 'content', 'group' => 'style',
-            'label' => esc_html__( 'Rahmenfarbe', 'bricks-vergleich' ),
-            'type' => 'color',
+            'label' => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+            'type' => 'border',
             'css' => [
-                [ 'property' => 'border-color', 'selector' => '' ],
+                [ 'property' => 'border', 'selector' => '' ],
                 [ 'property' => 'border-color', 'selector' => '.vergleich-card' ],
                 [ 'property' => 'border-color', 'selector' => '.vergleich-label' ],
                 [ 'property' => 'border-color', 'selector' => '.vergleich-zelle' ],
             ],
-        ];
-
-        $this->controls['borderRadius'] = [
-            'tab' => 'content', 'group' => 'style',
-            'label' => esc_html__( 'Eckenradius', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'placeholder' => '12px',
-            'css' => [ [ 'property' => 'border-radius', 'selector' => '' ] ],
         ];
     }
 
@@ -1489,10 +1482,9 @@ class Element_Vergleich extends \Bricks\Element {
                 'placeholder' => [ 'top' => '6px', 'right' => '12px', 'bottom' => '6px', 'left' => '12px' ],
                 'required'    => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
             ],
-            'scoreRadius' => [
-                'label'       => esc_html__( 'Ecken-Radius', 'bricks-vergleich' ),
-                'type'        => 'number', 'units' => true,
-                'placeholder' => '9999px',
+            'scoreBorder' => [
+                'label'       => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+                'type'        => 'border',
                 'required'    => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
             ],
 
@@ -1725,7 +1717,6 @@ class Element_Vergleich extends \Bricks\Element {
         $img_width   = $this->get_css_value( $settings['imageWidth']  ?? null, '100px' );
         $img_height  = $this->get_css_value( $settings['imageHeight'] ?? null, '100px' );
         $img_fit     = $settings['imageObjectFit'] ?? 'cover';
-        $img_radius  = $this->get_css_value( $settings['imageBorderRadius'] ?? null, '0px' );
 
         // Expand/Collapse
         $expand_enabled   = ! empty( $settings['expandEnabled'] );
@@ -1759,7 +1750,6 @@ class Element_Vergleich extends \Bricks\Element {
         $ranking_font_weight   = $settings['rankingFontWeight'] ?? '700';
         $ranking_bg_color      = $this->resolve_color( $settings['rankingBgColor'] ?? null ) ?: '#f59e0b';
         $ranking_text_color    = $this->resolve_color( $settings['rankingTextColor'] ?? null ) ?: '#ffffff';
-        $ranking_border_radius = $this->get_css_value( $settings['rankingBorderRadius'] ?? null, '9999px' );
         $ranking_shadow_map    = [
             'none' => 'none', 'small' => '0 1px 2px rgba(0,0,0,.12)',
             'medium' => '0 2px 6px rgba(0,0,0,.18)', 'large' => '0 4px 12px rgba(0,0,0,.22)',
@@ -1793,7 +1783,6 @@ class Element_Vergleich extends \Bricks\Element {
         $score_font_weight = $settings['scoreFontWeight'] ?? '700';
         $score_bg_color    = $this->resolve_color( $settings['scoreBgColor'] ?? null ) ?: '#111827';
         $score_text_color  = $this->resolve_color( $settings['scoreTextColor'] ?? null ) ?: '#ffffff';
-        $score_radius      = $this->get_css_value( $settings['scoreBorderRadius'] ?? null, '6px' );
         $score_shadow_map  = [
             'none' => 'none', 'small' => '0 1px 2px rgba(0,0,0,.12)',
             'medium' => '0 2px 6px rgba(0,0,0,.18)', 'large' => '0 4px 12px rgba(0,0,0,.22)',
@@ -2942,9 +2931,9 @@ class Element_Vergleich extends \Bricks\Element {
             $bg      = $this->resolve_color( $row['scoreBgColor'] ?? null ) ?: '#111827';
             $color   = $this->resolve_color( $row['scoreTextColor'] ?? null ) ?: '#ffffff';
             $padding = $this->format_spacing( $row['scorePadding'] ?? null, '6px 12px' );
-            $radius  = $this->get_css_value( $row['scoreRadius'] ?? null, '9999px' );
+            $border_css = $this->format_border( $row['scoreBorder'] ?? null, [ 'radius' => '9999px' ] );
             $style .= 'background:' . esc_attr( $bg ) . ';color:' . esc_attr( $color ) . ';'
-                   .  'padding:' . esc_attr( $padding ) . ';border-radius:' . esc_attr( $radius ) . ';'
+                   .  'padding:' . esc_attr( $padding ) . ';' . $border_css
                    .  'box-shadow:0 1px 2px rgba(0,0,0,.12);white-space:nowrap;';
         }
 
@@ -3295,6 +3284,53 @@ class Element_Vergleich extends \Bricks\Element {
         return implode( ' ', $sides );
     }
 
+    // Bricks-Border-Struktur → Inline-CSS-Fragment. Defaults greifen nur, wenn
+    // der User KEINEN Wert gesetzt hat (z.B. Badge-Default radius: 9999px).
+    private function format_border( $border, $defaults = [] ) {
+        $width_css = $style_css = $color_css = $radius_css = '';
+        if ( is_array( $border ) ) {
+            if ( ! empty( $border['width'] ) && is_array( $border['width'] ) ) {
+                $sides = [];
+                $any = false;
+                foreach ( [ 'top', 'right', 'bottom', 'left' ] as $side ) {
+                    $v = $border['width'][ $side ] ?? '';
+                    if ( $v === '' || $v === null ) { $sides[] = '0'; continue; }
+                    $sides[] = $this->format_length( $v );
+                    $any = true;
+                }
+                if ( $any ) $width_css = implode( ' ', $sides );
+            }
+            if ( ! empty( $border['style'] ) && is_string( $border['style'] ) ) {
+                $style_css = $this->sanitize_css_value( $border['style'] );
+            }
+            if ( ! empty( $border['color'] ) ) {
+                $color_css = $this->resolve_color( $border['color'] );
+            }
+            if ( ! empty( $border['radius'] ) && is_array( $border['radius'] ) ) {
+                $keys = isset( $border['radius']['top-left'] ) || isset( $border['radius']['top-right'] )
+                    ? [ 'top-left', 'top-right', 'bottom-right', 'bottom-left' ]
+                    : [ 'top', 'right', 'bottom', 'left' ];
+                $corners = [];
+                $any = false;
+                foreach ( $keys as $k ) {
+                    $v = $border['radius'][ $k ] ?? '';
+                    if ( $v === '' || $v === null ) { $corners[] = '0'; continue; }
+                    $corners[] = $this->format_length( $v );
+                    $any = true;
+                }
+                if ( $any ) $radius_css = implode( ' ', $corners );
+            }
+        }
+        if ( $radius_css === '' && ! empty( $defaults['radius'] ) ) $radius_css = (string) $defaults['radius'];
+
+        $out = '';
+        if ( $width_css !== '' ) $out .= 'border-width:' . esc_attr( $width_css ) . ';';
+        if ( $style_css !== '' ) $out .= 'border-style:' . esc_attr( $style_css ) . ';';
+        if ( $color_css !== '' ) $out .= 'border-color:' . esc_attr( $color_css ) . ';';
+        if ( $radius_css !== '' ) $out .= 'border-radius:' . esc_attr( $radius_css ) . ';';
+        return $out;
+    }
+
     private function format_length( $value ) {
         if ( is_array( $value ) ) {
             $n = $value['number'] ?? ( $value[0] ?? '' );
@@ -3507,7 +3543,6 @@ class Element_Vergleich extends \Bricks\Element {
             height: var(--vgl-img-height, 100px) !important;
             max-width: 100% !important;
             object-fit: var(--vgl-img-fit, cover) !important;
-            border-radius: var(--vgl-img-radius, 0) !important;
             display: block;
         }
         .vergleich-image-placeholder {
@@ -3578,7 +3613,7 @@ class Element_Vergleich extends \Bricks\Element {
             line-height: 1;
             color: var(--vgl-rank-color, #fff);
             background: var(--vgl-rank-bg, #f59e0b);
-            border-radius: var(--vgl-rank-radius, 9999px);
+            border-radius: 9999px;
             box-shadow: var(--vgl-rank-shadow, 0 2px 6px rgba(0,0,0,.18));
             pointer-events: none;
             white-space: nowrap;
@@ -3653,7 +3688,7 @@ class Element_Vergleich extends \Bricks\Element {
             line-height: 1;
             color: var(--vgl-score-color, #fff);
             background: var(--vgl-score-bg, #111827);
-            border-radius: var(--vgl-score-radius, 6px);
+            border-radius: 6px;
             box-shadow: var(--vgl-score-shadow, 0 2px 6px rgba(0,0,0,.18));
             pointer-events: none;
             white-space: nowrap;
