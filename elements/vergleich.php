@@ -3800,10 +3800,14 @@ class Element_Vergleich extends \Bricks\Element {
             opacity: .85;
         }
 
-        /* === Navigations-Pfeile === */
+        /* === Navigations-Pfeile ===
+           top wird per JS gesetzt: vertikale Mitte des sichtbaren Tabellen-
+           Abschnitts mit leichtem Upward-Bias (35%), damit die Buttons auch
+           bei langen Tabellen beim Scrollen mitgehen und nicht irgendwo in
+           der Tabellenmitte steckenbleiben. Fallback 50% wenn kein JS. */
         .vergleich-nav {
             position: absolute !important;
-            top: 50% !important;
+            top: 50%;
             transform: translateY(-50%);
             z-index: 8;
             width: var(--vgl-nav-size, 44px);
@@ -4144,6 +4148,39 @@ class Element_Vergleich extends \Bricks\Element {
         return root ? root.querySelector("[data-vgl-counter]") : null;
     }
 
+    // Setzt die vertikale Position der Nav-Pfeile auf die Mitte des aktuell
+    // sichtbaren Tabellen-Abschnitts, mit einem kleinen Upward-Bias. So bleiben
+    // die Pfeile beim Scrollen stets im Viewport sichtbar, statt in der
+    // geometrischen Mitte der (langen) Tabelle festzukleben.
+    function updateNavPosition(wrapper){
+        var prev = wrapper.querySelector(".vergleich-nav--prev");
+        var next = wrapper.querySelector(".vergleich-nav--next");
+        if (!prev && !next) return;
+
+        var rect = wrapper.getBoundingClientRect();
+        var vh   = window.innerHeight || document.documentElement.clientHeight || 0;
+        if (vh <= 0 || rect.height <= 0) return;
+
+        // Sichtbarer Abschnitt des Wrappers, in Wrapper-eigenen Koordinaten
+        var visTop    = Math.max(0, -rect.top);
+        var visBottom = Math.min(rect.height, vh - rect.top);
+
+        var topPx;
+        if (visBottom <= visTop) {
+            // Wrapper ist aktuell komplett außerhalb des Viewports → zurück auf
+            // geometrische Mitte, damit's keine komische Position gibt.
+            topPx = rect.height / 2;
+        } else {
+            // 35% vom oberen Rand des sichtbaren Abschnitts = leicht höher als
+            // die optische Mitte, matcht das Autobild-Pattern.
+            topPx = visTop + (visBottom - visTop) * 0.35;
+        }
+
+        var val = topPx + "px";
+        if (prev) prev.style.top = val;
+        if (next) next.style.top = val;
+    }
+
     function updateNav(wrapper){
         var scroll = wrapper.querySelector(".vergleich-scroll");
         if (!scroll) return;
@@ -4160,6 +4197,8 @@ class Element_Vergleich extends \Bricks\Element {
             prev.hidden = !overflows || atStart;
             next.hidden = !overflows || atEnd;
         }
+
+        updateNavPosition(wrapper);
 
         if (counter) {
             var cards = scroll.querySelectorAll(".vergleich-card");
@@ -4205,9 +4244,14 @@ class Element_Vergleich extends \Bricks\Element {
         });
 
         var handler = function(){ updateNav(wrapper); };
+        // Window-Scroll/Resize: nur die Arrow-Position updaten (nicht den
+        // ganzen updateNav, weil der auch den Counter erneut neu berechnet).
+        var posHandler = function(){ updateNavPosition(wrapper); };
+
         var scroll = wrapper.querySelector(".vergleich-scroll");
         if (scroll) scroll.addEventListener("scroll", handler, { passive: true });
         window.addEventListener("resize", handler);
+        window.addEventListener("scroll", posHandler, { passive: true });
         if (typeof ResizeObserver !== "undefined") {
             var ro = new ResizeObserver(handler);
             if (scroll) ro.observe(scroll);
