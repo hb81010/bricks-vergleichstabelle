@@ -120,7 +120,6 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'layout',
             'label' => esc_html__( 'Innenabstand Zellen & Labels', 'bricks-vergleich' ),
             'type' => 'spacing',
-            'placeholder' => [ 'top' => '8px', 'right' => '12px', 'bottom' => '8px', 'left' => '12px' ],
             'css'   => [
                 [ 'property' => 'padding', 'selector' => '.vergleich-zelle' ],
                 [ 'property' => 'padding', 'selector' => '.vergleich-label' ],
@@ -486,7 +485,6 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
             'type' => 'spacing',
-            'placeholder' => [ 'top' => '4px', 'right' => '10px', 'bottom' => '4px', 'left' => '10px' ],
             'required' => [ 'rankingEnabled', '=', true ],
             'css'   => [ [ 'property' => 'padding', 'selector' => '.vergleich-rank' ] ],
         ];
@@ -637,7 +635,6 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
             'type' => 'spacing',
-            'placeholder' => [ 'top' => '6px', 'right' => '10px', 'bottom' => '6px', 'left' => '10px' ],
             'required' => [ 'scoreEnabled', '=', true ],
             'css'   => [ [ 'property' => 'padding', 'selector' => '.vergleich-score' ] ],
         ];
@@ -770,7 +767,6 @@ class Element_Vergleich extends \Bricks\Element {
             'tab'   => 'content', 'group' => 'productLabels',
             'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
             'type'  => 'spacing',
-            'placeholder' => [ 'top' => '8px', 'right' => '12px', 'bottom' => '8px', 'left' => '12px' ],
             'required' => [ 'productLabelsEnabled', '=', true ],
             'css'   => [ [ 'property' => 'padding', 'selector' => '.vergleich-product-label-item' ] ],
         ];
@@ -944,7 +940,6 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
             'type' => 'spacing',
-            'placeholder' => [ 'top' => '8px', 'right' => '4px', 'bottom' => '8px', 'left' => '4px' ],
             'required' => [ 'navCounterEnabled', '=', true ],
             'css' => [ [ 'property' => 'padding', 'selector' => '.vergleich-counter' ] ],
         ];
@@ -1456,7 +1451,6 @@ class Element_Vergleich extends \Bricks\Element {
             'scorePadding' => [
                 'label'       => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
                 'type'        => 'spacing',
-                'placeholder' => [ 'top' => '6px', 'right' => '12px', 'bottom' => '6px', 'left' => '12px' ],
                 'required'    => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
             ],
             'scoreBorder' => [
