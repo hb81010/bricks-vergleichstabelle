@@ -518,15 +518,9 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['rankingShadow'] = [
             'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Schatten', 'bricks-vergleich' ),
-            'type' => 'select',
-            'options' => [
-                'none' => esc_html__( 'Kein', 'bricks-vergleich' ),
-                'small' => esc_html__( 'Klein', 'bricks-vergleich' ),
-                'medium' => esc_html__( 'Mittel', 'bricks-vergleich' ),
-                'large' => esc_html__( 'Groß', 'bricks-vergleich' ),
-            ],
-            'placeholder' => esc_html__( 'Mittel', 'bricks-vergleich' ),
+            'type' => 'box-shadow',
             'required' => [ 'rankingEnabled', '=', true ],
+            'css' => [ [ 'property' => 'box-shadow', 'selector' => '.vergleich-rank' ] ],
         ];
 
         $this->controls['rankingHighlightTop'] = [
@@ -675,15 +669,9 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['scoreShadow'] = [
             'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Schatten', 'bricks-vergleich' ),
-            'type' => 'select',
-            'options' => [
-                'none' => esc_html__( 'Kein', 'bricks-vergleich' ),
-                'small' => esc_html__( 'Klein', 'bricks-vergleich' ),
-                'medium' => esc_html__( 'Mittel', 'bricks-vergleich' ),
-                'large' => esc_html__( 'Groß', 'bricks-vergleich' ),
-            ],
-            'placeholder' => esc_html__( 'Mittel', 'bricks-vergleich' ),
+            'type' => 'box-shadow',
             'required' => [ 'scoreEnabled', '=', true ],
+            'css' => [ [ 'property' => 'box-shadow', 'selector' => '.vergleich-score' ] ],
         ];
 
         $this->controls['scoreHideEmpty'] = [
@@ -880,15 +868,9 @@ class Element_Vergleich extends \Bricks\Element {
         $this->controls['navShadow'] = [
             'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Schatten', 'bricks-vergleich' ),
-            'type' => 'select',
-            'options' => [
-                'none'   => esc_html__( 'Kein', 'bricks-vergleich' ),
-                'small'  => esc_html__( 'Klein', 'bricks-vergleich' ),
-                'medium' => esc_html__( 'Mittel', 'bricks-vergleich' ),
-                'large'  => esc_html__( 'Groß', 'bricks-vergleich' ),
-            ],
-            'placeholder' => esc_html__( 'Mittel', 'bricks-vergleich' ),
+            'type' => 'box-shadow',
             'required' => [ 'navEnabled', '=', true ],
+            'css' => [ [ 'property' => 'box-shadow', 'selector' => '.vergleich-nav' ] ],
         ];
 
         $this->controls['navScrollStep'] = [
@@ -1043,15 +1025,13 @@ class Element_Vergleich extends \Bricks\Element {
 
         $this->controls['highlightShadow'] = [
             'tab' => 'content', 'group' => 'effects',
-            'label' => esc_html__( 'Schatten-Intensität', 'bricks-vergleich' ),
-            'type' => 'select',
-            'options' => [
-                'soft'     => esc_html__( 'Weich', 'bricks-vergleich' ),
-                'medium'   => esc_html__( 'Mittel', 'bricks-vergleich' ),
-                'strong'   => esc_html__( 'Stark', 'bricks-vergleich' ),
+            'label' => esc_html__( 'Schatten', 'bricks-vergleich' ),
+            'type' => 'box-shadow',
+            'description' => esc_html__( 'Wird verwendet, wenn eine Zeile mit Stil „Schatten" hervorgehoben wird. Ohne Wert bleibt der Default (zweischichtiger weicher Glow).', 'bricks-vergleich' ),
+            'css' => [
+                [ 'property' => 'box-shadow', 'selector' => '.vergleich-label.is-highlight-shadow' ],
+                [ 'property' => 'box-shadow', 'selector' => '.vergleich-zelle.is-highlight-shadow' ],
             ],
-            'placeholder' => esc_html__( 'Mittel', 'bricks-vergleich' ),
-            'description' => esc_html__( 'Wird verwendet, wenn eine Zeile mit Stil „Schatten" hervorgehoben wird.', 'bricks-vergleich' ),
         ];
 
         $this->controls['labelColor'] = [
@@ -1700,11 +1680,6 @@ class Element_Vergleich extends \Bricks\Element {
         $ranking_offset_x      = $this->get_css_value( $settings['rankingOffsetX'] ?? null, '8px' );
         $ranking_size          = $this->get_css_value( $settings['rankingSize']    ?? null, '36px' );
         $ranking_padding       = $this->format_spacing( $settings['rankingPadding'] ?? null, '4px 10px' );
-        $ranking_shadow_map    = [
-            'none' => 'none', 'small' => '0 1px 2px rgba(0,0,0,.12)',
-            'medium' => '0 2px 6px rgba(0,0,0,.18)', 'large' => '0 4px 12px rgba(0,0,0,.22)',
-        ];
-        $ranking_shadow = $ranking_shadow_map[ $settings['rankingShadow'] ?? 'medium' ] ?? $ranking_shadow_map['medium'];
         $ranking_highlight_top = ! empty( $settings['rankingHighlightTop'] );
 
         $this->_ranking_runtime = [
@@ -1729,11 +1704,6 @@ class Element_Vergleich extends \Bricks\Element {
         $score_offset_x    = $this->get_css_value( $settings['scoreOffsetX'] ?? null, '8px' );
         $score_min_size    = $this->get_css_value( $settings['scoreMinSize'] ?? null, '36px' );
         $score_padding     = $this->format_spacing( $settings['scorePadding'] ?? null, '6px 10px' );
-        $score_shadow_map  = [
-            'none' => 'none', 'small' => '0 1px 2px rgba(0,0,0,.12)',
-            'medium' => '0 2px 6px rgba(0,0,0,.18)', 'large' => '0 4px 12px rgba(0,0,0,.22)',
-        ];
-        $score_shadow = $score_shadow_map[ $settings['scoreShadow'] ?? 'medium' ] ?? $score_shadow_map['medium'];
         $score_hide_empty = ! isset( $settings['scoreHideEmpty'] ) || ! empty( $settings['scoreHideEmpty'] );
 
         $this->_score_runtime = [
@@ -1777,11 +1747,6 @@ class Element_Vergleich extends \Bricks\Element {
         $nav_offset       = $this->get_css_value( $settings['navOffset']   ?? null, '12px' );
         $nav_bg_color     = $this->resolve_color( $settings['navBgColor']     ?? null ) ?: '#ffffff';
         $nav_icon_color   = $this->resolve_color( $settings['navIconColor']   ?? null ) ?: '#111827';
-        $nav_shadow_map = [
-            'none' => 'none', 'small' => '0 1px 3px rgba(0,0,0,.12)',
-            'medium' => '0 4px 12px rgba(0,0,0,.15)', 'large' => '0 8px 24px rgba(0,0,0,.18)',
-        ];
-        $nav_shadow = $nav_shadow_map[ $settings['navShadow'] ?? 'medium' ] ?? $nav_shadow_map['medium'];
         $nav_scroll_step = $settings['navScrollStep'] ?? 'card';
         if ( $nav_scroll_step !== 'view' ) $nav_scroll_step = 'card';
 
@@ -1820,26 +1785,6 @@ class Element_Vergleich extends \Bricks\Element {
             '--vgl-row-count:%d; --vgl-row-count-collapsed:%d; --vgl-text-align:%s;',
             $row_count, $visible_row_count, esc_attr( $text_align )
         );
-
-        // Shadow-Presets (aus Select gemapt) — haben KEIN css-Array, daher
-        // inline notwendig. Gilt nur wenn Feature aktiv ist.
-        if ( $ranking_enabled ) {
-            $inline_style .= ' --vgl-rank-shadow:' . esc_attr( $ranking_shadow ) . ';';
-        }
-        if ( $score_enabled ) {
-            $inline_style .= ' --vgl-score-shadow:' . esc_attr( $score_shadow ) . ';';
-        }
-        if ( $nav_enabled ) {
-            $inline_style .= ' --vgl-nav-shadow:' . esc_attr( $nav_shadow ) . ';';
-        }
-
-        $highlight_shadow_map = [
-            'soft'   => '0 2px 6px -1px rgba(0,0,0,.05), 0 -2px 6px -1px rgba(0,0,0,.05)',
-            'medium' => '0 3px 10px -2px rgba(0,0,0,.09), 0 -3px 10px -2px rgba(0,0,0,.09)',
-            'strong' => '0 6px 16px -4px rgba(0,0,0,.15), 0 -6px 16px -4px rgba(0,0,0,.15)',
-        ];
-        $highlight_shadow_key = $settings['highlightShadow'] ?? 'medium';
-        $inline_style .= ' --vgl-highlight-shadow:' . esc_attr( $highlight_shadow_map[ $highlight_shadow_key ] ?? $highlight_shadow_map['medium'] ) . ';';
 
         // Struktur: _root = neutraler Container mit CSS-Variablen,
         //           .vergleich-wrapper = bordertes Table-Grid (innen),
@@ -3462,7 +3407,7 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-zelle.is-highlight-shadow {
             position: relative;
             z-index: 2;
-            box-shadow: var(--vgl-highlight-shadow, 0 3px 10px -2px rgba(0,0,0,.09), 0 -3px 10px -2px rgba(0,0,0,.09));
+            box-shadow: 0 3px 10px -2px rgba(0,0,0,.09), 0 -3px 10px -2px rgba(0,0,0,.09);
         }
         .vergleich-wrapper.has-dividers .vergleich-label.is-highlight-shadow,
         .vergleich-wrapper.has-dividers .vergleich-zelle.is-highlight-shadow {
@@ -3605,7 +3550,7 @@ class Element_Vergleich extends \Bricks\Element {
             color: #fff;
             background: var(--vgl-rank-bg, #f59e0b);
             border-radius: 9999px;
-            box-shadow: var(--vgl-rank-shadow, 0 2px 6px rgba(0,0,0,.18));
+            box-shadow: 0 2px 6px rgba(0,0,0,.18);
             pointer-events: none;
             white-space: nowrap;
             grid-row: auto !important;
@@ -3680,7 +3625,7 @@ class Element_Vergleich extends \Bricks\Element {
             color: #fff;
             background: var(--vgl-score-bg, #111827);
             border-radius: 6px;
-            box-shadow: var(--vgl-score-shadow, 0 2px 6px rgba(0,0,0,.18));
+            box-shadow: 0 2px 6px rgba(0,0,0,.18);
             pointer-events: none;
             white-space: nowrap;
             margin: 0 !important;
@@ -3747,7 +3692,7 @@ class Element_Vergleich extends \Bricks\Element {
             background: var(--vgl-nav-bg, #ffffff);
             color: var(--vgl-nav-color, #111827);
             border-radius: 9999px;
-            box-shadow: var(--vgl-nav-shadow, 0 4px 12px rgba(0,0,0,.15));
+            box-shadow: 0 4px 12px rgba(0,0,0,.15);
             cursor: pointer;
             display: inline-flex;
             align-items: center;
