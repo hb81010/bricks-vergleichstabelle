@@ -95,7 +95,10 @@
                   || wrapper.querySelector(".vergleich-card > .vergleich-zelle")
                   || wrapper;
         var aRect = anchor.getBoundingClientRect();
-        var nudgeY = parseFloat(cs.getPropertyValue("--vgl-nav-offset-y")) || 0;
+        // parseFloat + isNaN-Check, weil (x || default) bei 0 fälschlich auf
+        // default fällt — User-Eingabe 0 soll aber exakt 0 bedeuten.
+        var nudgeYRaw = parseFloat(cs.getPropertyValue("--vgl-nav-offset-y"));
+        var nudgeY = isNaN(nudgeYRaw) ? 0 : nudgeYRaw;
         var defaultScreenY = aRect.top + aRect.height / 2 + nudgeY;
 
         var stickyScreenY = 40;
@@ -119,8 +122,12 @@
         //               die visuelle Viewport-Größe (nicht die Grid-Zelle).
         // Der Viewport bleibt beim Scrollen der Cards FIX (nur der Inhalt
         // bewegt sich), deshalb zappeln die Pfeile nicht mehr hinterher.
-        var navOffset = parseFloat(cs.getPropertyValue("--vgl-nav-offset")) || 12;
-        var nudgeX    = parseFloat(cs.getPropertyValue("--vgl-nav-offset-x")) || 0;
+        // parseFloat + isNaN-Check wie bei nudgeY: User-Eingabe 0 muss echt 0
+        // bleiben, nicht in den Default fallen (0 ist falsy in JS).
+        var navOffsetRaw = parseFloat(cs.getPropertyValue("--vgl-nav-offset"));
+        var navOffset    = isNaN(navOffsetRaw) ? 12 : navOffsetRaw;
+        var nudgeXRaw    = parseFloat(cs.getPropertyValue("--vgl-nav-offset-x"));
+        var nudgeX       = isNaN(nudgeXRaw) ? 0 : nudgeXRaw;
 
         var scroll = wrapper.querySelector(".vergleich-scroll");
 
