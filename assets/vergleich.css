@@ -7,7 +7,9 @@
     grid-template-columns: var(--vgl-label-width, 220px) minmax(0, auto);
     border: 1px solid #e5e7eb;
     border-radius: 12px;
-    overflow: hidden;
+    /* clip statt hidden — erhält Border-Radius-Clipping, erzeugt aber keinen
+       Scroll-Container und blockiert deshalb position:sticky auf Zellen nicht. */
+    overflow: clip;
     background: #fff;
     position: relative;
     max-width: 100%;

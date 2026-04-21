@@ -312,12 +312,107 @@
         wrapper.addEventListener("mouseleave", clearActive);
     }
 
+    // Sticky-Zeilen per transform:translateY. Hintergrund: position:sticky auf
+    // Grid-Items innerhalb von Subgrid funktioniert in Chrome nicht zuverlässig
+    // (Containing-Block-Berechnung + Subgrid-Interaktion). Statt das Element aus
+    // dem Grid-Flow zu reißen, lassen wir die Zellen in ihren Slots und
+    // verschieben sie beim Scrollen rein visuell per Transform nach unten — so
+    // bleiben sie am Viewport-Rand und das Layout dahinter rührt sich nicht.
+    function bindStickyRows(wrapper){
+        if (wrapper._vglStickyBound) return;
+        var root = wrapper.closest(".vergleich-root") || wrapper.parentNode;
+        if (!root) return;
+
+        // Alle Sticky-Zellen gruppieren nach Zeilen-Index
+        var rowMap = {};
+        root.querySelectorAll(".is-sticky-row").forEach(function(cell){
+            var idx = cell.getAttribute("data-row-index");
+            if (idx === null) return;
+            (rowMap[idx] = rowMap[idx] || []).push(cell);
+        });
+        if (!Object.keys(rowMap).length) return;
+        wrapper._vglStickyBound = true;
+
+        var sortedIdxs = Object.keys(rowMap).sort(function(a, b){
+            return parseInt(a, 10) - parseInt(b, 10);
+        });
+
+        function update(){
+            var cs = window.getComputedStyle(wrapper);
+            var offsetRaw = parseFloat(cs.getPropertyValue("--vgl-sticky-row-top"));
+            var baseOffset = isNaN(offsetRaw) ? 0 : offsetRaw;
+
+            var wrapRect = wrapper.getBoundingClientRect();
+            // Untergrenze: wenn die Tabelle rausscrollt, bleibt die sticky Zeile
+            // am unteren Tabellenrand kleben und verschwindet mit der Tabelle.
+            var wrapBottom = wrapRect.bottom;
+
+            // Akkumulierte Höhe aller bereits oben klebenden Sticky-Zeilen, damit
+            // mehrere sticky Zeilen sich übereinander stapeln statt sich zu
+            // überlappen.
+            var topAccum = baseOffset;
+
+            sortedIdxs.forEach(function(idx){
+                var cells = rowMap[idx];
+                if (!cells.length) return;
+
+                // Transform temporär rausnehmen, um die natürliche Position zu
+                // messen. Ohne das würde der gemessene rect den bereits gesetzten
+                // Transform mitrechnen und wir bekämen kumulative Drift.
+                cells.forEach(function(c){ c.style.transform = ""; });
+                var firstRect = cells[0].getBoundingClientRect();
+                var naturalTop = firstRect.top;
+                var cellH = firstRect.height;
+
+                var translateY = 0;
+                if (naturalTop < topAccum) {
+                    translateY = topAccum - naturalTop;
+                    // Clamp: nicht unter den Tabellenrand schieben. Sobald die
+                    // Zeile den Table-Boden erreicht, stehen bleiben und mit
+                    // der Tabelle aus dem Viewport wandern.
+                    var maxTranslate = wrapBottom - naturalTop - cellH;
+                    if (maxTranslate < 0) maxTranslate = 0;
+                    if (translateY > maxTranslate) translateY = maxTranslate;
+                }
+
+                if (translateY > 0) {
+                    var t = "translateY(" + translateY + "px)";
+                    cells.forEach(function(c){ c.style.transform = t; });
+                    // Nächste sticky Zeile klebt darunter, nicht am selben Top.
+                    topAccum += cellH;
+                }
+            });
+        }
+
+        var pending = false;
+        function schedule(){
+            if (pending) return;
+            pending = true;
+            requestAnimationFrame(function(){ update(); pending = false; });
+        }
+
+        // Capture-Phase auf document: fängt auch Scrolls auf Ancestor-Containern
+        // (z.B. Bricks-Section mit overflow:auto) ab.
+        document.addEventListener("scroll", schedule, { passive: true, capture: true });
+        window.addEventListener("scroll", schedule, { passive: true });
+        window.addEventListener("resize", schedule);
+        if (typeof ResizeObserver !== "undefined") {
+            var ro = new ResizeObserver(schedule);
+            ro.observe(wrapper);
+        }
+        // Erster Frame sofort + Nachzügler nach Layout (Bilder laden, Fonts etc.).
+        schedule();
+        setTimeout(schedule, 100);
+        setTimeout(schedule, 500);
+    }
+
     function init(wrapper){
         syncRows(wrapper);
         bindExpand(wrapper);
         bindNav(wrapper);
         bindRowHover(wrapper);
         bindLabelRowSync(wrapper);
+        bindStickyRows(wrapper);
         var burst = 0;
         (function tick(){
             if (!wrapper.isConnected) return;

@@ -86,6 +86,61 @@ class Element_Vergleich extends \Bricks\Element {
             'content' => esc_html__( 'Jede Zeile hat links ein Label und pro Produkt-Spalte eine Zelle. Der Zellentyp bestimmt den Inhalt (Text, Bild, Icon, Button, Rating, HTML, Dynamisch).', 'bricks-vergleich' ),
         ];
 
+        $this->controls['_sepStickyRows'] = [
+            'tab'   => 'content', 'group' => 'rows',
+            'type'  => 'separator',
+            'label' => esc_html__( 'Sticky-Zeilen (global)', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['stickyRowTop'] = [
+            'tab'   => 'content', 'group' => 'rows',
+            'label' => esc_html__( 'Sticky-Abstand (top)', 'bricks-vergleich' ),
+            'type'  => 'number',
+            'units' => true,
+            'description' => esc_html__( 'Abstand zum Viewport-Rand für alle als sticky markierten Zeilen (z.B. Ausgleich für fixe Topbar). Leer = 0.', 'bricks-vergleich' ),
+            'css'   => [ [ 'property' => '--vgl-sticky-row-top', 'selector' => '' ] ],
+        ];
+
+        $this->controls['stickyRowLabelBg'] = [
+            'tab'   => 'content', 'group' => 'rows',
+            'label' => esc_html__( 'Hintergrund Sticky-Label', 'bricks-vergleich' ),
+            'type'  => 'color',
+            'description' => esc_html__( 'Sticky-Zellen brauchen eine deckende Farbe, damit scrollender Inhalt dahinter nicht durchscheint. Default: Label-Spalten-Grau.', 'bricks-vergleich' ),
+            'css'   => [ [ 'property' => 'background-color', 'selector' => '.vergleich-label.is-sticky-row' ] ],
+        ];
+
+        $this->controls['stickyRowCellBg'] = [
+            'tab'   => 'content', 'group' => 'rows',
+            'label' => esc_html__( 'Hintergrund Sticky-Zellen', 'bricks-vergleich' ),
+            'type'  => 'color',
+            'description' => esc_html__( 'Default: Weiß (Card-Hintergrund).', 'bricks-vergleich' ),
+            'css'   => [ [ 'property' => 'background-color', 'selector' => '.vergleich-zelle.is-sticky-row' ] ],
+        ];
+
+        $this->controls['stickyRowTypography'] = [
+            'tab'   => 'content', 'group' => 'rows',
+            'label' => esc_html__( 'Typografie Sticky-Zeilen', 'bricks-vergleich' ),
+            'type'  => 'typography',
+            'description' => esc_html__( 'Gilt für Label und Zellen aller als sticky markierten Zeilen.', 'bricks-vergleich' ),
+            'css'   => [ [ 'property' => 'typography', 'selector' => '.is-sticky-row' ] ],
+        ];
+
+        $this->controls['stickyRowBorder'] = [
+            'tab'   => 'content', 'group' => 'rows',
+            'label' => esc_html__( 'Rahmen Sticky-Zeilen', 'bricks-vergleich' ),
+            'type'  => 'border',
+            'description' => esc_html__( 'Optional: eigene Border/Radius für Sticky-Zeilen, z.B. Schatten-Linie unten.', 'bricks-vergleich' ),
+            'css'   => [ [ 'property' => 'border', 'selector' => '.is-sticky-row' ] ],
+        ];
+
+        $this->controls['stickyRowShadow'] = [
+            'tab'   => 'content', 'group' => 'rows',
+            'label' => esc_html__( 'Schatten Sticky-Zeilen', 'bricks-vergleich' ),
+            'type'  => 'box-shadow',
+            'description' => esc_html__( 'Für den Finanzfluss-Look: subtiler Schatten unterhalb der Zeile.', 'bricks-vergleich' ),
+            'css'   => [ [ 'property' => 'box-shadow', 'selector' => '.is-sticky-row' ] ],
+        ];
+
         // ======================================================================
         // LAYOUT
         // ======================================================================
@@ -795,6 +850,24 @@ class Element_Vergleich extends \Bricks\Element {
             'description' => esc_html__( 'Gilt für alle nicht-leeren Labels (leere Platzhalter bleiben ohne Rahmen).', 'bricks-vergleich' ),
             'required' => [ 'productLabelsEnabled', '=', true ],
             'css'   => [ [ 'property' => 'border', 'selector' => '.vergleich-product-label-item:not(.is-empty)' ] ],
+        ];
+
+        $this->controls['productLabelsSticky'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Sticky beim Scrollen', 'bricks-vergleich' ),
+            'type'  => 'checkbox',
+            'description' => esc_html__( 'Die Produkt-Label-Zeile bleibt beim vertikalen Scrollen am oberen Viewport-Rand hängen (wie z.B. bei Finanzfluss).', 'bricks-vergleich' ),
+            'required' => [ 'productLabelsEnabled', '=', true ],
+        ];
+
+        $this->controls['productLabelsStickyOffset'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Sticky-Abstand (top)', 'bricks-vergleich' ),
+            'type'  => 'number',
+            'units' => true,
+            'description' => esc_html__( 'Abstand zur Viewport-Oberkante, z.B. um eine fixe Kopfleiste auszugleichen. Leer = 0.', 'bricks-vergleich' ),
+            'required' => [ [ 'productLabelsEnabled', '=', true ], [ 'productLabelsSticky', '=', true ] ],
+            'css'   => [ [ 'property' => '--vgl-product-labels-sticky-top', 'selector' => '' ] ],
         ];
 
         // ======================================================================
@@ -1696,6 +1769,11 @@ class Element_Vergleich extends \Bricks\Element {
                 'content'  => '',
                 'required' => [ 'collapsible', '=', true ],
             ],
+            'stickyRow' => [
+                'label'       => esc_html__( 'Sticky beim Scrollen', 'bricks-vergleich' ),
+                'type'        => 'checkbox',
+                'description' => esc_html__( 'Diese Zeile (Label + alle Produktspalten) bleibt beim vertikalen Scrollen am oberen Viewport-Rand hängen. Bei mehreren sticky Zeilen stapeln sie sich — bei Bedarf Sticky-Abstand auf Element-Ebene anpassen.', 'bricks-vergleich' ),
+            ],
             'cellAlign' => [
                 'label'   => esc_html__( 'Inhalt ausrichten', 'bricks-vergleich' ),
                 'type'    => 'select',
@@ -1889,6 +1967,9 @@ class Element_Vergleich extends \Bricks\Element {
         if ( $expand_enabled && $visible_row_count < $row_count ) {
             $root_classes[] = 'has-expand';
             if ( $expand_fade_enabled ) $root_classes[] = 'has-expand-fade';
+        }
+        if ( $product_labels_enabled && ! empty( $settings['productLabelsSticky'] ) ) {
+            $root_classes[] = 'has-sticky-product-labels';
         }
 
         $wrapper_classes = [ 'vergleich-wrapper' ];
@@ -2094,6 +2175,9 @@ class Element_Vergleich extends \Bricks\Element {
             if ( $collapsible ) {
                 $cls .= ' is-collapsible';
                 if ( $idx === $first_collapsible_idx ) $cls .= ' is-peek';
+            }
+            if ( ! empty( $row['stickyRow'] ) ) {
+                $cls .= ' is-sticky-row';
             }
 
             $extra = ' data-row-index="' . (int) $idx . '"';
@@ -2408,6 +2492,7 @@ class Element_Vergleich extends \Bricks\Element {
             $classes[] = 'is-collapsible';
             if ( $idx === (int) $this->_first_collapsible_idx ) $classes[] = 'is-peek';
         }
+        if ( ! empty( $row['stickyRow'] ) ) $classes[] = 'is-sticky-row';
         if ( $append_html !== '' ) $classes[] = 'has-score-anchor';
         if ( $align ) {
             $map = [
@@ -3491,7 +3576,11 @@ class Element_Vergleich extends \Bricks\Element {
             align-content: start !important;
             border: 1px solid #e5e7eb;
             border-radius: 12px;
-            overflow: hidden;
+            /* overflow: clip (statt hidden) erhält das visuelle Clipping für den
+               Border-Radius, erzeugt aber KEINEN Scroll-Container — so bleibt
+               position: sticky auf inneren Zellen relativ zum Seiten-Scroll
+               funktionsfähig. (Chrome 90+, FF 81+, Safari 15.5+.) */
+            overflow: clip;
             background: #fff;
             position: relative;
             max-width: 100%;
@@ -3576,6 +3665,29 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-wrapper.has-dividers .vergleich-label { border-bottom: 1px solid #e5e7eb; }
         .vergleich-wrapper.has-dividers .vergleich-label:last-child { border-bottom: none; }
         .vergleich-label.is-highlighted { background: #fef3c7; color: #92400e; }
+
+        /* === Sticky-Zeilen === JS-gesteuert (siehe assets/frontend.js →
+           bindStickyRows), weil position:sticky auf Grid-Items mit Subgrid in
+           Chrome unzuverlässig ist. JS misst beim Scrollen die natürliche
+           Position und verschiebt die Zellen per transform:translateY, sodass
+           sie visuell am Viewport-Rand hängen bleiben. Die Zellen behalten
+           ihre Grid-Slots — kein Layout-Sprung. */
+        .vergleich-label.is-sticky-row,
+        .vergleich-zelle.is-sticky-row {
+            /* Während Sticky aktiv ist: z-index + Hintergrund, damit die Zelle
+               über dem Rest schwebt und nicht transparent wird. Das Transform
+               selbst kommt aus JS. */
+            z-index: 4;
+        }
+        /* .vergleich-root-Prefix hebt Specificity auf 0,3,0, damit eigene
+           Row-Highlights (0,2,0) geschlagen werden. Bricks-User-Controls setzen
+           unter #brxe-xxx (1,2,0) und gewinnen dann normal. */
+        .vergleich-root .vergleich-label.is-sticky-row {
+            background-color: #f3f4f6;
+        }
+        .vergleich-root .vergleich-zelle.is-sticky-row {
+            background-color: #fff;
+        }
         /* Schatten-Hervorhebung: bandartiger Schatten an Ober- und Unterkante
            jeder Zelle der Reihe. Liegt per z-index ueber angrenzenden Zeilen
            und ueberdeckt die Divider visuell an dieser Stelle. */
@@ -3595,7 +3707,7 @@ class Element_Vergleich extends \Bricks\Element {
             grid-column: 2 !important;
             grid-row: 1 / -1 !important;
             overflow-x: auto;
-            overflow-y: hidden; /* Nur horizontal scrollen — verhindert das vertikale Drift im Canvas */
+            overflow-y: clip; /* clip statt hidden, damit position:sticky auf Zellen durchgereicht wird. */
             min-width: 0;
             display: grid !important;
             grid-template-rows: subgrid !important;
@@ -3618,7 +3730,8 @@ class Element_Vergleich extends \Bricks\Element {
             min-width: 0;
             max-width: var(--vgl-column-width, 200px);
             width: var(--vgl-column-width, 200px);
-            overflow: hidden;
+            /* clip statt hidden, damit position:sticky auf Zellen durchgereicht wird. */
+            overflow: clip;
             box-sizing: border-box;
             position: relative !important;
         }
@@ -3997,7 +4110,7 @@ class Element_Vergleich extends \Bricks\Element {
                großen leeren Block unterhalb der letzten Zeile erzeugen. */
             grid-template-rows: repeat(var(--vgl-row-count-fade, 1), minmax(var(--vgl-row-min, 20px), auto)) !important;
             position: relative;
-            overflow: hidden;
+            overflow: clip;
         }
         /* Alle Nicht-Peek-Collapsibles bleiben versteckt. */
         .vergleich-wrapper.has-expand-fade.is-collapsed .vergleich-label.is-collapsible:not(.is-peek),
@@ -4068,6 +4181,17 @@ class Element_Vergleich extends \Bricks\Element {
                Label-Spalten pixelgenau ueber den Card-Spalten sitzen. */
             margin: 0 1px var(--vgl-product-label-gap, 6px);
             max-width: 100%;
+        }
+        /* Sticky-Header (Finanzfluss-Pattern): die Produkt-Label-Zeile bleibt
+           beim vertikalen Scrollen oben am Viewport-Rand hängen. Funktioniert
+           hier sauber, weil .vergleich-product-label-row ein direkter Child von
+           .vergleich-root ist — nicht im overflow:hidden-Wrapper. Gap wird auf
+           den margin-bottom verschoben, damit keine Lücke zwischen Sticky-Header
+           und dem Rest entsteht. */
+        .vergleich-root.has-sticky-product-labels .vergleich-product-label-row {
+            position: sticky;
+            top: var(--vgl-product-labels-sticky-top, 0px);
+            z-index: 6;
         }
         .vergleich-product-label-row__spacer {
             background: transparent;
