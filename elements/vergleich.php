@@ -1224,6 +1224,38 @@ class Element_Vergleich extends \Bricks\Element {
                 'required' => [ 'type', '=', 'button' ],
             ],
 
+            // ─── Eigenes Styling (überschreibt Preset) ───
+            '_sepBtnCustom' => [
+                'type'     => 'separator',
+                'label'    => esc_html__( 'Eigenes Styling (überschreibt Preset)', 'bricks-vergleich' ),
+                'required' => [ 'type', '=', 'button' ],
+            ],
+            'btnBgColor' => [
+                'label'    => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
+                'type'     => 'color',
+                'required' => [ 'type', '=', 'button' ],
+            ],
+            'btnTypography' => [
+                'label'    => esc_html__( 'Typografie', 'bricks-vergleich' ),
+                'type'     => 'typography',
+                'required' => [ 'type', '=', 'button' ],
+            ],
+            'btnBorder' => [
+                'label'    => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+                'type'     => 'border',
+                'required' => [ 'type', '=', 'button' ],
+            ],
+            'btnPadding' => [
+                'label'    => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+                'type'     => 'spacing',
+                'required' => [ 'type', '=', 'button' ],
+            ],
+            'btnShadow' => [
+                'label'    => esc_html__( 'Schatten', 'bricks-vergleich' ),
+                'type'     => 'box-shadow',
+                'required' => [ 'type', '=', 'button' ],
+            ],
+
             // ───── RATING ─────
             'ratingValue' => [
                 'label'          => esc_html__( 'Rating-Wert (0–5)', 'bricks-vergleich' ),
@@ -1256,6 +1288,11 @@ class Element_Vergleich extends \Bricks\Element {
                 'label'    => esc_html__( 'Zahl zusätzlich anzeigen', 'bricks-vergleich' ),
                 'type'     => 'checkbox',
                 'required' => [ 'type', '=', 'rating' ],
+            ],
+            'ratingNumberTypography' => [
+                'label'    => esc_html__( 'Typografie (Zahl)', 'bricks-vergleich' ),
+                'type'     => 'typography',
+                'required' => [ [ 'type', '=', 'rating' ], [ 'ratingShowNumber', '=', true ] ],
             ],
             'ratingIconFull' => [
                 'label'       => esc_html__( 'Icon "voll" (optional)', 'bricks-vergleich' ),
@@ -1332,6 +1369,12 @@ class Element_Vergleich extends \Bricks\Element {
                 'type'        => 'text',
                 'default'     => '',
                 'placeholder' => esc_html__( 'z.B. Nein — leer = nur Icon', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'bool' ],
+            ],
+            'boolTypography' => [
+                'label'       => esc_html__( 'Typografie (Text)', 'bricks-vergleich' ),
+                'type'        => 'typography',
+                'description' => esc_html__( 'Gilt für den optionalen Ja/Nein-Text neben dem Icon. Die Icon-Farbe bleibt unabhängig über Farbe "Ja" / "Nein".', 'bricks-vergleich' ),
                 'required'    => [ 'type', '=', 'bool' ],
             ],
 
@@ -1421,6 +1464,11 @@ class Element_Vergleich extends \Bricks\Element {
                 'type'        => 'border',
                 'required'    => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
             ],
+            'scoreShadow' => [
+                'label'       => esc_html__( 'Schatten', 'bricks-vergleich' ),
+                'type'        => 'box-shadow',
+                'required'    => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
+            ],
 
             // ───── LIST (Icon-Liste pro Spalte, z.B. Vorteile / Nachteile) ─────
             'listSource' => [
@@ -1503,6 +1551,12 @@ class Element_Vergleich extends \Bricks\Element {
                 'placeholder'    => '-',
                 'description'    => esc_html__( 'Angezeigt, wenn für die Spalte keine Einträge vorhanden sind. Leer = gar nichts anzeigen.', 'bricks-vergleich' ),
                 'required'       => [ 'type', '=', 'list' ],
+            ],
+            'listTypography' => [
+                'label'       => esc_html__( 'Typografie (Text)', 'bricks-vergleich' ),
+                'type'        => 'typography',
+                'description' => esc_html__( 'Gilt für den Text der Listeneinträge. Die Icon-Farbe bleibt unabhängig.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'list' ],
             ],
 
             // ───── MANUAL (pro Spalte) ─────
@@ -2594,7 +2648,23 @@ class Element_Vergleich extends \Bricks\Element {
         }
         if ( $circle ) $class_list[] = 'circle';
 
+        // Optionale Inline-Overrides — nur gesetzt, wenn der User im Repeater
+        // entsprechende Controls befüllt hat. Preset-Styles bleiben die Basis.
+        $inline = '';
+        $bg_override = $this->resolve_color( $row['btnBgColor'] ?? null );
+        if ( $bg_override !== '' ) $inline .= 'background:' . esc_attr( $bg_override ) . ';';
+        $inline .= $this->format_typography( $row['btnTypography'] ?? null );
+        $inline .= $this->format_border( $row['btnBorder'] ?? null );
+        if ( ! empty( $row['btnPadding'] ) && is_array( $row['btnPadding'] ) ) {
+            $padding_any = array_filter( $row['btnPadding'], function ( $v ) { return $v !== '' && $v !== null; } );
+            if ( ! empty( $padding_any ) ) {
+                $inline .= 'padding:' . esc_attr( $this->format_spacing( $row['btnPadding'], '' ) ) . ';';
+            }
+        }
+        $inline .= $this->format_box_shadow( $row['btnShadow'] ?? null );
+
         $attrs  = 'class="' . esc_attr( implode( ' ', $class_list ) ) . '"';
+        if ( $inline !== '' )     $attrs .= ' style="' . esc_attr( $inline ) . '"';
         if ( $aria_label !== '' ) $attrs .= ' aria-label="' . esc_attr( $aria_label ) . '"';
         if ( $title_attr !== '' ) $attrs .= ' title="' . esc_attr( $title_attr ) . '"';
         if ( $url !== '' ) {
@@ -2627,7 +2697,8 @@ class Element_Vergleich extends \Bricks\Element {
         $number_html = '';
         if ( $show_number ) {
             $decimals = ( $value_clamped == (int) $value_clamped ) ? 0 : 1;
-            $number_html = '<span class="vergleich-rating__number" style="font-weight:600;">'
+            $num_style = $this->format_typography( $row['ratingNumberTypography'] ?? null, [ 'font-weight' => '600' ] );
+            $number_html = '<span class="vergleich-rating__number" style="' . esc_attr( $num_style ) . '">'
                 . esc_html( number_format_i18n( $value_clamped, $decimals ) )
                 . '</span>';
         }
@@ -2750,7 +2821,8 @@ class Element_Vergleich extends \Bricks\Element {
               . ' aria-label="' . esc_attr( $aria ) . '">';
         $out .= '<span class="vergleich-bool__icon" style="' . esc_attr( $icon_style ) . '">' . $svg . '</span>';
         if ( $label !== '' ) {
-            $out .= '<span class="vergleich-bool__text">' . esc_html( $label ) . '</span>';
+            $text_style = $this->format_typography( $row['boolTypography'] ?? null );
+            $out .= '<span class="vergleich-bool__text"' . ( $text_style !== '' ? ' style="' . esc_attr( $text_style ) . '"' : '' ) . '>' . esc_html( $label ) . '</span>';
         }
         $out .= '</span>';
         return $out;
@@ -2825,9 +2897,10 @@ class Element_Vergleich extends \Bricks\Element {
             $bg      = $this->resolve_color( $row['scoreBgColor'] ?? null ) ?: '#111827';
             $padding = $this->format_spacing( $row['scorePadding'] ?? null, '6px 12px' );
             $border_css = $this->format_border( $row['scoreBorder'] ?? null, [ 'radius' => '9999px' ] );
+            $shadow_css = $this->format_box_shadow( $row['scoreShadow'] ?? null, '0 1px 2px rgba(0,0,0,.12)' );
             $style .= 'background:' . esc_attr( $bg ) . ';'
-                   .  'padding:' . esc_attr( $padding ) . ';' . $border_css
-                   .  'box-shadow:0 1px 2px rgba(0,0,0,.12);white-space:nowrap;';
+                   .  'padding:' . esc_attr( $padding ) . ';' . $border_css . $shadow_css
+                   .  'white-space:nowrap;';
         }
 
         $html  = '<span class="vergleich-score-cell' . ( $as_badge ? ' is-badge' : '' ) . '" style="' . esc_attr( $style ) . '">';
@@ -2847,6 +2920,7 @@ class Element_Vergleich extends \Bricks\Element {
         $item_gap     = $this->get_css_value( $row['listItemGap'] ?? null, '6px' );
         $align        = $row['listAlign'] ?? 'left';
         $fallback_raw = isset( $row['listFallback'] ) ? (string) $row['listFallback'] : '';
+        $typography_css = $this->format_typography( $row['listTypography'] ?? null );
 
         // Datenquelle auflösen → Array von Strings (HTML pro Listeneintrag erlaubt).
         $raw = '';
@@ -2883,7 +2957,7 @@ class Element_Vergleich extends \Bricks\Element {
                             // Array-Meta (ACF Checkbox/Multi-Select): direkt als Items nehmen.
                             $items = array_filter( array_map( 'strval', $meta ), function( $v ) { return trim( $v ) !== ''; } );
                             $items = array_values( $items );
-                            return $this->render_list_html( $items, $icon, $icon_color, $icon_size, $icon_gap, $item_gap, $align, $fallback_raw );
+                            return $this->render_list_html( $items, $icon, $icon_color, $icon_size, $icon_gap, $item_gap, $align, $fallback_raw, $typography_css );
                         }
                         $raw = is_scalar( $meta ) ? (string) $meta : '';
                     }
@@ -2892,7 +2966,7 @@ class Element_Vergleich extends \Bricks\Element {
         }
 
         $items = $this->parse_list_items( $raw );
-        return $this->render_list_html( $items, $icon, $icon_color, $icon_size, $icon_gap, $item_gap, $align, $fallback_raw );
+        return $this->render_list_html( $items, $icon, $icon_color, $icon_size, $icon_gap, $item_gap, $align, $fallback_raw, $typography_css );
     }
 
     /**
@@ -2938,11 +3012,12 @@ class Element_Vergleich extends \Bricks\Element {
      * Layout-kritische Styles inline — Bricks-Canvas kann Klassen-Regeln
      * zeitweise schlucken.
      */
-    private function render_list_html( $items, $icon, $icon_color, $icon_size, $icon_gap, $item_gap, $align, $fallback_raw ) {
+    private function render_list_html( $items, $icon, $icon_color, $icon_size, $icon_gap, $item_gap, $align, $fallback_raw, $typography_css = '' ) {
         if ( empty( $items ) ) {
             $fb = $fallback_raw !== '' ? (string) $this->dd_string( $fallback_raw ) : '';
             if ( trim( strip_tags( $fb ) ) === '' ) return '';
-            return '<span class="vergleich-list__fallback">' . wp_kses_post( $fb ) . '</span>';
+            $fb_style = $typography_css !== '' ? ' style="' . esc_attr( $typography_css ) . '"' : '';
+            return '<span class="vergleich-list__fallback"' . $fb_style . '>' . wp_kses_post( $fb ) . '</span>';
         }
 
         // Icon-Block einmalig bauen (wird pro Eintrag per HTML-Kopie eingesetzt).
@@ -2978,7 +3053,7 @@ class Element_Vergleich extends \Bricks\Element {
         foreach ( $items as $item ) {
             $html .= '<li class="vergleich-list__item" style="' . esc_attr( $li_style ) . '">';
             if ( $icon_html !== '' ) $html .= $icon_html;
-            $html .= '<span class="vergleich-list__text" style="min-width:0;flex:1 1 auto;">' . wp_kses_post( $item ) . '</span>';
+            $html .= '<span class="vergleich-list__text" style="min-width:0;flex:1 1 auto;' . $typography_css . '">' . wp_kses_post( $item ) . '</span>';
             $html .= '</li>';
         }
         $html .= '</ul>';
@@ -3218,6 +3293,35 @@ class Element_Vergleich extends \Bricks\Element {
             }
         }
         return $out;
+    }
+
+    // Bricks-Box-Shadow-Struktur → Inline-CSS-Fragment. Bricks kann den Wert
+    // entweder als { values: "x y blur spread color", inset: bool } oder als
+    // { offsetX, offsetY, blur, spread, color, inset } liefern.
+    private function format_box_shadow( $shadow, $default = '' ) {
+        if ( ! is_array( $shadow ) ) {
+            return $default !== '' ? 'box-shadow:' . esc_attr( $default ) . ';' : '';
+        }
+        if ( isset( $shadow['values'] ) && is_string( $shadow['values'] ) && trim( $shadow['values'] ) !== '' ) {
+            $val = $this->sanitize_css_value( $shadow['values'] );
+            if ( ! empty( $shadow['inset'] ) ) $val .= ' inset';
+            return 'box-shadow:' . esc_attr( $val ) . ';';
+        }
+        $ox = isset( $shadow['offsetX'] ) && $shadow['offsetX'] !== '' ? $this->format_length( $shadow['offsetX'] ) : '';
+        $oy = isset( $shadow['offsetY'] ) && $shadow['offsetY'] !== '' ? $this->format_length( $shadow['offsetY'] ) : '';
+        $bl = isset( $shadow['blur'] )    && $shadow['blur']    !== '' ? $this->format_length( $shadow['blur'] )    : '';
+        $sp = isset( $shadow['spread'] )  && $shadow['spread']  !== '' ? $this->format_length( $shadow['spread'] )  : '';
+        $co = ! empty( $shadow['color'] ) ? $this->resolve_color( $shadow['color'] ) : '';
+        if ( $ox === '' && $oy === '' && $bl === '' && $sp === '' && $co === '' ) {
+            return $default !== '' ? 'box-shadow:' . esc_attr( $default ) . ';' : '';
+        }
+        $parts = [ $ox !== '' ? $ox : '0', $oy !== '' ? $oy : '0' ];
+        if ( $bl !== '' ) $parts[] = $bl;
+        if ( $sp !== '' ) $parts[] = $sp;
+        if ( $co !== '' ) $parts[] = $co;
+        $val = implode( ' ', $parts );
+        if ( ! empty( $shadow['inset'] ) ) $val .= ' inset';
+        return 'box-shadow:' . esc_attr( $val ) . ';';
     }
 
     // Bricks-Border-Struktur → Inline-CSS-Fragment. Defaults greifen nur, wenn
