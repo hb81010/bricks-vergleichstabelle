@@ -954,27 +954,12 @@ class Element_Vergleich extends \Bricks\Element {
             'css' => [ [ 'property' => 'background-color', 'selector' => '.vergleich-labels' ] ],
         ];
 
-        $this->controls['labelShadowEnabled'] = [
+        $this->controls['labelShadow'] = [
             'tab' => 'content', 'group' => 'style',
-            'label' => esc_html__( 'Schatten rechts an Label-Spalte', 'bricks-vergleich' ),
-            'type' => 'checkbox',
-            'description' => esc_html__( 'Zeigt einen weichen Schatten am rechten Rand der Label-Spalte — visuelle Trennung zum Scroll-Bereich, besonders nützlich bei sticky Labels.', 'bricks-vergleich' ),
-        ];
-
-        $this->controls['labelShadowColor'] = [
-            'tab' => 'content', 'group' => 'style',
-            'label' => esc_html__( 'Schatten-Farbe', 'bricks-vergleich' ),
-            'type' => 'color',
-            'required' => [ 'labelShadowEnabled', '=', true ],
-            'css' => [ [ 'property' => '--vgl-label-shadow-color', 'selector' => '' ] ],
-        ];
-
-        $this->controls['labelShadowWidth'] = [
-            'tab' => 'content', 'group' => 'style',
-            'label' => esc_html__( 'Schatten-Breite', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true,
-            'required' => [ 'labelShadowEnabled', '=', true ],
-            'css' => [ [ 'property' => '--vgl-label-shadow-width', 'selector' => '' ] ],
+            'label' => esc_html__( 'Schatten Label-Spalte', 'bricks-vergleich' ),
+            'type' => 'box-shadow',
+            'description' => esc_html__( 'Box-Schatten auf der Label-Spalte — z.B. X=8 Y=0 Unschärfe=12 für einen weichen Schatten rechts zur Abgrenzung vom Scroll-Bereich.', 'bricks-vergleich' ),
+            'css' => [ [ 'property' => 'box-shadow', 'selector' => '.vergleich-labels' ] ],
         ];
 
         // ─── ZEILEN-EFFEKTE (Zebra, Hover, Highlight-Schatten) ─────────────
@@ -1863,7 +1848,6 @@ class Element_Vergleich extends \Bricks\Element {
         if ( $sticky )         $wrapper_classes[] = 'has-sticky-labels';
         if ( $divider )        $wrapper_classes[] = 'has-dividers';
         if ( $enforce_img )    $wrapper_classes[] = 'has-enforced-images';
-        if ( ! empty( $settings['labelShadowEnabled'] ) ) $wrapper_classes[] = 'has-label-shadow';
         if ( $ranking_enabled ) {
             $wrapper_classes[] = 'has-ranking';
             $wrapper_classes[] = 'has-ranking-pos-' . preg_replace( '/[^a-z\-]/', '', strtolower( (string) $ranking_position ) );
@@ -3441,25 +3425,10 @@ class Element_Vergleich extends \Bricks\Element {
             grid-template-rows: subgrid !important;
             background: #f3f4f6;
             z-index: 3;
-            position: relative;
         }
         .vergleich-wrapper.has-sticky-labels .vergleich-labels {
             position: sticky;
             left: 0;
-        }
-        /* Optischer Schatten rechts an der Label-Spalte — visuelle Trennung
-           zum Scroll-Bereich. Gradient statt box-shadow, weil der Wrapper
-           overflow:hidden hat und echte box-shadow geklippt würde. */
-        .vergleich-wrapper.has-label-shadow .vergleich-labels::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 100%;
-            width: var(--vgl-label-shadow-width, 16px);
-            background: linear-gradient(to right, var(--vgl-label-shadow-color, rgba(0,0,0,.12)), transparent);
-            pointer-events: none;
-            z-index: 4;
         }
         .vergleich-label {
             padding: var(--vgl-cell-padding, 16px);
