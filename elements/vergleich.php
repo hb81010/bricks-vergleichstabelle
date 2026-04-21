@@ -1833,9 +1833,15 @@ class Element_Vergleich extends \Bricks\Element {
         // Keine Fallback-Werte fuer User-Controls: inline-style hat Spezifi-
         // taet 1000 und wuerde jede Klassen-/Global-Style-Regel ueberschreiben.
         // Fehlende Controls werden durch var(--name, default) im CSS abgefangen.
+        // Fade-Collapse: Grid-Zeilen = sichtbare + 1 Peek-Zeile (falls überhaupt
+        // eine einklappbare Zeile existiert). Ohne diese Begrenzung würden die
+        // mit display:none versteckten Zeilen weiterhin min-height-Spuren im
+        // Grid belegen und unten einen leeren Block erzeugen.
+        $fade_row_count = $visible_row_count + ( $first_collapsible_idx >= 0 ? 1 : 0 );
+
         $inline_style = sprintf(
-            '--vgl-row-count:%d; --vgl-row-count-collapsed:%d; --vgl-text-align:%s;',
-            $row_count, $visible_row_count, esc_attr( $text_align )
+            '--vgl-row-count:%d; --vgl-row-count-collapsed:%d; --vgl-row-count-fade:%d; --vgl-text-align:%s;',
+            $row_count, $visible_row_count, $fade_row_count, esc_attr( $text_align )
         );
 
         // Struktur: _root = neutraler Container mit CSS-Variablen,
@@ -2110,16 +2116,18 @@ class Element_Vergleich extends \Bricks\Element {
 
         echo '</div></div>';
 
-        // Navigations-Pfeile (nur wenn aktiviert). Sitzen absolut innerhalb
-        // des Wrappers — JS aktiviert sie, wenn die Cards horizontal überlaufen.
+        echo '</div>'; // .vergleich-wrapper schließen — Expand-Button liegt außerhalb
+
+        // Navigations-Pfeile ALS GESCHWISTER des Wrappers — nicht darin.
+        // Grund: Wrapper hat overflow:hidden, würde die Pfeile beim sticky-
+        // Scrollen clippen. Im Root können sie frei positioniert werden und
+        // das JS verankert sie per position:absolute + Viewport-Sticky-Top.
         if ( $nav_enabled ) {
             $arrow_l = '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>';
             $arrow_r = '<svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
             echo '<button type="button" class="vergleich-nav vergleich-nav--prev" aria-label="' . esc_attr__( 'Zurück', 'bricks-vergleich' ) . '" data-vgl-nav="prev" hidden>' . $arrow_l . '</button>';
             echo '<button type="button" class="vergleich-nav vergleich-nav--next" aria-label="' . esc_attr__( 'Weiter', 'bricks-vergleich' ) . '" data-vgl-nav="next" hidden>' . $arrow_r . '</button>';
         }
-
-        echo '</div>'; // .vergleich-wrapper schließen — Expand-Button liegt außerhalb
 
         if ( $nav_counter_enabled && $nav_counter_position === 'below' ) {
             echo $counter_html;
@@ -3801,13 +3809,14 @@ class Element_Vergleich extends \Bricks\Element {
         }
 
         /* === Navigations-Pfeile ===
-           top wird per JS gesetzt: vertikale Mitte des sichtbaren Tabellen-
-           Abschnitts mit leichtem Upward-Bias (35%), damit die Buttons auch
-           bei langen Tabellen beim Scrollen mitgehen und nicht irgendwo in
-           der Tabellenmitte steckenbleiben. Fallback 50% wenn kein JS. */
+           position: absolute, Geschwister von .vergleich-wrapper inside
+           .vergleich-root. JS setzt per Frame das top, damit die Pfeile beim
+           vertikalen Seiten-Scroll im Viewport bleiben (Sticky-Anker an der
+           Ranking-Zeile). left/right beziehen sich auf den Root, der die volle
+           Tabellenbreite hat. */
         .vergleich-nav {
-            position: absolute !important;
-            top: 50%;
+            position: absolute;
+            top: 80px;
             transform: translateY(-50%);
             z-index: 8;
             width: var(--vgl-nav-size, 44px);
@@ -3893,6 +3902,7 @@ class Element_Vergleich extends \Bricks\Element {
         /* Root-Container: nimmt Wrapper + Expand-Button auf */
         .vergleich-root {
             display: block;
+            position: relative;
         }
 
         /* Expand / Collapse: einfacher display:none-Toggle ohne Animation. */
@@ -3930,9 +3940,11 @@ class Element_Vergleich extends \Bricks\Element {
            des Teasers. Expandiert: alles normal, kein Gradient, kein Peek.
         */
         .vergleich-wrapper.has-expand-fade.is-collapsed {
-            /* Volle Zeilenanzahl beibehalten, nicht auf --vgl-row-count-collapsed
-               kuerzen — die Peek-Zeile bleibt Teil des Subgrids. */
-            grid-template-rows: repeat(var(--vgl-row-count, 3), minmax(var(--vgl-row-min, 20px), auto)) !important;
+            /* Grid nur so hoch wie visible-rows + 1 Peek-Zeile machen. Alle
+               weiteren collapsiblen Zeilen sind display:none und brauchen
+               keine Grid-Spur, würden aber sonst durch --vgl-row-min einen
+               großen leeren Block unterhalb der letzten Zeile erzeugen. */
+            grid-template-rows: repeat(var(--vgl-row-count-fade, 1), minmax(var(--vgl-row-min, 20px), auto)) !important;
             position: relative;
             overflow: hidden;
         }
@@ -4127,8 +4139,13 @@ class Element_Vergleich extends \Bricks\Element {
             // Pfeil drehen (direkt, keine Transition)
             var iconWrap = btn.querySelector(".vergleich-expand-icon");
             if (iconWrap) iconWrap.style.transform = isCollapsed ? "rotate(0deg)" : "rotate(180deg)";
-            // Row-Sync nach dem Toggle
-            requestAnimationFrame(function(){ syncRows(wrapper); });
+            // Row-Sync + Nav-Refresh nach dem Toggle — ResizeObserver greift
+            // zwar auch, aber ein direkter Aufruf vermeidet einen Flacker-Frame,
+            // in dem der Pfeil auf der alten Geometrie sitzt.
+            requestAnimationFrame(function(){
+                syncRows(wrapper);
+                updateNav(wrapper);
+            });
         });
     }
 
@@ -4148,37 +4165,55 @@ class Element_Vergleich extends \Bricks\Element {
         return root ? root.querySelector("[data-vgl-counter]") : null;
     }
 
-    // Setzt die vertikale Position der Nav-Pfeile auf die Mitte des aktuell
-    // sichtbaren Tabellen-Abschnitts, mit einem kleinen Upward-Bias. So bleiben
-    // die Pfeile beim Scrollen stets im Viewport sichtbar, statt in der
-    // geometrischen Mitte der (langen) Tabelle festzukleben.
+    // Positioniert die Nav-Pfeile per position:fixed. Verhalten:
+    // 1) Default-Anker ist das Ranking-Badge (oder erste Zeile als Fallback).
+    //    → Pfeil bleibt "auf Ranking-Höhe" solange der Anker im Viewport ist.
+    //    → Beim Expand ändert sich nichts, weil der Anker (erste Zeile) oben
+    //       bleibt und die ergänzten Zeilen darunter angehängt werden.
+    // 2) Scrollt der User runter und der Anker verschwindet über den oberen
+    //    Viewport-Rand, wird der Pfeil sticky an einer kleinen Offset-Position
+    //    unter der Viewport-Oberkante gehalten — nur dann "läuft er mit".
+    // 3) Wenn der User so weit runter gescrollt hat, dass die Tabelle fast
+    //    verlassen ist, clampt der Pfeil auf den unteren Tabellenrand, damit
+    //    er nicht ins Nichts (oder den Footer) wandert.
     function updateNavPosition(wrapper){
-        var prev = wrapper.querySelector(".vergleich-nav--prev");
-        var next = wrapper.querySelector(".vergleich-nav--next");
+        // Pfeile liegen jetzt im Root (Geschwister vom wrapper), nicht mehr im
+        // wrapper selbst. Dort suchen.
+        var rootEl = wrapper.closest(".vergleich-root") || wrapper.parentNode;
+        if (!rootEl) return;
+        var prev = rootEl.querySelector(".vergleich-nav--prev");
+        var next = rootEl.querySelector(".vergleich-nav--next");
         if (!prev && !next) return;
 
         var rect = wrapper.getBoundingClientRect();
         var vh   = window.innerHeight || document.documentElement.clientHeight || 0;
-        if (vh <= 0 || rect.height <= 0) return;
+        if (vh <= 0) return;
+        if (rect.bottom <= 0 || rect.top >= vh) return;
 
-        // Sichtbarer Abschnitt des Wrappers, in Wrapper-eigenen Koordinaten
-        var visTop    = Math.max(0, -rect.top);
-        var visBottom = Math.min(rect.height, vh - rect.top);
+        var rootRect = rootEl.getBoundingClientRect();
 
-        var topPx;
-        if (visBottom <= visTop) {
-            // Wrapper ist aktuell komplett außerhalb des Viewports → zurück auf
-            // geometrische Mitte, damit's keine komische Position gibt.
-            topPx = rect.height / 2;
-        } else {
-            // 35% vom oberen Rand des sichtbaren Abschnitts = leicht höher als
-            // die optische Mitte, matcht das Autobild-Pattern.
-            topPx = visTop + (visBottom - visTop) * 0.35;
-        }
+        // Anker: Mitte der zweiten Card-Zelle (meist Produkt-Name). Liegt
+        // optisch ein Stück unterhalb der Produktbilder — Autobild/Finanzfluss-
+        // Pattern. Fallback auf erste Zelle oder Wrapper-Mitte.
+        var anchor = wrapper.querySelector(".vergleich-card > .vergleich-zelle:nth-child(2)")
+                  || wrapper.querySelector(".vergleich-card > .vergleich-zelle")
+                  || wrapper;
+        var aRect = anchor.getBoundingClientRect();
+        var defaultScreenY = aRect.top + aRect.height / 2;
 
-        var val = topPx + "px";
-        if (prev) prev.style.top = val;
-        if (next) next.style.top = val;
+        // Sticky-Fallback: bei 40px unter Viewport-Oberkante, sobald Anker oben raus.
+        var stickyScreenY = 40;
+        var screenY = Math.max(defaultScreenY, stickyScreenY);
+
+        // Clamp: nicht unter den Tabellenrand.
+        var maxScreenY = rect.bottom - 30;
+        if (screenY > maxScreenY) screenY = maxScreenY;
+
+        // Umrechnung Screen-Y → Root-Koordinaten (absolute ist zu Root relativ).
+        var topInRoot = screenY - rootRect.top;
+        var topVal = topInRoot + "px";
+        if (prev) prev.style.top = topVal;
+        if (next) next.style.top = topVal;
     }
 
     function updateNav(wrapper){
@@ -4186,8 +4221,11 @@ class Element_Vergleich extends \Bricks\Element {
         if (!scroll) return;
 
         var counter = findCounter(wrapper);
-        var prev    = wrapper.querySelector(".vergleich-nav--prev");
-        var next    = wrapper.querySelector(".vergleich-nav--next");
+        // Pfeile liegen jetzt im Root (Geschwister vom wrapper) statt im
+        // wrapper selbst — dort suchen.
+        var rootEl  = wrapper.closest(".vergleich-root") || wrapper.parentNode;
+        var prev    = rootEl ? rootEl.querySelector(".vergleich-nav--prev") : null;
+        var next    = rootEl ? rootEl.querySelector(".vergleich-nav--next") : null;
 
         var overflows = scroll.scrollWidth - scroll.clientWidth > 1;
         var atStart   = scroll.scrollLeft <= 1;
@@ -4228,11 +4266,16 @@ class Element_Vergleich extends \Bricks\Element {
         if (wrapper._vglNavBound) { updateNav(wrapper); return; }
         wrapper._vglNavBound = true;
 
-        // Click-Events per Delegation am Wrapper — uebersteht, wenn Bricks
-        // die Nav-Buttons im Canvas gegen neue Nodes ersetzt.
-        wrapper.addEventListener("click", function(e){
+        // Click-Events per Delegation am Root (nicht mehr am Wrapper), weil
+        // die Pfeile als Root-Geschwister außerhalb des Wrappers sitzen.
+        var rootForClicks = wrapper.closest(".vergleich-root") || wrapper.parentNode;
+        (rootForClicks || wrapper).addEventListener("click", function(e){
             var btn = e.target && e.target.closest ? e.target.closest("[data-vgl-nav]") : null;
-            if (!btn || !wrapper.contains(btn)) return;
+            if (!btn) return;
+            // Sicherstellen, dass der Klick zu DIESEM Wrapper gehört (falls
+            // mehrere Tabellen auf der Seite sind, jeder Root hat seine eigene).
+            var clickRoot = btn.closest(".vergleich-root");
+            if (clickRoot && clickRoot !== rootForClicks) return;
             var scroll = wrapper.querySelector(".vergleich-scroll");
             if (!scroll) return;
             var dir = btn.getAttribute("data-vgl-nav");
@@ -4244,14 +4287,53 @@ class Element_Vergleich extends \Bricks\Element {
         });
 
         var handler = function(){ updateNav(wrapper); };
-        // Window-Scroll/Resize: nur die Arrow-Position updaten (nicht den
-        // ganzen updateNav, weil der auch den Counter erneut neu berechnet).
+        // Scroll/Resize auf Page-Level: nur die Arrow-Position updaten (nicht
+        // den ganzen updateNav, weil der auch den Counter erneut neu berechnet).
         var posHandler = function(){ updateNavPosition(wrapper); };
 
         var scroll = wrapper.querySelector(".vergleich-scroll");
         if (scroll) scroll.addEventListener("scroll", handler, { passive: true });
         window.addEventListener("resize", handler);
+        // Capture-Phase auf document: Scroll-Events bubblen nicht, aber Capture
+        // fängt sie auf jeder Ebene ab — auch wenn ein Parent-Container scrollt
+        // (z.B. ein Bricks-Section mit overflow:auto) statt window.
+        document.addEventListener("scroll", posHandler, { passive: true, capture: true });
         window.addEventListener("scroll", posHandler, { passive: true });
+
+        // RAF-Loop als Fallback: solange der Wrapper im Viewport sichtbar ist,
+        // wird die Pfeil-Position jedes Frame neu berechnet. Robust gegen
+        // Themes mit Custom-Scroll-Container, Smooth-Scroll-Libraries oder
+        // anderen Quellen, die kein brauchbares scroll-Event liefern. Bei
+        // unsichtbarer Tabelle wird der Loop pausiert, also keine Perf-Kosten.
+        var rafId = 0;
+        var rafActive = false;
+        function rafLoop(){
+            if (!rafActive || !wrapper.isConnected) { rafId = 0; return; }
+            updateNavPosition(wrapper);
+            rafId = requestAnimationFrame(rafLoop);
+        }
+        function startRaf(){
+            if (rafActive) return;
+            rafActive = true;
+            if (!rafId) rafId = requestAnimationFrame(rafLoop);
+        }
+        function stopRaf(){
+            rafActive = false;
+            if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+        }
+        if (typeof IntersectionObserver !== "undefined") {
+            var io = new IntersectionObserver(function(entries){
+                for (var i = 0; i < entries.length; i++) {
+                    if (entries[i].isIntersecting) startRaf();
+                    else stopRaf();
+                }
+            }, { threshold: 0 });
+            io.observe(wrapper);
+        } else {
+            // Ohne IntersectionObserver: Loop dauerhaft laufen lassen.
+            startRaf();
+        }
+
         if (typeof ResizeObserver !== "undefined") {
             var ro = new ResizeObserver(handler);
             if (scroll) ro.observe(scroll);

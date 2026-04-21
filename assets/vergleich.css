@@ -327,8 +327,8 @@
    Kreisrunde Buttons, vertikal mittig am Scroll-Bereich. Per JS ein-
    und ausgeblendet je nach Scroll-Position. */
 .vergleich-nav {
-    position: absolute !important;
-    top: 50% !important;
+    position: absolute;
+    top: 80px;
     transform: translateY(-50%);
     z-index: 8;
     width: var(--vgl-nav-size, 44px);
