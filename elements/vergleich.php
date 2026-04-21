@@ -1492,13 +1492,12 @@ class Element_Vergleich extends \Bricks\Element {
                 'required'       => [ [ 'type', '=', 'list' ], [ 'listSource', '!=', 'manualColumns' ] ],
             ],
             'listManualColumns' => [
-                'label'         => esc_html__( 'Einträge pro Spalte', 'bricks-vergleich' ),
-                'type'          => 'repeater',
-                'titleProperty' => 'content',
-                'placeholder'   => esc_html__( 'Spalte', 'bricks-vergleich' ),
-                'description'   => esc_html__( 'Pro Produkt-Spalte einen Eintrag. Rich-Text-Liste (Aufzählung) verwenden — jedes <li> wird ein Listenpunkt. Reihenfolge matched den Query-Loop.', 'bricks-vergleich' ),
-                'required'      => [ [ 'type', '=', 'list' ], [ 'listSource', '=', 'manualColumns' ] ],
-                'fields'        => [
+                'label'       => esc_html__( 'Einträge pro Spalte', 'bricks-vergleich' ),
+                'type'        => 'repeater',
+                'placeholder' => esc_html__( 'Spalte', 'bricks-vergleich' ),
+                'description' => esc_html__( 'Pro Produkt-Spalte einen Eintrag. Rich-Text-Liste (Aufzählung) verwenden — jedes <li> wird ein Listenpunkt. Reihenfolge matched den Query-Loop.', 'bricks-vergleich' ),
+                'required'    => [ [ 'type', '=', 'list' ], [ 'listSource', '=', 'manualColumns' ] ],
+                'fields'      => [
                     'content' => [
                         'label'          => esc_html__( 'Inhalt', 'bricks-vergleich' ),
                         'type'           => 'editor',
