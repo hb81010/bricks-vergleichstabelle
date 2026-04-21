@@ -293,12 +293,12 @@ class Element_Vergleich extends \Bricks\Element {
             'css' => [ [ 'property' => 'background-color', 'selector' => '.vergleich-expand-btn' ] ],
         ];
 
-        $this->controls['expandBtnTextColor'] = [
+        $this->controls['expandBtnTypography'] = [
             'tab' => 'content', 'group' => 'expand',
-            'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
-            'type' => 'color',
+            'label' => esc_html__( 'Typografie', 'bricks-vergleich' ),
+            'type' => 'typography',
             'required' => [ 'expandEnabled', '=', true ],
-            'css' => [ [ 'property' => 'color', 'selector' => '.vergleich-expand-btn' ] ],
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-expand-btn' ] ],
         ];
 
         $this->controls['expandBtnBorder'] = [
@@ -315,23 +315,6 @@ class Element_Vergleich extends \Bricks\Element {
             'type' => 'spacing',
             'required' => [ 'expandEnabled', '=', true ],
             'css' => [ [ 'property' => 'padding', 'selector' => '.vergleich-expand-btn' ] ],
-        ];
-
-        $this->controls['expandBtnFontSize'] = [
-            'tab' => 'content', 'group' => 'expand',
-            'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true,
-            'required' => [ 'expandEnabled', '=', true ],
-            'css' => [ [ 'property' => 'font-size', 'selector' => '.vergleich-expand-btn' ] ],
-        ];
-
-        $this->controls['expandBtnFontWeight'] = [
-            'tab' => 'content', 'group' => 'expand',
-            'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
-            'type' => 'select',
-            'options' => [ '400' => '400', '500' => '500', '600' => '600', '700' => '700', '800' => '800' ],
-            'required' => [ 'expandEnabled', '=', true ],
-            'css' => [ [ 'property' => 'font-weight', 'selector' => '.vergleich-expand-btn' ] ],
         ];
 
         $this->controls['_sepExpandLayout'] = [
@@ -508,24 +491,6 @@ class Element_Vergleich extends \Bricks\Element {
             'css'   => [ [ 'property' => 'padding', 'selector' => '.vergleich-rank' ] ],
         ];
 
-        $this->controls['rankingFontSize'] = [
-            'tab' => 'content', 'group' => 'badges',
-            'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'placeholder' => '14px',
-            'required' => [ 'rankingEnabled', '=', true ],
-            'css'   => [ [ 'property' => '--vgl-rank-font-size', 'selector' => '' ] ],
-        ];
-
-        $this->controls['rankingFontWeight'] = [
-            'tab' => 'content', 'group' => 'badges',
-            'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
-            'type' => 'select',
-            'options' => [ '400' => '400', '500' => '500', '600' => '600', '700' => '700', '800' => '800' ],
-            'placeholder' => '700',
-            'required' => [ 'rankingEnabled', '=', true ],
-            'css'   => [ [ 'property' => '--vgl-rank-font-weight', 'selector' => '' ] ],
-        ];
-
         $this->controls['rankingBgColor'] = [
             'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
@@ -534,12 +499,12 @@ class Element_Vergleich extends \Bricks\Element {
             'css'   => [ [ 'property' => '--vgl-rank-bg', 'selector' => '' ] ],
         ];
 
-        $this->controls['rankingTextColor'] = [
+        $this->controls['rankingTypography'] = [
             'tab' => 'content', 'group' => 'badges',
-            'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
-            'type' => 'color',
+            'label' => esc_html__( 'Typografie', 'bricks-vergleich' ),
+            'type' => 'typography',
             'required' => [ 'rankingEnabled', '=', true ],
-            'css'   => [ [ 'property' => '--vgl-rank-color', 'selector' => '' ] ],
+            'css'   => [ [ 'property' => 'typography', 'selector' => '.vergleich-rank' ] ],
         ];
 
         $this->controls['rankingBorder'] = [
@@ -683,24 +648,6 @@ class Element_Vergleich extends \Bricks\Element {
             'css'   => [ [ 'property' => 'padding', 'selector' => '.vergleich-score' ] ],
         ];
 
-        $this->controls['scoreFontSize'] = [
-            'tab' => 'content', 'group' => 'badges',
-            'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'placeholder' => '14px',
-            'required' => [ 'scoreEnabled', '=', true ],
-            'css'   => [ [ 'property' => '--vgl-score-font-size', 'selector' => '' ] ],
-        ];
-
-        $this->controls['scoreFontWeight'] = [
-            'tab' => 'content', 'group' => 'badges',
-            'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
-            'type' => 'select',
-            'options' => [ '400' => '400', '500' => '500', '600' => '600', '700' => '700', '800' => '800' ],
-            'placeholder' => '700',
-            'required' => [ 'scoreEnabled', '=', true ],
-            'css'   => [ [ 'property' => '--vgl-score-font-weight', 'selector' => '' ] ],
-        ];
-
         $this->controls['scoreBgColor'] = [
             'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
@@ -709,12 +656,12 @@ class Element_Vergleich extends \Bricks\Element {
             'css'   => [ [ 'property' => '--vgl-score-bg', 'selector' => '' ] ],
         ];
 
-        $this->controls['scoreTextColor'] = [
+        $this->controls['scoreTypography'] = [
             'tab' => 'content', 'group' => 'badges',
-            'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
-            'type' => 'color',
+            'label' => esc_html__( 'Typografie', 'bricks-vergleich' ),
+            'type' => 'typography',
             'required' => [ 'scoreEnabled', '=', true ],
-            'css'   => [ [ 'property' => '--vgl-score-color', 'selector' => '' ] ],
+            'css'   => [ [ 'property' => 'typography', 'selector' => '.vergleich-score' ] ],
         ];
 
         $this->controls['scoreBorder'] = [
@@ -840,37 +787,12 @@ class Element_Vergleich extends \Bricks\Element {
             'css'   => [ [ 'property' => 'padding', 'selector' => '.vergleich-product-label-item' ] ],
         ];
 
-        $this->controls['productLabelsFontSize'] = [
+        $this->controls['productLabelsTypography'] = [
             'tab'   => 'content', 'group' => 'productLabels',
-            'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
-            'type'  => 'number', 'units' => true, 'placeholder' => '14px',
+            'label' => esc_html__( 'Typografie', 'bricks-vergleich' ),
+            'type'  => 'typography',
             'required' => [ 'productLabelsEnabled', '=', true ],
-            'css'   => [ [ 'property' => '--vgl-product-label-font-size', 'selector' => '' ] ],
-        ];
-
-        $this->controls['productLabelsFontWeight'] = [
-            'tab'   => 'content', 'group' => 'productLabels',
-            'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
-            'type'  => 'select',
-            'options' => [ '400' => '400', '500' => '500', '600' => '600', '700' => '700', '800' => '800', '900' => '900' ],
-            'placeholder' => '700',
-            'required' => [ 'productLabelsEnabled', '=', true ],
-            'css'   => [ [ 'property' => '--vgl-product-label-font-weight', 'selector' => '' ] ],
-        ];
-
-        $this->controls['productLabelsUppercase'] = [
-            'tab'   => 'content', 'group' => 'productLabels',
-            'label' => esc_html__( 'Text in Großbuchstaben', 'bricks-vergleich' ),
-            'type'  => 'checkbox',
-            'required' => [ 'productLabelsEnabled', '=', true ],
-        ];
-
-        $this->controls['productLabelsLetterSpacing'] = [
-            'tab'   => 'content', 'group' => 'productLabels',
-            'label' => esc_html__( 'Buchstaben-Abstand', 'bricks-vergleich' ),
-            'type'  => 'number', 'units' => true, 'placeholder' => '0.04em',
-            'required' => [ 'productLabelsEnabled', '=', true ],
-            'css'   => [ [ 'property' => '--vgl-product-label-tracking', 'selector' => '' ] ],
+            'css'   => [ [ 'property' => 'typography', 'selector' => '.vergleich-product-label-item:not(.is-empty)' ] ],
         ];
 
         $this->controls['productLabelsDefaultBg'] = [
@@ -880,14 +802,6 @@ class Element_Vergleich extends \Bricks\Element {
             'description' => esc_html__( 'Wird verwendet, wenn im Repeater-Eintrag keine Farbe gesetzt ist.', 'bricks-vergleich' ),
             'required' => [ 'productLabelsEnabled', '=', true ],
             'css'   => [ [ 'property' => '--vgl-product-label-bg', 'selector' => '' ] ],
-        ];
-
-        $this->controls['productLabelsDefaultColor'] = [
-            'tab'   => 'content', 'group' => 'productLabels',
-            'label' => esc_html__( 'Standard-Textfarbe', 'bricks-vergleich' ),
-            'type'  => 'color',
-            'required' => [ 'productLabelsEnabled', '=', true ],
-            'css'   => [ [ 'property' => '--vgl-product-label-color', 'selector' => '' ] ],
         ];
 
         $this->controls['productLabelsBorder'] = [
@@ -1036,32 +950,12 @@ class Element_Vergleich extends \Bricks\Element {
             'required' => [ 'navCounterEnabled', '=', true ],
         ];
 
-        $this->controls['navCounterFontSize'] = [
+        $this->controls['navCounterTypography'] = [
             'tab' => 'content', 'group' => 'scroll',
-            'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
-            'type' => 'number', 'units' => true, 'placeholder' => '14px',
+            'label' => esc_html__( 'Typografie', 'bricks-vergleich' ),
+            'type' => 'typography',
             'required' => [ 'navCounterEnabled', '=', true ],
-            'css' => [ [ 'property' => 'font-size', 'selector' => '.vergleich-counter' ] ],
-        ];
-
-        $this->controls['navCounterFontWeight'] = [
-            'tab' => 'content', 'group' => 'scroll',
-            'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
-            'type' => 'select',
-            'options' => [
-                '400' => '400', '500' => '500', '600' => '600', '700' => '700',
-            ],
-            'placeholder' => '400',
-            'required' => [ 'navCounterEnabled', '=', true ],
-            'css' => [ [ 'property' => 'font-weight', 'selector' => '.vergleich-counter' ] ],
-        ];
-
-        $this->controls['navCounterColor'] = [
-            'tab' => 'content', 'group' => 'scroll',
-            'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
-            'type' => 'color',
-            'required' => [ 'navCounterEnabled', '=', true ],
-            'css' => [ [ 'property' => 'color', 'selector' => '.vergleich-counter' ] ],
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-counter' ] ],
         ];
 
         $this->controls['navCounterPadding'] = [
@@ -1531,22 +1425,9 @@ class Element_Vergleich extends \Bricks\Element {
                 'type'     => 'color',
                 'required' => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
             ],
-            'scoreTextColor' => [
-                'label'    => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
-                'type'     => 'color',
-                'required' => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
-            ],
-            'scoreFontSize' => [
-                'label'       => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
-                'type'        => 'number', 'units' => true,
-                'placeholder' => '16px',
-                'required'    => [ 'type', '=', 'score' ],
-            ],
-            'scoreFontWeight' => [
-                'label'    => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
-                'type'     => 'select',
-                'options'  => [ '400' => '400', '500' => '500', '600' => '600', '700' => '700', '800' => '800' ],
-                'placeholder' => '700',
+            'scoreTypography' => [
+                'label'    => esc_html__( 'Typografie', 'bricks-vergleich' ),
+                'type'     => 'typography',
                 'required' => [ 'type', '=', 'score' ],
             ],
             'scorePadding' => [
@@ -1819,10 +1700,6 @@ class Element_Vergleich extends \Bricks\Element {
         $ranking_offset_x      = $this->get_css_value( $settings['rankingOffsetX'] ?? null, '8px' );
         $ranking_size          = $this->get_css_value( $settings['rankingSize']    ?? null, '36px' );
         $ranking_padding       = $this->format_spacing( $settings['rankingPadding'] ?? null, '4px 10px' );
-        $ranking_font_size     = $this->get_css_value( $settings['rankingFontSize'] ?? null, '14px' );
-        $ranking_font_weight   = $settings['rankingFontWeight'] ?? '700';
-        $ranking_bg_color      = $this->resolve_color( $settings['rankingBgColor'] ?? null ) ?: '#f59e0b';
-        $ranking_text_color    = $this->resolve_color( $settings['rankingTextColor'] ?? null ) ?: '#ffffff';
         $ranking_shadow_map    = [
             'none' => 'none', 'small' => '0 1px 2px rgba(0,0,0,.12)',
             'medium' => '0 2px 6px rgba(0,0,0,.18)', 'large' => '0 4px 12px rgba(0,0,0,.22)',
@@ -1852,10 +1729,6 @@ class Element_Vergleich extends \Bricks\Element {
         $score_offset_x    = $this->get_css_value( $settings['scoreOffsetX'] ?? null, '8px' );
         $score_min_size    = $this->get_css_value( $settings['scoreMinSize'] ?? null, '36px' );
         $score_padding     = $this->format_spacing( $settings['scorePadding'] ?? null, '6px 10px' );
-        $score_font_size   = $this->get_css_value( $settings['scoreFontSize'] ?? null, '14px' );
-        $score_font_weight = $settings['scoreFontWeight'] ?? '700';
-        $score_bg_color    = $this->resolve_color( $settings['scoreBgColor'] ?? null ) ?: '#111827';
-        $score_text_color  = $this->resolve_color( $settings['scoreTextColor'] ?? null ) ?: '#ffffff';
         $score_shadow_map  = [
             'none' => 'none', 'small' => '0 1px 2px rgba(0,0,0,.12)',
             'medium' => '0 2px 6px rgba(0,0,0,.18)', 'large' => '0 4px 12px rgba(0,0,0,.22)',
@@ -1878,7 +1751,6 @@ class Element_Vergleich extends \Bricks\Element {
         $product_labels_items_raw = isset( $settings['productLabelsItems'] ) && is_array( $settings['productLabelsItems'] ) ? $settings['productLabelsItems'] : [];
         $product_labels_fallback  = $this->dd_string( (string) ( $settings['productLabelsFallback'] ?? '' ) );
         $product_labels_left_lbl  = $this->dd_string( (string) ( $settings['productLabelsLeftLabel'] ?? '' ) );
-        $product_labels_uppercase = ! empty( $settings['productLabelsUppercase'] );
 
         // Items normalisieren: pro Index text/bg/color auflösen.
         $product_labels_items = [];
@@ -1892,11 +1764,10 @@ class Element_Vergleich extends \Bricks\Element {
         }
 
         $this->_product_label_runtime = [
-            'enabled'   => $product_labels_enabled,
-            'items'     => $product_labels_items,
-            'fallback'  => $product_labels_fallback,
-            'left'      => $product_labels_left_lbl,
-            'uppercase' => $product_labels_uppercase,
+            'enabled'  => $product_labels_enabled,
+            'items'    => $product_labels_items,
+            'fallback' => $product_labels_fallback,
+            'left'     => $product_labels_left_lbl,
         ];
 
         // Navigation
@@ -2077,7 +1948,6 @@ class Element_Vergleich extends \Bricks\Element {
             $pl_items  = is_array( $pl_cfg['items'] ?? null ) ? $pl_cfg['items'] : [];
             $pl_fb     = (string) ( $pl_cfg['fallback'] ?? '' );
             $pl_left   = (string) ( $pl_cfg['left'] ?? '' );
-            $pl_upper  = ! empty( $pl_cfg['uppercase'] );
 
             // Anzahl der Spalten: Query-Count bevorzugt, sonst Anzahl Items,
             // sonst 1.
@@ -2090,11 +1960,12 @@ class Element_Vergleich extends \Bricks\Element {
             $spacer_style = 'flex:0 0 var(--vgl-label-width,200px);width:var(--vgl-label-width,200px);max-width:var(--vgl-label-width,200px);display:flex;align-items:center;padding:0 var(--vgl-cell-padding,16px);min-width:0;background:transparent;';
             $scroll_style = 'flex:1 1 auto;min-width:0;overflow:hidden;';
             $track_style  = 'display:flex;flex-direction:row;flex-wrap:nowrap;min-width:0;will-change:transform;';
+            // Layout-kritische Styles inline; Typografie kommt über das
+            // typography-Control (selektorbasierte CSS-Regel).
             $item_base    = 'flex:0 0 var(--vgl-column-width,200px);width:var(--vgl-column-width,200px);max-width:var(--vgl-column-width,200px);'
                 . 'min-height:var(--vgl-product-label-height,40px);padding:var(--vgl-product-label-padding,8px 12px);'
-                . 'font-size:var(--vgl-product-label-font-size,14px);font-weight:var(--vgl-product-label-font-weight,700);'
-                . 'letter-spacing:var(--vgl-product-label-tracking,0);line-height:1.2;display:flex;align-items:center;'
-                . 'justify-content:center;text-align:center;overflow:hidden;box-sizing:border-box;';
+                . 'line-height:1.2;display:flex;align-items:center;'
+                . 'justify-content:center;overflow:hidden;box-sizing:border-box;';
 
             echo '<div class="vergleich-product-label-row" aria-hidden="true" style="' . esc_attr( $row_style ) . '">';
 
@@ -2119,15 +1990,15 @@ class Element_Vergleich extends \Bricks\Element {
 
                 $cls = 'vergleich-product-label-item';
                 if ( $pl_text === '' ) $cls .= ' is-empty';
-                if ( $pl_upper )       $cls .= ' is-uppercase';
 
-                // Pro-Item-Farben: Inline-Override der Standardfarben.
+                // Pro-Item-Overrides: wenn im Repeater-Eintrag gesetzt, hart
+                // inline. Sonst greifen die Typografie- und BG-Controls.
                 $item_style = $item_base;
                 if ( $pl_text === '' ) {
                     $item_style .= 'background:transparent;pointer-events:none;';
                 } else {
-                    $item_style .= 'background:' . ( $pl_bg !== '' ? $pl_bg : 'var(--vgl-product-label-bg,transparent)' ) . ';';
-                    $item_style .= 'color:'      . ( $pl_color !== '' ? $pl_color : 'var(--vgl-product-label-color,inherit)' ) . ';';
+                    if ( $pl_bg    !== '' ) $item_style .= 'background:' . $pl_bg . ';';
+                    if ( $pl_color !== '' ) $item_style .= 'color:' . $pl_color . ';';
                 }
 
                 echo '<div class="' . esc_attr( $cls ) . '" style="' . esc_attr( $item_style ) . '">';
@@ -2993,18 +2864,23 @@ class Element_Vergleich extends \Bricks\Element {
             $display = number_format( (float) $normalized, $decimals, $dec_sep, '' );
         }
 
-        // Inline-Styling (Canvas-robust).
-        $font_size   = $this->get_css_value( $row['scoreFontSize'] ?? null, $as_badge ? '14px' : '16px' );
-        $font_weight = isset( $row['scoreFontWeight'] ) && $row['scoreFontWeight'] !== '' ? (string) $row['scoreFontWeight'] : '700';
+        // Inline-Styling (Canvas-robust). Typografie aus dem Bricks-Control
+        // extrahieren, Defaults greifen nur, wenn nichts gesetzt.
+        $typo_defaults = [
+            'font-size'   => $as_badge ? '14px' : '16px',
+            'font-weight' => '700',
+            'line-height' => '1.2',
+        ];
+        if ( $as_badge ) $typo_defaults['color'] = '#ffffff';
 
-        $style = 'font-size:' . esc_attr( $font_size ) . ';font-weight:' . esc_attr( $font_weight ) . ';line-height:1.2;display:inline-flex;align-items:center;gap:4px;';
+        $typo_css = $this->format_typography( $row['scoreTypography'] ?? null, $typo_defaults );
+        $style = $typo_css . 'display:inline-flex;align-items:center;gap:4px;';
 
         if ( $as_badge ) {
             $bg      = $this->resolve_color( $row['scoreBgColor'] ?? null ) ?: '#111827';
-            $color   = $this->resolve_color( $row['scoreTextColor'] ?? null ) ?: '#ffffff';
             $padding = $this->format_spacing( $row['scorePadding'] ?? null, '6px 12px' );
             $border_css = $this->format_border( $row['scoreBorder'] ?? null, [ 'radius' => '9999px' ] );
-            $style .= 'background:' . esc_attr( $bg ) . ';color:' . esc_attr( $color ) . ';'
+            $style .= 'background:' . esc_attr( $bg ) . ';'
                    .  'padding:' . esc_attr( $padding ) . ';' . $border_css
                    .  'box-shadow:0 1px 2px rgba(0,0,0,.12);white-space:nowrap;';
         }
@@ -3356,6 +3232,49 @@ class Element_Vergleich extends \Bricks\Element {
         return implode( ' ', $sides );
     }
 
+    // Bricks-Typography-Struktur → Inline-CSS-Fragment. Für Stellen, an denen
+    // Typografie inline gebraucht wird (z.B. Repeater-Badges). Für Element-
+    // Level-Controls reicht 'css' => [[ 'property' => 'typography', ... ]] —
+    // Bricks erzeugt das CSS dann selbst.
+    private function format_typography( $typo, $defaults = [] ) {
+        $props = [
+            'color', 'font-family', 'font-weight', 'font-style',
+            'font-variation-settings', 'line-height', 'text-align',
+            'text-transform', 'text-decoration', 'white-space',
+        ];
+        $length_props = [ 'font-size', 'letter-spacing' ];
+
+        $out = '';
+        if ( is_array( $typo ) ) {
+            foreach ( $props as $p ) {
+                if ( ! isset( $typo[ $p ] ) || $typo[ $p ] === '' || $typo[ $p ] === null ) continue;
+                $val = $typo[ $p ];
+                if ( $p === 'color' ) {
+                    $resolved = $this->resolve_color( $val );
+                    if ( $resolved !== '' ) $out .= 'color:' . esc_attr( $resolved ) . ';';
+                    continue;
+                }
+                if ( is_array( $val ) ) continue; // unerwartet — skip
+                $out .= $p . ':' . esc_attr( $this->sanitize_css_value( (string) $val ) ) . ';';
+            }
+            foreach ( $length_props as $p ) {
+                if ( ! isset( $typo[ $p ] ) ) continue;
+                $v = $typo[ $p ];
+                if ( $v === '' || $v === null ) continue;
+                $formatted = $this->format_length( $v );
+                if ( $formatted !== '' && $formatted !== '0' ) {
+                    $out .= $p . ':' . esc_attr( $formatted ) . ';';
+                }
+            }
+        }
+        foreach ( [ 'color', 'font-size', 'font-weight', 'line-height' ] as $p ) {
+            if ( ! empty( $defaults[ $p ] ) && strpos( $out, $p . ':' ) === false ) {
+                $out .= $p . ':' . esc_attr( (string) $defaults[ $p ] ) . ';';
+            }
+        }
+        return $out;
+    }
+
     // Bricks-Border-Struktur → Inline-CSS-Fragment. Defaults greifen nur, wenn
     // der User KEINEN Wert gesetzt hat (z.B. Badge-Default radius: 9999px).
     private function format_border( $border, $defaults = [] ) {
@@ -3680,10 +3599,10 @@ class Element_Vergleich extends \Bricks\Element {
             min-width: var(--vgl-rank-size, 36px);
             min-height: var(--vgl-rank-size, 36px);
             padding: var(--vgl-rank-padding, 4px 10px);
-            font-size: var(--vgl-rank-font-size, 14px);
-            font-weight: var(--vgl-rank-font-weight, 700);
+            font-size: 14px;
+            font-weight: 700;
             line-height: 1;
-            color: var(--vgl-rank-color, #fff);
+            color: #fff;
             background: var(--vgl-rank-bg, #f59e0b);
             border-radius: 9999px;
             box-shadow: var(--vgl-rank-shadow, 0 2px 6px rgba(0,0,0,.18));
@@ -3755,10 +3674,10 @@ class Element_Vergleich extends \Bricks\Element {
             min-width: var(--vgl-score-size, 36px);
             min-height: var(--vgl-score-size, 36px);
             padding: var(--vgl-score-padding, 6px 10px);
-            font-size: var(--vgl-score-font-size, 14px);
-            font-weight: var(--vgl-score-font-weight, 700);
+            font-size: 14px;
+            font-weight: 700;
             line-height: 1;
-            color: var(--vgl-score-color, #fff);
+            color: #fff;
             background: var(--vgl-score-bg, #111827);
             border-radius: 6px;
             box-shadow: var(--vgl-score-shadow, 0 2px 6px rgba(0,0,0,.18));
@@ -4021,7 +3940,7 @@ class Element_Vergleich extends \Bricks\Element {
             padding: 0 var(--vgl-cell-padding, 16px);
             display: flex;
             align-items: center;
-            font-size: var(--vgl-product-label-font-size, 14px);
+            font-size: 14px;
             color: #6b7280;
             min-width: 0;
         }
@@ -4045,9 +3964,8 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-product-label-item {
             min-height: var(--vgl-product-label-height, 40px);
             padding: var(--vgl-product-label-padding, 8px 12px);
-            font-size: var(--vgl-product-label-font-size, 14px);
-            font-weight: var(--vgl-product-label-font-weight, 700);
-            letter-spacing: var(--vgl-product-label-tracking, 0);
+            font-size: 14px;
+            font-weight: 700;
             line-height: 1.2;
             display: flex;
             align-items: center;
@@ -4057,14 +3975,10 @@ class Element_Vergleich extends \Bricks\Element {
             box-sizing: border-box;
             background: transparent;
         }
-        /* Defaultfarben (Standard-BG/-Color aus den Controls) nur auf gefuellte
-           Items anwenden. Inline-Styles pro Item ueberschreiben den Default. */
+        /* Standard-Hintergrund (aus den Controls) nur auf gefuellte Items
+           anwenden. Inline-Styles pro Item ueberschreiben den Default. */
         .vergleich-product-label-item:not(.is-empty) {
             background: var(--vgl-product-label-bg, transparent);
-            color: var(--vgl-product-label-color, inherit);
-        }
-        .vergleich-product-label-item.is-uppercase {
-            text-transform: uppercase;
         }
         .vergleich-product-label-item.is-empty {
             background: transparent !important;
