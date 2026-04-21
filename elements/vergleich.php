@@ -277,6 +277,70 @@ class Element_Vergleich extends \Bricks\Element {
             'required' => [ 'expandEnabled', '=', true ],
         ];
 
+        // ─── Eigenes Styling (überschreibt das Preset oben) ───
+        $this->controls['_sepExpandBtnCustom'] = [
+            'tab' => 'content', 'group' => 'expand',
+            'type' => 'separator',
+            'label' => esc_html__( 'Eigenes Styling (überschreibt Preset)', 'bricks-vergleich' ),
+            'required' => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandBtnBgColor'] = [
+            'tab' => 'content', 'group' => 'expand',
+            'label' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
+            'type' => 'color',
+            'required' => [ 'expandEnabled', '=', true ],
+            'css' => [ [ 'property' => 'background-color', 'selector' => '.vergleich-expand-btn' ] ],
+        ];
+
+        $this->controls['expandBtnTextColor'] = [
+            'tab' => 'content', 'group' => 'expand',
+            'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
+            'type' => 'color',
+            'required' => [ 'expandEnabled', '=', true ],
+            'css' => [ [ 'property' => 'color', 'selector' => '.vergleich-expand-btn' ] ],
+        ];
+
+        $this->controls['expandBtnBorder'] = [
+            'tab' => 'content', 'group' => 'expand',
+            'label' => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+            'type' => 'border',
+            'required' => [ 'expandEnabled', '=', true ],
+            'css' => [ [ 'property' => 'border', 'selector' => '.vergleich-expand-btn' ] ],
+        ];
+
+        $this->controls['expandBtnPadding'] = [
+            'tab' => 'content', 'group' => 'expand',
+            'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+            'type' => 'spacing',
+            'required' => [ 'expandEnabled', '=', true ],
+            'css' => [ [ 'property' => 'padding', 'selector' => '.vergleich-expand-btn' ] ],
+        ];
+
+        $this->controls['expandBtnFontSize'] = [
+            'tab' => 'content', 'group' => 'expand',
+            'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'required' => [ 'expandEnabled', '=', true ],
+            'css' => [ [ 'property' => 'font-size', 'selector' => '.vergleich-expand-btn' ] ],
+        ];
+
+        $this->controls['expandBtnFontWeight'] = [
+            'tab' => 'content', 'group' => 'expand',
+            'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [ '400' => '400', '500' => '500', '600' => '600', '700' => '700', '800' => '800' ],
+            'required' => [ 'expandEnabled', '=', true ],
+            'css' => [ [ 'property' => 'font-weight', 'selector' => '.vergleich-expand-btn' ] ],
+        ];
+
+        $this->controls['_sepExpandLayout'] = [
+            'tab' => 'content', 'group' => 'expand',
+            'type' => 'separator',
+            'label' => esc_html__( 'Layout', 'bricks-vergleich' ),
+            'required' => [ 'expandEnabled', '=', true ],
+        ];
+
         $this->controls['expandAlign'] = [
             'tab' => 'content', 'group' => 'expand',
             'label' => esc_html__( 'Button-Ausrichtung', 'bricks-vergleich' ),
@@ -826,6 +890,15 @@ class Element_Vergleich extends \Bricks\Element {
             'css'   => [ [ 'property' => '--vgl-product-label-color', 'selector' => '' ] ],
         ];
 
+        $this->controls['productLabelsBorder'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+            'type'  => 'border',
+            'description' => esc_html__( 'Gilt für alle nicht-leeren Labels (leere Platzhalter bleiben ohne Rahmen).', 'bricks-vergleich' ),
+            'required' => [ 'productLabelsEnabled', '=', true ],
+            'css'   => [ [ 'property' => 'border', 'selector' => '.vergleich-product-label-item:not(.is-empty)' ] ],
+        ];
+
         // ======================================================================
         // SCROLL & NAVIGATION — Pfeile und Zähler in einer Gruppe.
         // ======================================================================
@@ -882,12 +955,12 @@ class Element_Vergleich extends \Bricks\Element {
             'css' => [ [ 'property' => '--vgl-nav-color', 'selector' => '' ] ],
         ];
 
-        $this->controls['navBorderColor'] = [
+        $this->controls['navBorder'] = [
             'tab' => 'content', 'group' => 'scroll',
-            'label' => esc_html__( 'Rahmenfarbe', 'bricks-vergleich' ),
-            'type' => 'color',
+            'label' => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+            'type' => 'border',
             'required' => [ 'navEnabled', '=', true ],
-            'css' => [ [ 'property' => '--vgl-nav-border', 'selector' => '' ] ],
+            'css' => [ [ 'property' => 'border', 'selector' => '.vergleich-nav' ] ],
         ];
 
         $this->controls['navShadow'] = [
@@ -1833,7 +1906,6 @@ class Element_Vergleich extends \Bricks\Element {
         $nav_offset       = $this->get_css_value( $settings['navOffset']   ?? null, '12px' );
         $nav_bg_color     = $this->resolve_color( $settings['navBgColor']     ?? null ) ?: '#ffffff';
         $nav_icon_color   = $this->resolve_color( $settings['navIconColor']   ?? null ) ?: '#111827';
-        $nav_border_color = $this->resolve_color( $settings['navBorderColor'] ?? null ) ?: '#e5e7eb';
         $nav_shadow_map = [
             'none' => 'none', 'small' => '0 1px 3px rgba(0,0,0,.12)',
             'medium' => '0 4px 12px rgba(0,0,0,.15)', 'large' => '0 8px 24px rgba(0,0,0,.18)',
@@ -3752,7 +3824,7 @@ class Element_Vergleich extends \Bricks\Element {
             height: var(--vgl-nav-size, 44px);
             padding: 0;
             margin: 0;
-            border: 1px solid var(--vgl-nav-border, #e5e7eb);
+            border: 1px solid #e5e7eb;
             background: var(--vgl-nav-bg, #ffffff);
             color: var(--vgl-nav-color, #111827);
             border-radius: 9999px;
