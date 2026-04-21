@@ -26,20 +26,27 @@ class Element_Vergleich extends \Bricks\Element {
     /** Runtime-State für Score-Badge (Bewertung aus Meta-Feld). */
     public $_score_runtime = null;
 
+    /** Runtime-State für Produkt-Labels (manueller Top-Balken pro Spalte). */
+    public $_product_label_runtime = null;
+
+    /** Index der ersten aufklappbaren Zeile (fuer Fade-Peek). -1 = keine. */
+    public $_first_collapsible_idx = -1;
+
     public function get_label() {
         return esc_html__( 'Produkt-Vergleichstabelle', 'bricks-vergleich' );
     }
 
     public function set_control_groups() {
-        $this->control_groups['query']   = [ 'title' => esc_html__( 'Query Loop', 'bricks-vergleich' ), 'tab' => 'content' ];
-        $this->control_groups['rows']    = [ 'title' => esc_html__( 'Zeilen', 'bricks-vergleich' ),    'tab' => 'content' ];
-        $this->control_groups['layout']  = [ 'title' => esc_html__( 'Layout', 'bricks-vergleich' ),    'tab' => 'content' ];
-        $this->control_groups['images']  = [ 'title' => esc_html__( 'Bilder', 'bricks-vergleich' ),    'tab' => 'content' ];
-        $this->control_groups['expand']  = [ 'title' => esc_html__( 'Aufklappen', 'bricks-vergleich' ),'tab' => 'content' ];
-        $this->control_groups['ranking'] = [ 'title' => esc_html__( 'Ranking-Badge', 'bricks-vergleich' ), 'tab' => 'content' ];
-        $this->control_groups['score']   = [ 'title' => esc_html__( 'Bewertungs-Badge', 'bricks-vergleich' ), 'tab' => 'content' ];
-        $this->control_groups['nav']     = [ 'title' => esc_html__( 'Navigation (Pfeile)', 'bricks-vergleich' ), 'tab' => 'content' ];
-        $this->control_groups['style']   = [ 'title' => esc_html__( 'Styling', 'bricks-vergleich' ),   'tab' => 'content' ];
+        $this->control_groups['query']   = [ 'title' => esc_html__( 'Query Loop', 'bricks-vergleich' ),        'tab' => 'content' ];
+        $this->control_groups['rows']    = [ 'title' => esc_html__( 'Zeilen', 'bricks-vergleich' ),            'tab' => 'content' ];
+        $this->control_groups['layout']  = [ 'title' => esc_html__( 'Layout', 'bricks-vergleich' ),            'tab' => 'content' ];
+        $this->control_groups['images']  = [ 'title' => esc_html__( 'Bilder', 'bricks-vergleich' ),            'tab' => 'content' ];
+        $this->control_groups['expand']  = [ 'title' => esc_html__( 'Aufklappen', 'bricks-vergleich' ),        'tab' => 'content' ];
+        $this->control_groups['badges']  = [ 'title' => esc_html__( 'Badges', 'bricks-vergleich' ),            'tab' => 'content' ];
+        $this->control_groups['productLabels'] = [ 'title' => esc_html__( 'Produkt-Labels', 'bricks-vergleich' ), 'tab' => 'content' ];
+        $this->control_groups['scroll']  = [ 'title' => esc_html__( 'Scroll & Navigation', 'bricks-vergleich' ), 'tab' => 'content' ];
+        $this->control_groups['effects'] = [ 'title' => esc_html__( 'Zeilen-Effekte', 'bricks-vergleich' ),    'tab' => 'content' ];
+        $this->control_groups['style']   = [ 'title' => esc_html__( 'Farben & Rahmen', 'bricks-vergleich' ),   'tab' => 'content' ];
     }
 
     public function set_controls() {
@@ -82,6 +89,12 @@ class Element_Vergleich extends \Bricks\Element {
         // ======================================================================
         // LAYOUT
         // ======================================================================
+        $this->controls['_sepSizes'] = [
+            'tab' => 'content', 'group' => 'layout',
+            'type' => 'separator',
+            'label' => esc_html__( 'Maße', 'bricks-vergleich' ),
+        ];
+
         $this->controls['labelWidth'] = [
             'tab' => 'content', 'group' => 'layout',
             'label' => esc_html__( 'Breite Label-Spalte', 'bricks-vergleich' ),
@@ -112,6 +125,12 @@ class Element_Vergleich extends \Bricks\Element {
                 [ 'property' => 'padding', 'selector' => '.vergleich-zelle' ],
                 [ 'property' => 'padding', 'selector' => '.vergleich-label' ],
             ],
+        ];
+
+        $this->controls['_sepBehavior'] = [
+            'tab' => 'content', 'group' => 'layout',
+            'type' => 'separator',
+            'label' => esc_html__( 'Verhalten', 'bricks-vergleich' ),
         ];
 
         $this->controls['stickyLabels'] = [
@@ -278,25 +297,83 @@ class Element_Vergleich extends \Bricks\Element {
             'required' => [ 'expandEnabled', '=', true ],
         ];
 
+        // ─── Fade-Effekt (optischer Teaser der nächsten Zeile) ───
+        $this->controls['_sepExpandFade'] = [
+            'tab' => 'content', 'group' => 'expand',
+            'type' => 'separator',
+            'label' => esc_html__( 'Fade-Effekt (optional)', 'bricks-vergleich' ),
+            'required' => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandFadeEnabled'] = [
+            'tab'         => 'content', 'group' => 'expand',
+            'label'       => esc_html__( 'Fade-Effekt aktivieren', 'bricks-vergleich' ),
+            'type'        => 'checkbox',
+            'description' => esc_html__( 'Statt harter Abschneidung: die erste verborgene Zeile wird leicht angedeutet, ein Farbverlauf blendet sie nach unten aus und der "Aufklappen"-Button überlagert den Fade-Bereich.', 'bricks-vergleich' ),
+            'required'    => [ 'expandEnabled', '=', true ],
+        ];
+
+        $this->controls['expandFadePeek'] = [
+            'tab'         => 'content', 'group' => 'expand',
+            'label'       => esc_html__( 'Sichtbare Peek-Höhe', 'bricks-vergleich' ),
+            'type'        => 'number', 'units' => true, 'placeholder' => '48px',
+            'description' => esc_html__( 'Wieviel von der ersten verborgenen Zeile sichtbar sein soll (bevor der Fade einsetzt).', 'bricks-vergleich' ),
+            'required'    => [ [ 'expandEnabled', '=', true ], [ 'expandFadeEnabled', '=', true ] ],
+            'css'         => [ [ 'property' => '--vgl-fade-peek', 'selector' => '' ] ],
+        ];
+
+        $this->controls['expandFadeHeight'] = [
+            'tab'         => 'content', 'group' => 'expand',
+            'label'       => esc_html__( 'Fade-Höhe (Gradient)', 'bricks-vergleich' ),
+            'type'        => 'number', 'units' => true, 'placeholder' => '140px',
+            'description' => esc_html__( 'Höhe des Farbverlaufs am unteren Rand.', 'bricks-vergleich' ),
+            'required'    => [ [ 'expandEnabled', '=', true ], [ 'expandFadeEnabled', '=', true ] ],
+            'css'         => [ [ 'property' => '--vgl-fade-height', 'selector' => '' ] ],
+        ];
+
+        $this->controls['expandFadeColor'] = [
+            'tab'         => 'content', 'group' => 'expand',
+            'label'       => esc_html__( 'Fade-Farbe', 'bricks-vergleich' ),
+            'type'        => 'color',
+            'description' => esc_html__( 'Endfarbe des Gradients. Sollte der Tabellenhintergrund sein (standardmäßig Weiß).', 'bricks-vergleich' ),
+            'required'    => [ [ 'expandEnabled', '=', true ], [ 'expandFadeEnabled', '=', true ] ],
+            'css'         => [ [ 'property' => '--vgl-fade-color', 'selector' => '' ] ],
+        ];
+
+        $this->controls['expandFadeButtonOverlap'] = [
+            'tab'         => 'content', 'group' => 'expand',
+            'label'       => esc_html__( 'Button-Überlappung', 'bricks-vergleich' ),
+            'type'        => 'number', 'units' => true, 'placeholder' => '40px',
+            'description' => esc_html__( 'Wie weit der Aufklappen-Button in den Fade-Bereich hinein ragen soll.', 'bricks-vergleich' ),
+            'required'    => [ [ 'expandEnabled', '=', true ], [ 'expandFadeEnabled', '=', true ] ],
+            'css'         => [ [ 'property' => '--vgl-fade-btn-overlap', 'selector' => '' ] ],
+        ];
+
         // ======================================================================
-        // RANKING
+        // BADGES — Ranking + Bewertung zusammengefasst.
         // ======================================================================
+        $this->controls['_sepRanking'] = [
+            'tab' => 'content', 'group' => 'badges',
+            'type' => 'separator',
+            'label' => esc_html__( 'Ranking-Badge', 'bricks-vergleich' ),
+        ];
+
         $this->controls['rankingEnabled'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Ranking-Badge anzeigen', 'bricks-vergleich' ),
             'type' => 'checkbox',
             'description' => esc_html__( 'Platzierungs-Plakette (1, 2, 3, …) auf jeder Produkt-Spalte.', 'bricks-vergleich' ),
         ];
 
         $this->controls['rankingStart'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Start-Nummer', 'bricks-vergleich' ),
             'type' => 'number', 'placeholder' => '1', 'min' => 0,
             'required' => [ 'rankingEnabled', '=', true ],
         ];
 
         $this->controls['rankingReverse'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Reihenfolge umkehren', 'bricks-vergleich' ),
             'type' => 'checkbox',
             'description' => esc_html__( 'Letzte Spalte bekommt Platz 1.', 'bricks-vergleich' ),
@@ -304,7 +381,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingPrefix'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Präfix', 'bricks-vergleich' ),
             'type' => 'text', 'placeholder' => '#',
             'hasDynamicData' => 'text',
@@ -312,7 +389,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingSuffix'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Suffix', 'bricks-vergleich' ),
             'type' => 'text',
             'hasDynamicData' => 'text',
@@ -320,7 +397,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingPosition'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Position', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [
@@ -335,7 +412,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingOffsetY'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Abstand oben/unten', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '8px',
             'required' => [ 'rankingEnabled', '=', true ],
@@ -343,7 +420,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingOffsetX'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Abstand links/rechts', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '8px',
             'required' => [ 'rankingEnabled', '=', true ],
@@ -351,7 +428,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingSize'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Mindestgröße', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '36px',
             'required' => [ 'rankingEnabled', '=', true ],
@@ -359,7 +436,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingPadding'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
             'type' => 'spacing',
             'placeholder' => [ 'top' => '4px', 'right' => '10px', 'bottom' => '4px', 'left' => '10px' ],
@@ -368,7 +445,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingFontSize'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '14px',
             'required' => [ 'rankingEnabled', '=', true ],
@@ -376,7 +453,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingFontWeight'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [ '400' => '400', '500' => '500', '600' => '600', '700' => '700', '800' => '800' ],
@@ -386,7 +463,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingBgColor'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
             'type' => 'color',
             'required' => [ 'rankingEnabled', '=', true ],
@@ -394,7 +471,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingTextColor'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
             'type' => 'color',
             'required' => [ 'rankingEnabled', '=', true ],
@@ -402,7 +479,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingBorderRadius'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Ecken-Radius', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '9999px',
             'required' => [ 'rankingEnabled', '=', true ],
@@ -410,7 +487,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingShadow'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Schatten', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [
@@ -424,26 +501,30 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['rankingHighlightTop'] = [
-            'tab' => 'content', 'group' => 'ranking',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Top-1 besonders hervorheben', 'bricks-vergleich' ),
             'type' => 'checkbox',
             'required' => [ 'rankingEnabled', '=', true ],
         ];
 
         // ======================================================================
-        // SCORE / BEWERTUNGS-BADGE
-        // Zeigt den Wert eines Meta-Felds (z.B. Bewertungsnote) als Badge auf
-        // jeder Produkt-Spalte. Funktioniert unabhängig vom Ranking.
+        // SCORE / BEWERTUNGS-BADGE (gleiche Gruppe wie Ranking).
         // ======================================================================
+        $this->controls['_sepScore'] = [
+            'tab' => 'content', 'group' => 'badges',
+            'type' => 'separator',
+            'label' => esc_html__( 'Bewertungs-Badge', 'bricks-vergleich' ),
+        ];
+
         $this->controls['scoreEnabled'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Bewertungs-Badge anzeigen', 'bricks-vergleich' ),
             'type' => 'checkbox',
             'description' => esc_html__( 'Zeigt einen Meta-Feld-Wert (z. B. Bewertungsnote) als Badge auf jeder Spalte.', 'bricks-vergleich' ),
         ];
 
         $this->controls['scoreMetaKey'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Meta-Key oder Dynamic Data', 'bricks-vergleich' ),
             'type' => 'text',
             'placeholder' => 'bewertung',
@@ -453,14 +534,14 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scoreDecimals'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Dezimalstellen', 'bricks-vergleich' ),
             'type' => 'number', 'placeholder' => '1', 'min' => 0, 'max' => 4,
             'required' => [ 'scoreEnabled', '=', true ],
         ];
 
         $this->controls['scoreDecimalSeparator'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Dezimal-Trennzeichen', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [
@@ -472,7 +553,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scorePrefix'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Präfix', 'bricks-vergleich' ),
             'type' => 'text',
             'hasDynamicData' => 'text',
@@ -481,7 +562,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scoreSuffix'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Suffix', 'bricks-vergleich' ),
             'type' => 'text',
             'hasDynamicData' => 'text',
@@ -490,7 +571,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scorePosition'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Position', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [
@@ -506,7 +587,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scoreOffsetY'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Abstand oben/unten', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '8px',
             'required' => [ 'scoreEnabled', '=', true ],
@@ -514,7 +595,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scoreOffsetX'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Abstand links/rechts', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '8px',
             'required' => [ 'scoreEnabled', '=', true ],
@@ -522,7 +603,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scoreMinSize'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Mindestgröße', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '36px',
             'required' => [ 'scoreEnabled', '=', true ],
@@ -530,7 +611,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scorePadding'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
             'type' => 'spacing',
             'placeholder' => [ 'top' => '6px', 'right' => '10px', 'bottom' => '6px', 'left' => '10px' ],
@@ -539,7 +620,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scoreFontSize'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '14px',
             'required' => [ 'scoreEnabled', '=', true ],
@@ -547,7 +628,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scoreFontWeight'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [ '400' => '400', '500' => '500', '600' => '600', '700' => '700', '800' => '800' ],
@@ -557,7 +638,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scoreBgColor'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
             'type' => 'color',
             'required' => [ 'scoreEnabled', '=', true ],
@@ -565,7 +646,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scoreTextColor'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
             'type' => 'color',
             'required' => [ 'scoreEnabled', '=', true ],
@@ -573,7 +654,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scoreBorderRadius'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Ecken-Radius', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '6px',
             'required' => [ 'scoreEnabled', '=', true ],
@@ -581,7 +662,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scoreShadow'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Schatten', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [
@@ -595,7 +676,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['scoreHideEmpty'] = [
-            'tab' => 'content', 'group' => 'score',
+            'tab' => 'content', 'group' => 'badges',
             'label' => esc_html__( 'Badge verbergen, wenn Wert leer', 'bricks-vergleich' ),
             'type' => 'checkbox',
             'description' => esc_html__( 'Empfohlen: an. Badge wird ausgeblendet, wenn das Feld leer ist.', 'bricks-vergleich' ),
@@ -603,17 +684,166 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         // ======================================================================
-        // NAVIGATION (Prev/Next-Pfeile wie bei Finanztip)
+        // PRODUKT-LABELS — Manueller Balken oberhalb jeder Spalte (z. B. "TESTSIEGER").
+        // Pro Produkt individuell konfigurierbar, Position oberhalb der ersten Zeile.
         // ======================================================================
+        $this->controls['productLabelsEnabled'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Produkt-Labels anzeigen', 'bricks-vergleich' ),
+            'type'  => 'checkbox',
+            'description' => esc_html__( 'Fügt einen manuell konfigurierbaren Balken oberhalb jeder Produkt-Spalte ein (z. B. "TESTSIEGER", "PREIS-TIPP"). Leere Einträge erzeugen einen leeren Platzhalter, damit die Zeilenhöhen synchron bleiben.', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['productLabelsInfo'] = [
+            'tab'     => 'content', 'group' => 'productLabels',
+            'type'    => 'info',
+            'content' => esc_html__( 'Reihenfolge der Einträge = Reihenfolge der Produkt-Spalten. Fehlt ein Eintrag für eine Spalte, wird der Fallback-Text verwendet; ist beides leer, bleibt der Platz leer (Höhe bleibt erhalten).', 'bricks-vergleich' ),
+            'required' => [ 'productLabelsEnabled', '=', true ],
+        ];
+
+        $this->controls['productLabelsItems'] = [
+            'tab'           => 'content', 'group' => 'productLabels',
+            'label'         => esc_html__( 'Labels pro Spalte', 'bricks-vergleich' ),
+            'type'          => 'repeater',
+            'titleProperty' => 'text',
+            'placeholder'   => esc_html__( 'Label', 'bricks-vergleich' ),
+            'fields'        => [
+                'text' => [
+                    'label' => esc_html__( 'Text', 'bricks-vergleich' ),
+                    'type' => 'text',
+                    'hasDynamicData' => 'text',
+                    'placeholder' => esc_html__( 'z. B. TESTSIEGER', 'bricks-vergleich' ),
+                ],
+                'bgColor' => [
+                    'label' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
+                    'type' => 'color',
+                ],
+                'textColor' => [
+                    'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
+                    'type' => 'color',
+                ],
+            ],
+            'required' => [ 'productLabelsEnabled', '=', true ],
+        ];
+
+        $this->controls['productLabelsFallback'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Fallback-Text', 'bricks-vergleich' ),
+            'type'  => 'text',
+            'hasDynamicData' => 'text',
+            'description' => esc_html__( 'Wird verwendet, wenn für eine Spalte kein Eintrag vorhanden ist. Leer lassen = Platzhalter ohne Text.', 'bricks-vergleich' ),
+            'required' => [ 'productLabelsEnabled', '=', true ],
+        ];
+
+        $this->controls['productLabelsLeftLabel'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Text in linker Spalte', 'bricks-vergleich' ),
+            'type'  => 'text',
+            'hasDynamicData' => 'text',
+            'description' => esc_html__( 'Optionaler Text, der links in der Label-Spalte für diese Zeile erscheint. Leer = leerer Platzhalter.', 'bricks-vergleich' ),
+            'required' => [ 'productLabelsEnabled', '=', true ],
+        ];
+
+        $this->controls['_sepProdLabelsStyle'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'type'  => 'separator',
+            'label' => esc_html__( 'Darstellung', 'bricks-vergleich' ),
+            'required' => [ 'productLabelsEnabled', '=', true ],
+        ];
+
+        $this->controls['productLabelsHeight'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Balkenhöhe', 'bricks-vergleich' ),
+            'type'  => 'number', 'units' => true, 'placeholder' => '40px',
+            'required' => [ 'productLabelsEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-product-label-height', 'selector' => '' ] ],
+        ];
+
+        $this->controls['productLabelsGap'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Abstand zur Tabelle', 'bricks-vergleich' ),
+            'type'  => 'number', 'units' => true, 'placeholder' => '6px',
+            'required' => [ 'productLabelsEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-product-label-gap', 'selector' => '' ] ],
+        ];
+
+        $this->controls['productLabelsPadding'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+            'type'  => 'spacing',
+            'placeholder' => [ 'top' => '8px', 'right' => '12px', 'bottom' => '8px', 'left' => '12px' ],
+            'required' => [ 'productLabelsEnabled', '=', true ],
+            'css'   => [ [ 'property' => 'padding', 'selector' => '.vergleich-product-label-item' ] ],
+        ];
+
+        $this->controls['productLabelsFontSize'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
+            'type'  => 'number', 'units' => true, 'placeholder' => '14px',
+            'required' => [ 'productLabelsEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-product-label-font-size', 'selector' => '' ] ],
+        ];
+
+        $this->controls['productLabelsFontWeight'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
+            'type'  => 'select',
+            'options' => [ '400' => '400', '500' => '500', '600' => '600', '700' => '700', '800' => '800', '900' => '900' ],
+            'placeholder' => '700',
+            'required' => [ 'productLabelsEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-product-label-font-weight', 'selector' => '' ] ],
+        ];
+
+        $this->controls['productLabelsUppercase'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Text in Großbuchstaben', 'bricks-vergleich' ),
+            'type'  => 'checkbox',
+            'required' => [ 'productLabelsEnabled', '=', true ],
+        ];
+
+        $this->controls['productLabelsLetterSpacing'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Buchstaben-Abstand', 'bricks-vergleich' ),
+            'type'  => 'number', 'units' => true, 'placeholder' => '0.04em',
+            'required' => [ 'productLabelsEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-product-label-tracking', 'selector' => '' ] ],
+        ];
+
+        $this->controls['productLabelsDefaultBg'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Standard-Hintergrund', 'bricks-vergleich' ),
+            'type'  => 'color',
+            'description' => esc_html__( 'Wird verwendet, wenn im Repeater-Eintrag keine Farbe gesetzt ist.', 'bricks-vergleich' ),
+            'required' => [ 'productLabelsEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-product-label-bg', 'selector' => '' ] ],
+        ];
+
+        $this->controls['productLabelsDefaultColor'] = [
+            'tab'   => 'content', 'group' => 'productLabels',
+            'label' => esc_html__( 'Standard-Textfarbe', 'bricks-vergleich' ),
+            'type'  => 'color',
+            'required' => [ 'productLabelsEnabled', '=', true ],
+            'css'   => [ [ 'property' => '--vgl-product-label-color', 'selector' => '' ] ],
+        ];
+
+        // ======================================================================
+        // SCROLL & NAVIGATION — Pfeile und Zähler in einer Gruppe.
+        // ======================================================================
+        $this->controls['_sepArrows'] = [
+            'tab' => 'content', 'group' => 'scroll',
+            'type' => 'separator',
+            'label' => esc_html__( 'Navigations-Pfeile', 'bricks-vergleich' ),
+        ];
+
         $this->controls['navEnabled'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Navigations-Pfeile anzeigen', 'bricks-vergleich' ),
             'type' => 'checkbox',
             'description' => esc_html__( 'Kreisrunde Pfeile links/rechts am Scroll-Bereich — nur sichtbar, wenn die Spalten tatsächlich überlaufen.', 'bricks-vergleich' ),
         ];
 
         $this->controls['navSize'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Button-Größe', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '44px',
             'required' => [ 'navEnabled', '=', true ],
@@ -621,7 +851,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['navIconSize'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Icon-Größe', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '18px',
             'required' => [ 'navEnabled', '=', true ],
@@ -629,7 +859,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['navOffset'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Abstand zum Rand', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '12px',
             'required' => [ 'navEnabled', '=', true ],
@@ -637,7 +867,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['navBgColor'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
             'type' => 'color',
             'required' => [ 'navEnabled', '=', true ],
@@ -645,7 +875,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['navIconColor'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Icon-Farbe', 'bricks-vergleich' ),
             'type' => 'color',
             'required' => [ 'navEnabled', '=', true ],
@@ -653,7 +883,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['navBorderColor'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Rahmenfarbe', 'bricks-vergleich' ),
             'type' => 'color',
             'required' => [ 'navEnabled', '=', true ],
@@ -661,7 +891,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['navShadow'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Schatten', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [
@@ -675,7 +905,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['navScrollStep'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Scroll-Schrittweite', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [
@@ -686,15 +916,21 @@ class Element_Vergleich extends \Bricks\Element {
             'required' => [ 'navEnabled', '=', true ],
         ];
 
+        $this->controls['_sepCounter'] = [
+            'tab' => 'content', 'group' => 'scroll',
+            'type' => 'separator',
+            'label' => esc_html__( 'Positions-Zähler', 'bricks-vergleich' ),
+        ];
+
         $this->controls['navCounterEnabled'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Zähler anzeigen (z.B. „1–4 von 80")', 'bricks-vergleich' ),
             'type' => 'checkbox',
             'description' => esc_html__( 'Kleine Anzeige, die zeigt, welche Spalten gerade sichtbar sind. Besonders hilfreich auf Mobil.', 'bricks-vergleich' ),
         ];
 
         $this->controls['navCounterPosition'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Zähler-Position', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [
@@ -706,7 +942,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['navCounterFormat'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Zähler-Format', 'bricks-vergleich' ),
             'type' => 'text',
             'placeholder' => '{start}–{end} von {total}',
@@ -715,7 +951,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['navCounterAlign'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Zähler-Ausrichtung', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [
@@ -728,7 +964,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['navCounterFontSize'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true, 'placeholder' => '14px',
             'required' => [ 'navCounterEnabled', '=', true ],
@@ -736,7 +972,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['navCounterFontWeight'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [
@@ -748,7 +984,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['navCounterColor'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
             'type' => 'color',
             'required' => [ 'navCounterEnabled', '=', true ],
@@ -756,7 +992,7 @@ class Element_Vergleich extends \Bricks\Element {
         ];
 
         $this->controls['navCounterPadding'] = [
-            'tab' => 'content', 'group' => 'nav',
+            'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
             'type' => 'spacing',
             'placeholder' => [ 'top' => '8px', 'right' => '4px', 'bottom' => '8px', 'left' => '4px' ],
@@ -774,9 +1010,73 @@ class Element_Vergleich extends \Bricks\Element {
             'css' => [ [ 'property' => 'background-color', 'selector' => '.vergleich-labels' ] ],
         ];
 
+        // ─── ZEILEN-EFFEKTE (Zebra, Hover, Highlight-Schatten) ─────────────
+        $this->controls['_sepZebra'] = [
+            'tab' => 'content', 'group' => 'effects',
+            'type' => 'separator',
+            'label' => esc_html__( 'Zebra-Streifen', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['rowBgOdd'] = [
+            'tab' => 'content', 'group' => 'effects',
+            'label' => esc_html__( 'Hintergrund ungerade Zeilen', 'bricks-vergleich' ),
+            'type' => 'color',
+            'description' => esc_html__( 'Leer = kein Zebra. Gilt für 1., 3., 5. Zeile.', 'bricks-vergleich' ),
+            'css' => [ [ 'property' => '--vgl-row-bg-odd', 'selector' => '' ] ],
+        ];
+
+        $this->controls['rowBgEven'] = [
+            'tab' => 'content', 'group' => 'effects',
+            'label' => esc_html__( 'Hintergrund gerade Zeilen', 'bricks-vergleich' ),
+            'type' => 'color',
+            'description' => esc_html__( 'Leer = kein Zebra. Gilt für 2., 4., 6. Zeile.', 'bricks-vergleich' ),
+            'css' => [ [ 'property' => '--vgl-row-bg-even', 'selector' => '' ] ],
+        ];
+
+        $this->controls['rowColorOdd'] = [
+            'tab' => 'content', 'group' => 'effects',
+            'label' => esc_html__( 'Textfarbe ungerade Zeilen', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => '--vgl-row-color-odd', 'selector' => '' ] ],
+        ];
+
+        $this->controls['rowColorEven'] = [
+            'tab' => 'content', 'group' => 'effects',
+            'label' => esc_html__( 'Textfarbe gerade Zeilen', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => '--vgl-row-color-even', 'selector' => '' ] ],
+        ];
+
+        $this->controls['_sepHover'] = [
+            'tab' => 'content', 'group' => 'effects',
+            'type' => 'separator',
+            'label' => esc_html__( 'Hover-Effekt', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['rowHoverEnabled'] = [
+            'tab' => 'content', 'group' => 'effects',
+            'label' => esc_html__( 'Zeilen-Hover-Effekt', 'bricks-vergleich' ),
+            'type' => 'checkbox',
+            'description' => esc_html__( 'Färbt die gesamte Zeile leicht ein, wenn die Maus drüber fährt.', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['rowHoverBg'] = [
+            'tab' => 'content', 'group' => 'effects',
+            'label' => esc_html__( 'Hover-Hintergrundfarbe', 'bricks-vergleich' ),
+            'type' => 'color',
+            'required' => [ 'rowHoverEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-row-hover-bg', 'selector' => '' ] ],
+        ];
+
+        $this->controls['_sepHighlight'] = [
+            'tab' => 'content', 'group' => 'effects',
+            'type' => 'separator',
+            'label' => esc_html__( 'Zeilen-Hervorhebung', 'bricks-vergleich' ),
+        ];
+
         $this->controls['highlightShadow'] = [
-            'tab' => 'content', 'group' => 'style',
-            'label' => esc_html__( 'Schatten hervorgehobener Zeile', 'bricks-vergleich' ),
+            'tab' => 'content', 'group' => 'effects',
+            'label' => esc_html__( 'Schatten-Intensität', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [
                 'soft'     => esc_html__( 'Weich', 'bricks-vergleich' ),
@@ -784,52 +1084,7 @@ class Element_Vergleich extends \Bricks\Element {
                 'strong'   => esc_html__( 'Stark', 'bricks-vergleich' ),
             ],
             'placeholder' => esc_html__( 'Mittel', 'bricks-vergleich' ),
-            'description' => esc_html__( 'Wird verwendet, wenn der Hervorhebungs-Stil „Schatten" oder „Beides" ist.', 'bricks-vergleich' ),
-        ];
-
-        $this->controls['rowBgOdd'] = [
-            'tab' => 'content', 'group' => 'style',
-            'label' => esc_html__( 'Zebra: Hintergrund ungerade Zeilen', 'bricks-vergleich' ),
-            'type' => 'color',
-            'description' => esc_html__( 'Leer lassen, um Zebra-Effekt zu deaktivieren. Gilt für 1., 3., 5. Zeile.', 'bricks-vergleich' ),
-            'css' => [ [ 'property' => '--vgl-row-bg-odd', 'selector' => '' ] ],
-        ];
-
-        $this->controls['rowBgEven'] = [
-            'tab' => 'content', 'group' => 'style',
-            'label' => esc_html__( 'Zebra: Hintergrund gerade Zeilen', 'bricks-vergleich' ),
-            'type' => 'color',
-            'description' => esc_html__( 'Leer lassen = kein Zebra. Gilt für 2., 4., 6. Zeile.', 'bricks-vergleich' ),
-            'css' => [ [ 'property' => '--vgl-row-bg-even', 'selector' => '' ] ],
-        ];
-
-        $this->controls['rowColorOdd'] = [
-            'tab' => 'content', 'group' => 'style',
-            'label' => esc_html__( 'Zebra: Textfarbe ungerade Zeilen', 'bricks-vergleich' ),
-            'type' => 'color',
-            'css' => [ [ 'property' => '--vgl-row-color-odd', 'selector' => '' ] ],
-        ];
-
-        $this->controls['rowColorEven'] = [
-            'tab' => 'content', 'group' => 'style',
-            'label' => esc_html__( 'Zebra: Textfarbe gerade Zeilen', 'bricks-vergleich' ),
-            'type' => 'color',
-            'css' => [ [ 'property' => '--vgl-row-color-even', 'selector' => '' ] ],
-        ];
-
-        $this->controls['rowHoverEnabled'] = [
-            'tab' => 'content', 'group' => 'style',
-            'label' => esc_html__( 'Zeilen-Hover-Effekt', 'bricks-vergleich' ),
-            'type' => 'checkbox',
-            'description' => esc_html__( 'Färbt die gesamte Zeile leicht ein, wenn die Maus drüber fährt.', 'bricks-vergleich' ),
-        ];
-
-        $this->controls['rowHoverBg'] = [
-            'tab' => 'content', 'group' => 'style',
-            'label' => esc_html__( 'Hover-Hintergrundfarbe', 'bricks-vergleich' ),
-            'type' => 'color',
-            'required' => [ 'rowHoverEnabled', '=', true ],
-            'css' => [ [ 'property' => '--vgl-row-hover-bg', 'selector' => '' ] ],
+            'description' => esc_html__( 'Wird verwendet, wenn eine Zeile mit Stil „Schatten" hervorgehoben wird.', 'bricks-vergleich' ),
         ];
 
         $this->controls['labelColor'] = [
@@ -888,6 +1143,7 @@ class Element_Vergleich extends \Bricks\Element {
                     'button'  => esc_html__( 'Button', 'bricks-vergleich' ),
                     'rating'  => esc_html__( 'Sterne-Rating', 'bricks-vergleich' ),
                     'bool'    => esc_html__( 'Ja/Nein (Check / Cross)', 'bricks-vergleich' ),
+                    'list'    => esc_html__( 'Liste mit Icon (Vor-/Nachteile)', 'bricks-vergleich' ),
                     'manual'  => esc_html__( 'Manuell pro Spalte', 'bricks-vergleich' ),
                     'html'    => esc_html__( 'HTML / Shortcode', 'bricks-vergleich' ),
                     'dynamic' => esc_html__( 'Dynamische Daten (Tag)', 'bricks-vergleich' ),
@@ -1138,6 +1394,89 @@ class Element_Vergleich extends \Bricks\Element {
                 'required'    => [ 'type', '=', 'bool' ],
             ],
 
+            // ───── LIST (Icon-Liste pro Spalte, z.B. Vorteile / Nachteile) ─────
+            'listSource' => [
+                'label'   => esc_html__( 'Datenquelle', 'bricks-vergleich' ),
+                'type'    => 'select',
+                'options' => [
+                    'dynamic'       => esc_html__( 'Dynamisch (Meta / DD)', 'bricks-vergleich' ),
+                    'manualColumns' => esc_html__( 'Manuell pro Spalte', 'bricks-vergleich' ),
+                ],
+                'default'  => 'dynamic',
+                'required' => [ 'type', '=', 'list' ],
+            ],
+            'listDynamic' => [
+                'label'          => esc_html__( 'Dynamic Data / Meta-Key', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'placeholder'    => 'z. B. {acf:pros} oder pros',
+                'description'    => esc_html__( 'Akzeptiert: Meta-Key (Wert zeilen-getrennt), Dynamic-Data-Tag, oder HTML mit <ul><li>…</li></ul>.', 'bricks-vergleich' ),
+                'required'       => [ [ 'type', '=', 'list' ], [ 'listSource', '!=', 'manualColumns' ] ],
+            ],
+            'listManualColumns' => [
+                'label'         => esc_html__( 'Einträge pro Spalte', 'bricks-vergleich' ),
+                'type'          => 'repeater',
+                'titleProperty' => 'content',
+                'placeholder'   => esc_html__( 'Spalte', 'bricks-vergleich' ),
+                'description'   => esc_html__( 'Pro Produkt-Spalte einen Eintrag. Rich-Text-Liste (Aufzählung) verwenden — jedes <li> wird ein Listenpunkt. Reihenfolge matched den Query-Loop.', 'bricks-vergleich' ),
+                'required'      => [ [ 'type', '=', 'list' ], [ 'listSource', '=', 'manualColumns' ] ],
+                'fields'        => [
+                    'content' => [
+                        'label'          => esc_html__( 'Inhalt', 'bricks-vergleich' ),
+                        'type'           => 'editor',
+                        'hasDynamicData' => 'text',
+                        'description'    => esc_html__( 'Liste über das Toolbar-Icon (Aufzählung) einfügen — jeder <li>-Eintrag wird mit dem konfigurierten Icon gerendert.', 'bricks-vergleich' ),
+                    ],
+                ],
+            ],
+            'listIcon' => [
+                'label'    => esc_html__( 'Icon', 'bricks-vergleich' ),
+                'type'     => 'icon',
+                'required' => [ 'type', '=', 'list' ],
+            ],
+            'listIconColor' => [
+                'label'    => esc_html__( 'Icon-Farbe', 'bricks-vergleich' ),
+                'type'     => 'color',
+                'required' => [ 'type', '=', 'list' ],
+            ],
+            'listIconSize' => [
+                'label'       => esc_html__( 'Icon-Größe', 'bricks-vergleich' ),
+                'type'        => 'number', 'units' => true,
+                'placeholder' => '16px',
+                'required'    => [ 'type', '=', 'list' ],
+            ],
+            'listIconGap' => [
+                'label'       => esc_html__( 'Abstand Icon → Text', 'bricks-vergleich' ),
+                'type'        => 'number', 'units' => true,
+                'placeholder' => '8px',
+                'required'    => [ 'type', '=', 'list' ],
+            ],
+            'listItemGap' => [
+                'label'       => esc_html__( 'Abstand zwischen Einträgen', 'bricks-vergleich' ),
+                'type'        => 'number', 'units' => true,
+                'placeholder' => '6px',
+                'required'    => [ 'type', '=', 'list' ],
+            ],
+            'listAlign' => [
+                'label'    => esc_html__( 'Ausrichtung', 'bricks-vergleich' ),
+                'type'     => 'select',
+                'options'  => [
+                    'left'   => esc_html__( 'Links', 'bricks-vergleich' ),
+                    'center' => esc_html__( 'Mitte', 'bricks-vergleich' ),
+                    'right'  => esc_html__( 'Rechts', 'bricks-vergleich' ),
+                ],
+                'default'  => 'left',
+                'required' => [ 'type', '=', 'list' ],
+            ],
+            'listFallback' => [
+                'label'          => esc_html__( 'Fallback-Text wenn leer', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'placeholder'    => '-',
+                'description'    => esc_html__( 'Angezeigt, wenn für die Spalte keine Einträge vorhanden sind. Leer = gar nichts anzeigen.', 'bricks-vergleich' ),
+                'required'       => [ 'type', '=', 'list' ],
+            ],
+
             // ───── MANUAL (pro Spalte) ─────
             'manualColumns' => [
                 'label'         => esc_html__( 'Werte pro Spalte', 'bricks-vergleich' ),
@@ -1299,6 +1638,7 @@ class Element_Vergleich extends \Bricks\Element {
         $expand_btn_outline = ! empty( $settings['expandBtnOutline'] );
         $expand_align       = $settings['expandAlign'] ?? 'center';
         $expand_show_icon   = ! isset( $settings['expandShowIcon'] ) || ! empty( $settings['expandShowIcon'] );
+        $expand_fade_enabled = ! empty( $settings['expandFadeEnabled'] );
 
         // Ranking
         $ranking_enabled   = ! empty( $settings['rankingEnabled'] );
@@ -1369,6 +1709,32 @@ class Element_Vergleich extends \Bricks\Element {
             'hide_empty'  => $score_hide_empty,
         ];
 
+        // Produkt-Labels (manueller Balken oberhalb jeder Spalte)
+        $product_labels_enabled   = ! empty( $settings['productLabelsEnabled'] );
+        $product_labels_items_raw = isset( $settings['productLabelsItems'] ) && is_array( $settings['productLabelsItems'] ) ? $settings['productLabelsItems'] : [];
+        $product_labels_fallback  = $this->dd_string( (string) ( $settings['productLabelsFallback'] ?? '' ) );
+        $product_labels_left_lbl  = $this->dd_string( (string) ( $settings['productLabelsLeftLabel'] ?? '' ) );
+        $product_labels_uppercase = ! empty( $settings['productLabelsUppercase'] );
+
+        // Items normalisieren: pro Index text/bg/color auflösen.
+        $product_labels_items = [];
+        foreach ( $product_labels_items_raw as $item ) {
+            if ( ! is_array( $item ) ) $item = [];
+            $product_labels_items[] = [
+                'text'      => $this->dd_string( (string) ( $item['text'] ?? '' ) ),
+                'bgColor'   => $this->resolve_color( $item['bgColor'] ?? null ),
+                'textColor' => $this->resolve_color( $item['textColor'] ?? null ),
+            ];
+        }
+
+        $this->_product_label_runtime = [
+            'enabled'   => $product_labels_enabled,
+            'items'     => $product_labels_items,
+            'fallback'  => $product_labels_fallback,
+            'left'      => $product_labels_left_lbl,
+            'uppercase' => $product_labels_uppercase,
+        ];
+
         // Navigation
         $nav_enabled      = ! empty( $settings['navEnabled'] );
         $nav_size         = $this->get_css_value( $settings['navSize']     ?? null, '44px' );
@@ -1397,10 +1763,19 @@ class Element_Vergleich extends \Bricks\Element {
         $rows = $this->get_rows();
         $row_count = max( 1, count( $rows ) );
         $visible_row_count = 0;
-        foreach ( $rows as $r ) {
-            if ( empty( $r['collapsible'] ) ) $visible_row_count++;
+        $first_collapsible_idx = -1;
+        foreach ( $rows as $ri => $r ) {
+            if ( empty( $r['collapsible'] ) ) {
+                $visible_row_count++;
+            } elseif ( $first_collapsible_idx === -1 ) {
+                $first_collapsible_idx = $ri;
+            }
         }
         $visible_row_count = max( 1, $visible_row_count );
+
+        // Index der ersten aufklappbaren Zeile — wird bei aktivem Fade-Effekt
+        // im kollabierten Zustand als "Peek" angezeigt (statt display:none).
+        $this->_first_collapsible_idx = $first_collapsible_idx;
 
         // Inline-Style auf _root: NUR Runtime-berechnete Werte, die nicht
         // ueber Bricks' css-Array-Pipeline gesetzt werden koennen.
@@ -1439,6 +1814,7 @@ class Element_Vergleich extends \Bricks\Element {
         $root_classes = [ 'vergleich-root' ];
         if ( $expand_enabled && $visible_row_count < $row_count ) {
             $root_classes[] = 'has-expand';
+            if ( $expand_fade_enabled ) $root_classes[] = 'has-expand-fade';
         }
 
         $wrapper_classes = [ 'vergleich-wrapper' ];
@@ -1453,6 +1829,9 @@ class Element_Vergleich extends \Bricks\Element {
             $wrapper_classes[] = 'has-score';
             $wrapper_classes[] = 'has-score-pos-' . preg_replace( '/[^a-z\-]/', '', strtolower( (string) $score_position ) );
         }
+        if ( $product_labels_enabled ) {
+            $wrapper_classes[] = 'has-product-labels';
+        }
         if ( $nav_enabled ) {
             $wrapper_classes[] = 'has-nav';
             $wrapper_classes[] = 'vgl-nav-step-' . $nav_scroll_step;
@@ -1463,6 +1842,7 @@ class Element_Vergleich extends \Bricks\Element {
         if ( $expand_enabled && $visible_row_count < $row_count ) {
             $wrapper_classes[] = 'has-expand';
             $wrapper_classes[] = 'is-collapsed';
+            if ( $expand_fade_enabled ) $wrapper_classes[] = 'has-expand-fade';
         }
 
         $this->set_attribute( '_root', 'class', $root_classes );
@@ -1501,6 +1881,103 @@ class Element_Vergleich extends \Bricks\Element {
             echo $counter_html;
         }
 
+        // Query bereits hier erzeugen (statt erst unten), damit die Anzahl
+        // Produkte fuer die Produkt-Label-Leiste verfuegbar ist. Dasselbe
+        // Query-Objekt wird weiter unten fuer das Rendern der Cards benutzt.
+        $has_loop       = ! empty( $settings['hasLoop'] );
+        $prepared_query = null;
+        $prepared_count = 0;
+        if ( $has_loop && class_exists( '\Bricks\Query' ) ) {
+            try {
+                $element_for_query = [
+                    'id'       => $this->id,
+                    'name'     => $this->name,
+                    'settings' => $this->settings,
+                ];
+                $prepared_query = new \Bricks\Query( $element_for_query );
+                $prepared_count = (int) ( $prepared_query->count ?? 0 );
+                if ( is_array( $this->_ranking_runtime ) ) {
+                    $this->_ranking_runtime['total'] = $prepared_count;
+                }
+            } catch ( \Throwable $e ) {
+                $prepared_query = null;
+            }
+        }
+
+        // ─── PRODUKT-LABELS (oberhalb des Wrappers) ────────────────────────
+        // Wird als eigene Leiste vor dem Wrapper gerendert — sieht damit aus
+        // wie ein freischwebender Balken über der Tabelle, nicht wie eine
+        // weitere Zeile im Tabellenrahmen. Horizontaler Scroll wird per JS
+        // an .vergleich-scroll gekoppelt (siehe print_sync_script).
+        if ( ! empty( $this->_product_label_runtime['enabled'] ) ) {
+            $pl_cfg    = $this->_product_label_runtime;
+            $pl_items  = is_array( $pl_cfg['items'] ?? null ) ? $pl_cfg['items'] : [];
+            $pl_fb     = (string) ( $pl_cfg['fallback'] ?? '' );
+            $pl_left   = (string) ( $pl_cfg['left'] ?? '' );
+            $pl_upper  = ! empty( $pl_cfg['uppercase'] );
+
+            // Anzahl der Spalten: Query-Count bevorzugt, sonst Anzahl Items,
+            // sonst 1.
+            $pl_total = $prepared_count > 0 ? $prepared_count : max( 1, count( $pl_items ) );
+
+            // Layout-kritische Styles inline setzen — Bricks-Canvas ueberschreibt
+            // sonst gelegentlich unsere Klassen-Regeln (display:flex/grid greift
+            // im Canvas nicht zuverlaessig). Inline gewinnt immer.
+            $row_style    = 'display:flex;margin:0 1px var(--vgl-product-label-gap,6px);max-width:100%;';
+            $spacer_style = 'flex:0 0 var(--vgl-label-width,200px);width:var(--vgl-label-width,200px);max-width:var(--vgl-label-width,200px);display:flex;align-items:center;padding:0 var(--vgl-cell-padding,16px);min-width:0;background:transparent;';
+            $scroll_style = 'flex:1 1 auto;min-width:0;overflow:hidden;';
+            $track_style  = 'display:flex;flex-direction:row;flex-wrap:nowrap;min-width:0;will-change:transform;';
+            $item_base    = 'flex:0 0 var(--vgl-column-width,200px);width:var(--vgl-column-width,200px);max-width:var(--vgl-column-width,200px);'
+                . 'min-height:var(--vgl-product-label-height,40px);padding:var(--vgl-product-label-padding,8px 12px);'
+                . 'font-size:var(--vgl-product-label-font-size,14px);font-weight:var(--vgl-product-label-font-weight,700);'
+                . 'letter-spacing:var(--vgl-product-label-tracking,0);line-height:1.2;display:flex;align-items:center;'
+                . 'justify-content:center;text-align:center;overflow:hidden;box-sizing:border-box;';
+
+            echo '<div class="vergleich-product-label-row" aria-hidden="true" style="' . esc_attr( $row_style ) . '">';
+
+            // Linker Spacer — gleiche Breite wie die Label-Spalte; optionaler Text.
+            echo '<div class="vergleich-product-label-row__spacer" style="' . esc_attr( $spacer_style ) . '">';
+            if ( $pl_left !== '' ) {
+                echo '<span class="vergleich-product-label-row__spacer-text">' . wp_kses_post( $pl_left ) . '</span>';
+            }
+            echo '</div>';
+
+            // Rechts: Track mit einem Item pro Spalte — Breite pro Item matcht
+            // die Card-Breite der Tabelle.
+            echo '<div class="vergleich-product-label-row__scroll" style="' . esc_attr( $scroll_style ) . '">';
+            echo '<div class="vergleich-product-label-row__track" style="' . esc_attr( $track_style ) . '">';
+
+            for ( $i = 0; $i < $pl_total; $i++ ) {
+                $item     = isset( $pl_items[ $i ] ) && is_array( $pl_items[ $i ] ) ? $pl_items[ $i ] : null;
+                $pl_text  = is_array( $item ) ? (string) ( $item['text'] ?? '' ) : '';
+                if ( $pl_text === '' ) $pl_text = $pl_fb;
+                $pl_bg    = is_array( $item ) ? (string) ( $item['bgColor']   ?? '' ) : '';
+                $pl_color = is_array( $item ) ? (string) ( $item['textColor'] ?? '' ) : '';
+
+                $cls = 'vergleich-product-label-item';
+                if ( $pl_text === '' ) $cls .= ' is-empty';
+                if ( $pl_upper )       $cls .= ' is-uppercase';
+
+                // Pro-Item-Farben: Inline-Override der Standardfarben.
+                $item_style = $item_base;
+                if ( $pl_text === '' ) {
+                    $item_style .= 'background:transparent;pointer-events:none;';
+                } else {
+                    $item_style .= 'background:' . ( $pl_bg !== '' ? $pl_bg : 'var(--vgl-product-label-bg,transparent)' ) . ';';
+                    $item_style .= 'color:'      . ( $pl_color !== '' ? $pl_color : 'var(--vgl-product-label-color,inherit)' ) . ';';
+                }
+
+                echo '<div class="' . esc_attr( $cls ) . '" style="' . esc_attr( $item_style ) . '">';
+                if ( $pl_text !== '' ) {
+                    echo '<span class="vergleich-product-label-item__text">' . wp_kses_post( $pl_text ) . '</span>';
+                }
+                echo '</div>';
+            }
+
+            echo '</div></div>'; // /__track /__scroll
+            echo '</div>'; // /.vergleich-product-label-row
+        }
+
         // Innerer Table-Wrapper (Bordered, enthält Labels + Cards)
         $wrapper_data_attrs = 'data-row-count="' . (int) $row_count . '"';
         if ( $nav_counter_enabled ) {
@@ -1510,6 +1987,7 @@ class Element_Vergleich extends \Bricks\Element {
 
         // ─── LABEL COLUMN ──────────────────────────────────────────────────
         echo '<div class="vergleich-labels">';
+
         if ( empty( $rows ) ) {
             echo '<div class="vergleich-label" style="color:#9ca3af;font-style:italic;">'
                 . esc_html__( '(Zeilen im Repeater hinzufügen)', 'bricks-vergleich' )
@@ -1539,7 +2017,10 @@ class Element_Vergleich extends \Bricks\Element {
                     if ( $hl_text ) $label_inline .= 'color:' . $hl_text . ';';
                 }
             }
-            if ( $collapsible ) $cls .= ' is-collapsible';
+            if ( $collapsible ) {
+                $cls .= ' is-collapsible';
+                if ( $idx === $first_collapsible_idx ) $cls .= ' is-peek';
+            }
 
             $extra = ' data-row-index="' . (int) $idx . '"';
             if ( $collapsible ) {
@@ -1573,18 +2054,9 @@ class Element_Vergleich extends \Bricks\Element {
         // ─── SCROLL / TRACK (Cards) ────────────────────────────────────────
         echo '<div class="vergleich-scroll"><div class="vergleich-track">';
 
-        $has_loop = ! empty( $settings['hasLoop'] );
-        if ( $has_loop && class_exists( '\Bricks\Query' ) ) {
+        if ( $prepared_query instanceof \Bricks\Query ) {
             try {
-                $element_for_query = [
-                    'id'       => $this->id,
-                    'name'     => $this->name,
-                    'settings' => $this->settings,
-                ];
-                $query = new \Bricks\Query( $element_for_query );
-                if ( is_array( $this->_ranking_runtime ) ) {
-                    $this->_ranking_runtime['total'] = (int) ( $query->count ?? 0 );
-                }
+                $query = $prepared_query;
                 $loop_output = $query->render( [ $this, 'render_card' ], [] );
                 if ( trim( (string) $loop_output ) === '' ) {
                     echo '<div class="vergleich-card"><div class="vergleich-zelle" style="padding:2rem;color:#6b7280;">'
@@ -1858,7 +2330,10 @@ class Element_Vergleich extends \Bricks\Element {
                 if ( $hl_bg ) $styles[] = 'background:' . $hl_bg;
             }
         }
-        if ( $collapsible ) $classes[] = 'is-collapsible';
+        if ( $collapsible ) {
+            $classes[] = 'is-collapsible';
+            if ( $idx === (int) $this->_first_collapsible_idx ) $classes[] = 'is-peek';
+        }
         if ( $append_html !== '' ) $classes[] = 'has-score-anchor';
         if ( $align ) {
             $map = [
@@ -1887,6 +2362,7 @@ class Element_Vergleich extends \Bricks\Element {
                 case 'button':  $content = $this->render_cell_button( $row, $idx );  break;
                 case 'rating':  $content = $this->render_cell_rating( $row );  break;
                 case 'bool':    $content = $this->render_cell_bool( $row );    break;
+                case 'list':    $content = $this->render_cell_list( $row );    break;
                 case 'manual':  $content = $this->render_cell_manual( $row );  break;
                 case 'html':    $content = $this->render_cell_html( $row );    break;
                 case 'dynamic': $content = $this->render_cell_dynamic( $row ); break;
@@ -2304,6 +2780,153 @@ class Element_Vergleich extends \Bricks\Element {
      * Manuelle Werte pro Produkt-Spalte. Greift via Bricks-Query-Loop-Index
      * auf das i-te Sub-Repeater-Item zu. Ohne Loop (einzelne Demo-Card) → Index 0.
      */
+    private function render_cell_list( $row ) {
+        $source       = isset( $row['listSource'] ) ? (string) $row['listSource'] : 'dynamic';
+        $icon         = $row['listIcon'] ?? null;
+        $icon_color   = $this->resolve_color( $row['listIconColor'] ?? null );
+        $icon_size    = $this->get_css_value( $row['listIconSize'] ?? null, '16px' );
+        $icon_gap     = $this->get_css_value( $row['listIconGap'] ?? null, '8px' );
+        $item_gap     = $this->get_css_value( $row['listItemGap'] ?? null, '6px' );
+        $align        = $row['listAlign'] ?? 'left';
+        $fallback_raw = isset( $row['listFallback'] ) ? (string) $row['listFallback'] : '';
+
+        // Datenquelle auflösen → Array von Strings (HTML pro Listeneintrag erlaubt).
+        $raw = '';
+        if ( $source === 'manualColumns' ) {
+            $cols = isset( $row['listManualColumns'] ) && is_array( $row['listManualColumns'] )
+                ? array_values( array_filter( $row['listManualColumns'], 'is_array' ) )
+                : [];
+
+            // Loop-Index (passende Spalte auswählen).
+            $loop_idx = 0;
+            if ( class_exists( '\Bricks\Query' ) && method_exists( '\Bricks\Query', 'get_loop_index' ) ) {
+                $li = \Bricks\Query::get_loop_index();
+                if ( $li !== '' && $li !== null ) $loop_idx = (int) $li;
+            }
+            $entry = $cols[ $loop_idx ] ?? null;
+            $raw   = is_array( $entry ) ? (string) ( $entry['content'] ?? '' ) : '';
+            if ( $raw !== '' ) $raw = $this->dd_string( $raw );
+        } else {
+            $key = isset( $row['listDynamic'] ) ? trim( (string) $row['listDynamic'] ) : '';
+            if ( $key !== '' ) {
+                // DD-Tag? → über Bricks auflösen (respektiert Loop-Kontext).
+                if ( strpos( $key, '{' ) !== false ) {
+                    $raw = (string) $this->dd_string( $key );
+                } else {
+                    // Reiner Meta-Key: Wert des aktuellen Loop-Posts holen.
+                    $post_id = 0;
+                    if ( class_exists( '\Bricks\Query' ) && method_exists( '\Bricks\Query', 'get_loop_object_id' ) && \Bricks\Query::is_looping() ) {
+                        $post_id = (int) \Bricks\Query::get_loop_object_id();
+                    }
+                    if ( ! $post_id ) $post_id = (int) get_the_ID();
+                    if ( $post_id ) {
+                        $meta = get_post_meta( $post_id, $key, true );
+                        if ( is_array( $meta ) ) {
+                            // Array-Meta (ACF Checkbox/Multi-Select): direkt als Items nehmen.
+                            $items = array_filter( array_map( 'strval', $meta ), function( $v ) { return trim( $v ) !== ''; } );
+                            $items = array_values( $items );
+                            return $this->render_list_html( $items, $icon, $icon_color, $icon_size, $icon_gap, $item_gap, $align, $fallback_raw );
+                        }
+                        $raw = is_scalar( $meta ) ? (string) $meta : '';
+                    }
+                }
+            }
+        }
+
+        $items = $this->parse_list_items( $raw );
+        return $this->render_list_html( $items, $icon, $icon_color, $icon_size, $icon_gap, $item_gap, $align, $fallback_raw );
+    }
+
+    /**
+     * Zerlegt Rohdaten (HTML / Text) in einzelne Listeneinträge.
+     * Bevorzugt <li>-Inhalte; sonst Zeilenumbrüche (\n oder <br>); entfernt
+     * führende Bullet-Zeichen (•, -, *). Behält Inline-HTML pro Eintrag.
+     */
+    private function parse_list_items( $raw ) {
+        $raw = trim( (string) $raw );
+        if ( $raw === '' ) return [];
+
+        // HTML-Liste? → <li>-Inhalte extrahieren.
+        if ( stripos( $raw, '<li' ) !== false ) {
+            $items = [];
+            if ( preg_match_all( '/<li\b[^>]*>(.*?)<\/li>/is', $raw, $m ) ) {
+                foreach ( $m[1] as $item ) {
+                    $cleaned = trim( $item );
+                    if ( $cleaned !== '' ) $items[] = $cleaned;
+                }
+            }
+            if ( ! empty( $items ) ) return $items;
+        }
+
+        // <br> als Zeilenumbruch behandeln.
+        $normalized = preg_replace( '/<br\s*\/?>/i', "\n", $raw );
+        // Absätze (<p>) als Zeilentrenner.
+        $normalized = preg_replace( '/<\/p>\s*<p[^>]*>/i', "\n", $normalized );
+        $normalized = preg_replace( '/<\/?p[^>]*>/i', '', $normalized );
+
+        $lines = preg_split( '/\r?\n/', (string) $normalized );
+        $items = [];
+        foreach ( $lines as $line ) {
+            $line = trim( (string) $line );
+            // Führende Bullet-Zeichen entfernen (•, ·, -, *).
+            $line = preg_replace( '/^[\s\-\*\x{2022}\x{00B7}]+/u', '', (string) $line );
+            if ( $line !== '' ) $items[] = $line;
+        }
+        return $items;
+    }
+
+    /**
+     * Rendert die aufgelöste Item-Liste als <ul> mit Icon pro Eintrag.
+     * Layout-kritische Styles inline — Bricks-Canvas kann Klassen-Regeln
+     * zeitweise schlucken.
+     */
+    private function render_list_html( $items, $icon, $icon_color, $icon_size, $icon_gap, $item_gap, $align, $fallback_raw ) {
+        if ( empty( $items ) ) {
+            $fb = $fallback_raw !== '' ? (string) $this->dd_string( $fallback_raw ) : '';
+            if ( trim( strip_tags( $fb ) ) === '' ) return '';
+            return '<span class="vergleich-list__fallback">' . wp_kses_post( $fb ) . '</span>';
+        }
+
+        // Icon-Block einmalig bauen (wird pro Eintrag per HTML-Kopie eingesetzt).
+        // Wichtig: SVG-Icons ignorieren font-size und bringen ihre native
+        // Größe mit (z.B. 512px). Deshalb die Box mit festen width/height
+        // zwingen; das innere <svg> wird per CSS auf 100% gezogen (s. Inline-CSS).
+        $icon_html = '';
+        if ( is_array( $icon ) && ( ! empty( $icon['icon'] ) || ! empty( $icon['svg'] ) ) ) {
+            $sz    = esc_attr( $icon_size );
+            $style = 'width:' . $sz . ';height:' . $sz . ';min-width:' . $sz . ';'
+                   . 'flex:0 0 ' . $sz . ';'
+                   . 'font-size:' . $sz . ';line-height:1;'
+                   . 'display:inline-flex;align-items:center;justify-content:center;'
+                   . 'overflow:hidden;box-sizing:content-box;';
+            if ( $icon_color ) $style .= 'color:' . esc_attr( $icon_color ) . ';';
+            try {
+                $icon_html = \Bricks\Element::render_icon( $icon, [
+                    'class' => [ 'vergleich-list__icon' ],
+                    'style' => $style,
+                ] );
+            } catch ( \Throwable $e ) {
+                $icon_html = '';
+            }
+        }
+
+        $justify_map = [ 'left' => 'flex-start', 'center' => 'center', 'right' => 'flex-end' ];
+        $justify     = $justify_map[ $align ] ?? 'flex-start';
+
+        $ul_style = 'display:flex;flex-direction:column;gap:' . esc_attr( $item_gap ) . ';list-style:none;padding:0;margin:0;align-items:stretch;width:100%;';
+        $li_style = 'display:flex;align-items:flex-start;gap:' . esc_attr( $icon_gap ) . ';justify-content:' . esc_attr( $justify ) . ';text-align:left;';
+
+        $html = '<ul class="vergleich-list" style="' . esc_attr( $ul_style ) . '">';
+        foreach ( $items as $item ) {
+            $html .= '<li class="vergleich-list__item" style="' . esc_attr( $li_style ) . '">';
+            if ( $icon_html !== '' ) $html .= $icon_html;
+            $html .= '<span class="vergleich-list__text" style="min-width:0;flex:1 1 auto;">' . wp_kses_post( $item ) . '</span>';
+            $html .= '</li>';
+        }
+        $html .= '</ul>';
+        return $html;
+    }
+
     private function render_cell_manual( $row ) {
         $columns = isset( $row['manualColumns'] ) && is_array( $row['manualColumns'] )
             ? array_values( array_filter( $row['manualColumns'], 'is_array' ) )
@@ -2739,6 +3362,26 @@ class Element_Vergleich extends \Bricks\Element {
             line-height: 1 !important;
         }
 
+        /* Listen-Icon: SVG-Icons (Custom Upload) haben native Groessen und
+           ignorieren font-size. Wrapper hat feste width/height (inline), das
+           innere <svg> wird hier auf 100% gezogen. Fuer Font-Icons (FA etc.)
+           greift stattdessen font-size; Groesse kommt per inherit. */
+        .vergleich-list__icon {
+            overflow: hidden;
+        }
+        .vergleich-list__icon > svg {
+            width: 100% !important;
+            height: 100% !important;
+            display: block !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+        }
+        .vergleich-list__icon > i,
+        .vergleich-list__icon > .bricks-icon {
+            font-size: inherit !important;
+            line-height: 1 !important;
+        }
+
         /* Ranking-Badge */
         .vergleich-card > .vergleich-rank,
         .vergleich-rank {
@@ -3006,6 +3649,152 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-expand.is-align-center { justify-content: center !important; }
         .vergleich-expand.is-align-right  { justify-content: flex-end !important; }
 
+        /* === Fade-Collapse-Modus ================================================
+           Alternative zum harten display:none-Toggle. Die erste aufklappbare
+           Zeile (is-peek) wird teilweise sichtbar gelassen und per Gradient
+           nach unten ausgeblendet. Der Aufklappen-Button rutscht durch
+           negative Margin in den Fade-Bereich hinein und wirkt so als Teil
+           des Teasers. Expandiert: alles normal, kein Gradient, kein Peek.
+        */
+        .vergleich-wrapper.has-expand-fade.is-collapsed {
+            /* Volle Zeilenanzahl beibehalten, nicht auf --vgl-row-count-collapsed
+               kuerzen — die Peek-Zeile bleibt Teil des Subgrids. */
+            grid-template-rows: repeat(var(--vgl-row-count, 3), minmax(var(--vgl-row-min, 20px), auto)) !important;
+            position: relative;
+            overflow: hidden;
+        }
+        /* Alle Nicht-Peek-Collapsibles bleiben versteckt. */
+        .vergleich-wrapper.has-expand-fade.is-collapsed .vergleich-label.is-collapsible:not(.is-peek),
+        .vergleich-wrapper.has-expand-fade.is-collapsed .vergleich-zelle.is-collapsible:not(.is-peek) {
+            display: none !important;
+        }
+        /* Die Peek-Zeile wird angezeigt, aber in der Hoehe beschnitten. */
+        .vergleich-wrapper.has-expand-fade.is-collapsed .vergleich-label.is-collapsible.is-peek,
+        .vergleich-wrapper.has-expand-fade.is-collapsed .vergleich-zelle.is-collapsible.is-peek {
+            display: flex !important;
+            max-height: var(--vgl-fade-peek, 48px) !important;
+            min-height: 0 !important;
+            overflow: hidden !important;
+            /* Inhalt nach oben clippen, damit nur der Kopf der Zeile sichtbar ist. */
+            align-items: flex-start !important;
+        }
+        /* Die Grid-Zeile selbst soll sich ebenfalls zusammenziehen: Subgrid
+           passt sich der tatsaechlichen Zellenhoehe an, weil wir in der
+           JS-Sync keine min-height auf Peek-Rows zwingen (s. sync_script). */
+        .vergleich-wrapper.has-expand-fade.is-collapsed .is-peek {
+            grid-row-start: auto;
+        }
+        /* Gradient am unteren Rand. Sitzt ueber Labels + Scroll und verdeckt
+           Peek-Zeile + den Uebergang zum Button. Keine Interaktion (pointer-events:none). */
+        .vergleich-wrapper.has-expand-fade.is-collapsed::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: var(--vgl-fade-height, 140px);
+            background: linear-gradient(
+                to bottom,
+                rgba(255, 255, 255, 0) 0%,
+                var(--vgl-fade-color, #ffffff) 85%
+            );
+            pointer-events: none;
+            z-index: 6;
+        }
+        /* Button ueberlappt den Fade-Bereich: negatives margin-top zieht ihn
+           in den Wrapper hinein. Nur im kollabierten Fade-Modus. */
+        .vergleich-root.has-expand-fade.has-expand .vergleich-expand {
+            margin-top: calc(-1 * var(--vgl-fade-btn-overlap, 40px)) !important;
+            position: relative;
+            z-index: 10;
+        }
+        /* Wenn ausgeklappt, verschwindet der Overlap automatisch, weil die
+           Wrapper-Klasse has-expand-fade bleibt, aber is-collapsed wegfaellt:
+           Gradient + Peek werden durch das CSS oben nur im is-collapsed-Zustand
+           aktiviert. Der Button-Margin bleibt bestehen, ist dann aber visuell
+           minimal (Wrapper ragt nicht mehr in den Buttonbereich). Falls ge-
+           wuenscht, hier den Overlap aufheben: */
+        .vergleich-root.has-expand-fade.has-expand .vergleich-wrapper:not(.is-collapsed) ~ .vergleich-expand {
+            margin-top: 0 !important;
+        }
+
+        /* === Produkt-Labels (freie Leiste oberhalb des Tabellen-Wrappers) ===
+           Eigenes 2-Spalten-Grid ueber dem Wrapper: links ein Spacer in Breite
+           der Label-Spalte, rechts ein horizontal scrollbarer Track dessen
+           scrollLeft per JS an .vergleich-scroll gekoppelt ist. Dadurch wirkt
+           die Leiste wie ein freischwebender Balken — keine Tabellenrahmen,
+           keine Divider. Leere Items sind transparent und dienen nur als
+           Platzhalter fuer die Spaltenbreite. */
+        .vergleich-product-label-row {
+            display: grid !important;
+            grid-template-columns: var(--vgl-label-width, 200px) minmax(0, auto) !important;
+            /* 1px seitlich: gleicht den 1px-Border des Wrappers aus, damit die
+               Label-Spalten pixelgenau ueber den Card-Spalten sitzen. */
+            margin: 0 1px var(--vgl-product-label-gap, 6px);
+            max-width: 100%;
+        }
+        .vergleich-product-label-row__spacer {
+            background: transparent;
+            padding: 0 var(--vgl-cell-padding, 16px);
+            display: flex;
+            align-items: center;
+            font-size: var(--vgl-product-label-font-size, 14px);
+            color: #6b7280;
+            min-width: 0;
+        }
+        .vergleich-product-label-row__spacer-text {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .vergleich-product-label-row__scroll {
+            overflow-x: hidden;
+            overflow-y: hidden;
+            min-width: 0;
+        }
+        .vergleich-product-label-row__track {
+            display: grid !important;
+            grid-auto-flow: column !important;
+            grid-auto-columns: var(--vgl-column-width, 200px) !important;
+            min-width: 0;
+        }
+        .vergleich-product-label-item {
+            min-height: var(--vgl-product-label-height, 40px);
+            padding: var(--vgl-product-label-padding, 8px 12px);
+            font-size: var(--vgl-product-label-font-size, 14px);
+            font-weight: var(--vgl-product-label-font-weight, 700);
+            letter-spacing: var(--vgl-product-label-tracking, 0);
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            overflow: hidden;
+            box-sizing: border-box;
+            background: transparent;
+        }
+        /* Defaultfarben (Standard-BG/-Color aus den Controls) nur auf gefuellte
+           Items anwenden. Inline-Styles pro Item ueberschreiben den Default. */
+        .vergleich-product-label-item:not(.is-empty) {
+            background: var(--vgl-product-label-bg, transparent);
+            color: var(--vgl-product-label-color, inherit);
+        }
+        .vergleich-product-label-item.is-uppercase {
+            text-transform: uppercase;
+        }
+        .vergleich-product-label-item.is-empty {
+            background: transparent !important;
+            pointer-events: none;
+        }
+        .vergleich-product-label-item__text {
+            display: inline-block;
+            max-width: 100%;
+            white-space: normal;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         /* Breakpoint-Werte kommen ausschliesslich aus den User-Controls
            labelWidth und columnWidth via Bricks reaktiver CSS-Pipeline. */
         </style>';
@@ -3165,6 +3954,35 @@ class Element_Vergleich extends \Bricks\Element {
         setTimeout(handler, 800);
     }
 
+    // Horizontaler Scroll-Sync: die Produkt-Label-Leiste sitzt ausserhalb
+    // des Wrappers. Statt der Leiste selbst Scroll-Verhalten zu geben (was
+    // bei overflow:hidden unzuverlaessig ist), verschieben wir den Track per
+    // transform: translateX(-scrollLeft) synchron zur Haupt-Scroll-Position.
+    function bindLabelRowSync(wrapper){
+        if (!wrapper || wrapper._vglLabelRowBound) return;
+        var root = wrapper.closest(".vergleich-root") || wrapper.parentNode;
+        if (!root) return;
+        var track = root.querySelector(".vergleich-product-label-row__track");
+        if (!track) return;
+        var scroll = wrapper.querySelector(".vergleich-scroll");
+        if (!scroll) return;
+        wrapper._vglLabelRowBound = true;
+
+        var ticking = false;
+        function apply(){
+            track.style.transform = "translateX(" + (-scroll.scrollLeft) + "px)";
+        }
+        scroll.addEventListener("scroll", function(){
+            if (ticking) return;
+            ticking = true;
+            requestAnimationFrame(function(){
+                apply();
+                ticking = false;
+            });
+        }, { passive: true });
+        apply(); // initial
+    }
+
     function bindRowHover(wrapper){
         if (wrapper._vglRowHoverBound) return;
         wrapper._vglRowHoverBound = true;
@@ -3196,6 +4014,7 @@ class Element_Vergleich extends \Bricks\Element {
         bindExpand(wrapper);
         bindNav(wrapper);
         bindRowHover(wrapper);
+        bindLabelRowSync(wrapper);
         var burst = 0;
         (function tick(){
             if (!wrapper.isConnected) return;
