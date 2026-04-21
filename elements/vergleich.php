@@ -1125,6 +1125,11 @@ class Element_Vergleich extends \Bricks\Element {
                 'description'    => esc_html__( 'Wird angezeigt, wenn Dynamic Data leer ist.', 'bricks-vergleich' ),
                 'required'       => [ 'type', '=', 'text' ],
             ],
+            'textTypography' => [
+                'label'    => esc_html__( 'Typografie', 'bricks-vergleich' ),
+                'type'     => 'typography',
+                'required' => [ 'type', '=', 'text' ],
+            ],
 
             // ───── IMAGE ─────
             'image' => [
@@ -2452,7 +2457,10 @@ class Element_Vergleich extends \Bricks\Element {
         // Link-Wrap INNERHALB des Tags, damit die semantische Struktur (z.B. <h3>)
         // erhalten bleibt und der Link nur den Text umschließt.
         $content = $this->maybe_wrap_link( $inner, $link, 'vergleich-text-link' );
-        return '<' . $tag . ' class="vergleich-text">' . $content . '</' . $tag . '>';
+
+        $typo_css = $this->format_typography( $row['textTypography'] ?? null );
+        $style_attr = $typo_css !== '' ? ' style="' . esc_attr( $typo_css ) . '"' : '';
+        return '<' . $tag . ' class="vergleich-text"' . $style_attr . '>' . $content . '</' . $tag . '>';
     }
 
     private function render_cell_image( $row ) {
