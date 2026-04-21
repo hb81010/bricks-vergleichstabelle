@@ -3254,41 +3254,58 @@ class Element_Vergleich extends \Bricks\Element {
         return implode( ' ', $sides );
     }
 
-    // Bricks-Typography-Struktur → Inline-CSS-Fragment. Für Stellen, an denen
-    // Typografie inline gebraucht wird (z.B. Repeater-Badges). Für Element-
-    // Level-Controls reicht 'css' => [[ 'property' => 'typography', ... ]] —
-    // Bricks erzeugt das CSS dann selbst.
+    // Bricks-Typography-Struktur → Inline-CSS-Fragment. Richtet sich nach
+    // Bricks\Assets::typography-Case: kebab-case Keys, Strings, Font-Size/
+    // Letter-Spacing mit Einheit, Font-Family mit Quotes + Fallback, Text-
+    // Shadow als Struct. Überspringt Arrays für simple String-Props wie
+    // Bricks selbst. Defaults greifen nur wenn der Wert fehlt.
     private function format_typography( $typo, $defaults = [] ) {
-        $props = [
-            'color', 'font-family', 'font-weight', 'font-style',
-            'font-variation-settings', 'line-height', 'text-align',
-            'text-transform', 'text-decoration', 'white-space',
-        ];
-        $length_props = [ 'font-size', 'letter-spacing' ];
-
         $out = '';
+
         if ( is_array( $typo ) ) {
-            foreach ( $props as $p ) {
-                if ( ! isset( $typo[ $p ] ) || $typo[ $p ] === '' || $typo[ $p ] === null ) continue;
-                $val = $typo[ $p ];
-                if ( $p === 'color' ) {
-                    $resolved = $this->resolve_color( $val );
-                    if ( $resolved !== '' ) $out .= 'color:' . esc_attr( $resolved ) . ';';
-                    continue;
-                }
-                if ( is_array( $val ) ) continue; // unerwartet — skip
-                $out .= $p . ':' . esc_attr( $this->sanitize_css_value( (string) $val ) ) . ';';
+            // Font-Family: Quotes + optionale Fallback-Familie
+            if ( ! empty( $typo['font-family'] ) && is_string( $typo['font-family'] ) ) {
+                $family   = $this->sanitize_css_value( $typo['font-family'] );
+                $fallback = ! empty( $typo['fallback'] ) && is_string( $typo['fallback'] ) ? ', ' . $this->sanitize_css_value( $typo['fallback'] ) : '';
+                if ( $family !== '' ) $out .= 'font-family:"' . esc_attr( $family ) . '"' . esc_attr( $fallback ) . ';';
             }
-            foreach ( $length_props as $p ) {
-                if ( ! isset( $typo[ $p ] ) ) continue;
-                $v = $typo[ $p ];
-                if ( $v === '' || $v === null ) continue;
-                $formatted = $this->format_length( $v );
-                if ( $formatted !== '' && $formatted !== '0' ) {
-                    $out .= $p . ':' . esc_attr( $formatted ) . ';';
+
+            // Color
+            if ( ! empty( $typo['color'] ) ) {
+                $resolved = $this->resolve_color( $typo['color'] );
+                if ( $resolved !== '' ) $out .= 'color:' . esc_attr( $resolved ) . ';';
+            }
+
+            // Text-Shadow: Struct { values: { offsetX, offsetY, blur }, color }
+            if ( ! empty( $typo['text-shadow'] ) && is_array( $typo['text-shadow'] ) ) {
+                $ts   = $typo['text-shadow'];
+                $vals = is_array( $ts['values'] ?? null ) ? $ts['values'] : [];
+                $parts = [];
+                foreach ( [ 'offsetX', 'offsetY', 'blur' ] as $k ) {
+                    $v = $vals[ $k ] ?? '';
+                    $parts[] = ( $v === '' || $v === null ) ? '0' : ( is_numeric( $v ) ? $v . 'px' : $this->sanitize_css_value( (string) $v ) );
                 }
+                $c = ! empty( $ts['color'] ) ? $this->resolve_color( $ts['color'] ) : '';
+                if ( $c !== '' ) $parts[] = $c; else $parts[] = 'transparent';
+                $out .= 'text-shadow:' . esc_attr( implode( ' ', $parts ) ) . ';';
+            }
+
+            // Alle weiteren Props: direkter CSS-Property-Name. Arrays werden
+            // übersprungen (wie Bricks-Core). Font-Size/Letter-Spacing bekommen
+            // bei reinen Zahlen 'px' angehängt.
+            $skip = [ 'font-family', 'fallback', 'color', 'text-shadow', 'font-variants' ];
+            foreach ( $typo as $prop => $val ) {
+                if ( in_array( $prop, $skip, true ) ) continue;
+                if ( $val === '' || $val === null ) continue;
+                if ( is_array( $val ) ) continue;
+                $str = (string) $val;
+                if ( $prop === 'font-size' || $prop === 'letter-spacing' ) {
+                    if ( is_numeric( $str ) ) $str .= 'px';
+                }
+                $out .= esc_attr( (string) $prop ) . ':' . esc_attr( $this->sanitize_css_value( $str ) ) . ';';
             }
         }
+
         foreach ( [ 'color', 'font-size', 'font-weight', 'line-height' ] as $p ) {
             if ( ! empty( $defaults[ $p ] ) && strpos( $out, $p . ':' ) === false ) {
                 $out .= $p . ':' . esc_attr( (string) $defaults[ $p ] ) . ';';
