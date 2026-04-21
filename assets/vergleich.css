@@ -478,27 +478,6 @@
     background: #6b7280;
 }
 
-/* === RESPONSIVE ===
-   Hardcoded Breiten-Overrides entfernt — die Breakpoint-Werte für Label/
-   Spalte kommen aus den Bricks-Controls (labelWidth, columnWidth) und
-   müssen nicht zusätzlich überschrieben werden. Hier nur noch Padding/
-   Font-Size-Defaults für sehr kleine Viewports. */
-@media (max-width: 767px) {
-    .vergleich-label,
-    .vergleich-zelle {
-        padding: 12px 10px;
-        font-size: 0.875rem;
-    }
-}
-
-@media (max-width: 479px) {
-    .vergleich-label,
-    .vergleich-zelle {
-        padding: 10px 8px;
-        font-size: 0.8rem;
-    }
-}
-
 /* === BRICKS BUILDER SPEZIFISCH === */
 /* Im Builder sollen die Zellen sichtbar sein, auch wenn leer */
 .bricks-builder-edit .vergleich-zelle:empty::after {

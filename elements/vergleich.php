@@ -1275,6 +1275,13 @@ class Element_Vergleich extends \Bricks\Element {
                 'type'     => 'spacing',
                 'required' => [ 'type', '=', 'button' ],
             ],
+            'btnMinWidth' => [
+                'label'       => esc_html__( 'Mindestbreite', 'bricks-vergleich' ),
+                'type'        => 'number',
+                'units'       => true,
+                'description' => esc_html__( 'z.B. 85% oder 140px. Leer = kein min-width. Nützlich, damit Buttons in allen Spalten gleich breit sind, auch wenn der Text unterschiedlich lang ist.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'button' ],
+            ],
             'btnShadow' => [
                 'label'    => esc_html__( 'Schatten', 'bricks-vergleich' ),
                 'type'     => 'box-shadow',
@@ -1359,6 +1366,18 @@ class Element_Vergleich extends \Bricks\Element {
                 'placeholder'    => '{jet_cf_app_support} oder true',
                 'description'    => esc_html__( 'Akzeptiert true/false, 1/0, yes/no, on/off — alles andere (außer leer) wird als TRUE gewertet.', 'bricks-vergleich' ),
                 'required'       => [ 'type', '=', 'bool' ],
+            ],
+            'boolTrueIcon' => [
+                'label'       => esc_html__( 'Icon "Ja" (optional)', 'bricks-vergleich' ),
+                'type'        => 'icon',
+                'description' => esc_html__( 'Ohne Auswahl wird ein Default-Häkchen verwendet.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'bool' ],
+            ],
+            'boolFalseIcon' => [
+                'label'       => esc_html__( 'Icon "Nein" (optional)', 'bricks-vergleich' ),
+                'type'        => 'icon',
+                'description' => esc_html__( 'Ohne Auswahl wird ein Default-X verwendet.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'bool' ],
             ],
             'boolTrueColor' => [
                 'label'    => esc_html__( 'Farbe "Ja"', 'bricks-vergleich' ),
@@ -2686,6 +2705,10 @@ class Element_Vergleich extends \Bricks\Element {
                 $inline .= 'padding:' . esc_attr( $this->format_spacing( $row['btnPadding'], '' ) ) . ';';
             }
         }
+        $min_width = $this->get_css_value( $row['btnMinWidth'] ?? null, '' );
+        if ( $min_width !== '' ) {
+            $inline .= 'min-width:' . esc_attr( $min_width ) . ';';
+        }
         $inline .= $this->format_box_shadow( $row['btnShadow'] ?? null );
 
         $attrs  = 'class="' . esc_attr( implode( ' ', $class_list ) ) . '"';
@@ -2825,8 +2848,13 @@ class Element_Vergleich extends \Bricks\Element {
         $label = $is_true ? $true_text  : $false_text;
         $aria  = $is_true ? esc_html__( 'Ja', 'bricks-vergleich' ) : esc_html__( 'Nein', 'bricks-vergleich' );
 
-        // Inline SVG — immer in currentColor, damit der umgebende color-Style greift.
-        if ( $is_true ) {
+        // User-Icon (Bricks Icon-Control) hat Vorrang. Fallback: inline SVG in
+        // currentColor, damit der umgebende color-Style (über boolTrueColor /
+        // boolFalseColor) greift. Gleiches Verhalten wie beim rating-Zelltyp.
+        $custom_icon = $is_true ? ( $row['boolTrueIcon'] ?? null ) : ( $row['boolFalseIcon'] ?? null );
+        if ( is_array( $custom_icon ) && ( ! empty( $custom_icon['icon'] ) || ! empty( $custom_icon['svg'] ) ) ) {
+            $svg = \Bricks\Element::render_icon( $custom_icon );
+        } elseif ( $is_true ) {
             $svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 12 10 18 20 6"/></svg>';
         } else {
             $svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
@@ -2836,9 +2864,11 @@ class Element_Vergleich extends \Bricks\Element {
             'display:inline-flex;align-items:center;justify-content:center;gap:6px;color:%s;font-weight:600;',
             esc_attr( $color )
         );
+        // font-size mitgeben, damit Bricks-gerenderte Font-Icons (<i class="...">)
+        // auf die gleiche Größe skalieren wie inline-SVG (width/height).
         $icon_style = sprintf(
-            'display:inline-block;width:%s;height:%s;flex:0 0 auto;',
-            esc_attr( $size ), esc_attr( $size )
+            'display:inline-flex;align-items:center;justify-content:center;width:%s;height:%s;font-size:%s;flex:0 0 auto;line-height:1;',
+            esc_attr( $size ), esc_attr( $size ), esc_attr( $size )
         );
 
         $out  = '<span class="vergleich-bool is-' . ( $is_true ? 'true' : 'false' ) . '"'
@@ -3765,10 +3795,6 @@ class Element_Vergleich extends \Bricks\Element {
             min-width: var(--vgl-score-size, 36px);
             min-height: var(--vgl-score-size, 36px);
             padding: var(--vgl-score-padding, 6px 10px);
-            font-size: 14px;
-            font-weight: 700;
-            line-height: 1;
-            color: #fff;
             background: var(--vgl-score-bg, #111827);
             border-radius: 6px;
             box-shadow: 0 2px 6px rgba(0,0,0,.18);
@@ -3776,6 +3802,15 @@ class Element_Vergleich extends \Bricks\Element {
             white-space: nowrap;
             margin: 0 !important;
             flex: 0 0 auto !important;
+        }
+        /* Typografie-Defaults in eigener, weniger-spezifischer Regel (0,1,0),
+           damit Bricks-Typography-Control (Scope-Prefix → 0,2,0) sie problemlos
+           überschreiben kann. In der obigen 0,3,0-Regel würden sie gewinnen. */
+        .vergleich-score {
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1;
+            color: #fff;
         }
         .vergleich-wrapper.has-score-pos-top-left .vergleich-zelle.has-score-anchor > .vergleich-score {
             top: var(--vgl-score-offset-y, 8px) !important;
