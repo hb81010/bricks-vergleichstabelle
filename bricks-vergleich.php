@@ -3,7 +3,7 @@
  * Plugin Name: Bricks Vergleich
  * Plugin URI: https://example.com
  * Description: Custom Bricks Element für Produktvergleich mit Produkten als Spalten (Finanzfluss-Style).
- * Version: 1.0.0
+ * Version: 1.0.1
  * Author: Du
  * Text Domain: bricks-vergleich
  * Requires at least: 6.0
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'BRICKS_VERGLEICH_VERSION', '1.0.0' );
+define( 'BRICKS_VERGLEICH_VERSION', '1.0.1' );
 define( 'BRICKS_VERGLEICH_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BRICKS_VERGLEICH_URL', plugin_dir_url( __FILE__ ) );
 
@@ -63,6 +63,18 @@ add_action( 'wp_enqueue_scripts', function () {
         BRICKS_VERGLEICH_URL . 'assets/vergleich.css',
         [],
         BRICKS_VERGLEICH_VERSION
+    );
+
+    // Frontend-Runtime (Row-Sync, Nav-Pfeile, Expand, Label-Row-Sync, Row-Hover).
+    // Als externes Script — nicht inline — damit Bricks-Canvas-AJAX-Re-Renders
+    // funktionieren: innerHTML führt injizierte <script>-Tags nicht aus, eine
+    // enqueue'te Datei dagegen lädt normal in der Canvas-iframe.
+    wp_enqueue_script(
+        'bricks-vergleich-frontend',
+        BRICKS_VERGLEICH_URL . 'assets/frontend.js',
+        [],
+        BRICKS_VERGLEICH_VERSION,
+        true
     );
 });
 

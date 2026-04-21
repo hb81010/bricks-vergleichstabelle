@@ -837,6 +837,24 @@ class Element_Vergleich extends \Bricks\Element {
             'css' => [ [ 'property' => '--vgl-nav-offset', 'selector' => '' ] ],
         ];
 
+        $this->controls['navOffsetX'] = [
+            'tab' => 'content', 'group' => 'scroll',
+            'label' => esc_html__( 'Versatz horizontal', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'description' => esc_html__( 'Feinjustierung zusätzlich zum Rand-Abstand. Positive Werte schieben beide Pfeile nach rechts, negative nach links.', 'bricks-vergleich' ),
+            'required' => [ 'navEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-nav-offset-x', 'selector' => '' ] ],
+        ];
+
+        $this->controls['navOffsetY'] = [
+            'tab' => 'content', 'group' => 'scroll',
+            'label' => esc_html__( 'Versatz vertikal', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'description' => esc_html__( 'Feinjustierung der Auto-Position. Positive Werte schieben den Pfeil nach unten, negative nach oben. Sticky-Verhalten beim Scrollen bleibt erhalten.', 'bricks-vergleich' ),
+            'required' => [ 'navEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-nav-offset-y', 'selector' => '' ] ],
+        ];
+
         $this->controls['navBgColor'] = [
             'tab' => 'content', 'group' => 'scroll',
             'label' => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
@@ -1945,7 +1963,7 @@ class Element_Vergleich extends \Bricks\Element {
         // Wird als eigene Leiste vor dem Wrapper gerendert — sieht damit aus
         // wie ein freischwebender Balken über der Tabelle, nicht wie eine
         // weitere Zeile im Tabellenrahmen. Horizontaler Scroll wird per JS
-        // an .vergleich-scroll gekoppelt (siehe print_sync_script).
+        // an .vergleich-scroll gekoppelt (siehe assets/frontend.js → bindLabelRowSync).
         if ( ! empty( $this->_product_label_runtime['enabled'] ) ) {
             $pl_cfg    = $this->_product_label_runtime;
             $pl_items  = is_array( $pl_cfg['items'] ?? null ) ? $pl_cfg['items'] : [];
@@ -2162,8 +2180,6 @@ class Element_Vergleich extends \Bricks\Element {
         }
 
         echo '</div>'; // .vergleich-root
-
-        $this->print_sync_script();
     }
 
     // ==========================================================================
@@ -3854,10 +3870,10 @@ class Element_Vergleich extends \Bricks\Element {
             display: block;
         }
         .vergleich-nav--prev {
-            left: calc(var(--vgl-label-width, 200px) + var(--vgl-nav-offset, 12px));
+            left: calc(var(--vgl-label-width, 200px) + var(--vgl-nav-offset, 12px) + var(--vgl-nav-offset-x, 0px));
         }
         .vergleich-nav--next {
-            right: var(--vgl-nav-offset, 12px);
+            right: calc(var(--vgl-nav-offset, 12px) - var(--vgl-nav-offset-x, 0px));
         }
         /* Zebra-Streifen: nur auf den Card-Zellen, NICHT auf der Label-
            Spalte — die behaelt ihre eigene Hintergrundfarbe. */
@@ -4080,380 +4096,4 @@ class Element_Vergleich extends \Bricks\Element {
         </style>';
     }
 
-    private function print_sync_script() {
-        static $printed = false;
-        if ( $printed ) return;
-        $printed = true;
-        ?>
-<script id="bricks-vergleich-sync">
-(function(){
-    function syncRows(wrapper){
-        if (!wrapper || !wrapper.isConnected) return;
-        var labels = wrapper.querySelectorAll(".vergleich-labels .vergleich-label");
-        var cards  = wrapper.querySelectorAll(".vergleich-card");
-        if (!labels.length || !cards.length) return;
-
-        labels.forEach(function(el){ el.style.minHeight = ""; });
-        var cardCells = [];
-        cards.forEach(function(card){
-            var cells = [];
-            card.querySelectorAll(".vergleich-zelle").forEach(function(el){
-                if (el.closest(".vergleich-card") === card) cells.push(el);
-            });
-            cardCells.push(cells);
-            cells.forEach(function(el){ el.style.minHeight = ""; });
-        });
-
-        for (var i = 0; i < labels.length; i++) {
-            var max = labels[i].offsetHeight;
-            for (var c = 0; c < cardCells.length; c++) {
-                var cell = cardCells[c][i];
-                if (cell) max = Math.max(max, cell.offsetHeight);
-            }
-            labels[i].style.minHeight = max + "px";
-            for (var c2 = 0; c2 < cardCells.length; c2++) {
-                var cell2 = cardCells[c2][i];
-                if (cell2) cell2.style.minHeight = max + "px";
-            }
-        }
-    }
-
-    function bindExpand(wrapper){
-        if (!wrapper || wrapper._vglBound) return;
-        wrapper._vglBound = true;
-        // Expand-Button sitzt als Geschwister der Wrapper innerhalb des Roots.
-        var root = wrapper.closest(".vergleich-root") || wrapper.parentNode;
-        var btn = root ? root.querySelector(".vergleich-expand-btn") : null;
-        if (!btn) return;
-        btn.addEventListener("click", function(){
-            var expanded = wrapper.classList.toggle("is-collapsed") ? false : true;
-            // NB: toggle returns the NEW state; is-collapsed true = collapsed
-            var isCollapsed = wrapper.classList.contains("is-collapsed");
-            btn.setAttribute("aria-expanded", isCollapsed ? "false" : "true");
-            var txt = btn.querySelector(".vergleich-expand-text");
-            if (txt) {
-                txt.textContent = isCollapsed
-                    ? btn.getAttribute("data-label-expand")
-                    : btn.getAttribute("data-label-collapse");
-            }
-            // Pfeil drehen (direkt, keine Transition)
-            var iconWrap = btn.querySelector(".vergleich-expand-icon");
-            if (iconWrap) iconWrap.style.transform = isCollapsed ? "rotate(0deg)" : "rotate(180deg)";
-            // Row-Sync + Nav-Refresh nach dem Toggle — ResizeObserver greift
-            // zwar auch, aber ein direkter Aufruf vermeidet einen Flacker-Frame,
-            // in dem der Pfeil auf der alten Geometrie sitzt.
-            requestAnimationFrame(function(){
-                syncRows(wrapper);
-                updateNav(wrapper);
-            });
-        });
-    }
-
-    // Re-queries child nodes bei jedem Call — robust gegen Canvas-Re-Renders,
-    // bei denen Bricks die Wrapper-Kinder austauscht und unsere Referenzen
-    // verwaist lassen wuerde.
-    function findCounter(wrapper){
-        // Primaer ueber Wrapper-Attribut data-counter (ID-Ref, sicher auch
-        // wenn Bricks die DOM-Struktur im Canvas anders verschachtelt).
-        var id = wrapper.getAttribute("data-counter");
-        if (id) {
-            var byId = document.getElementById(id);
-            if (byId) return byId;
-        }
-        // Fallback: naechster Root-Container
-        var root = wrapper.closest(".vergleich-root") || wrapper.parentNode;
-        return root ? root.querySelector("[data-vgl-counter]") : null;
-    }
-
-    // Positioniert die Nav-Pfeile per position:fixed. Verhalten:
-    // 1) Default-Anker ist das Ranking-Badge (oder erste Zeile als Fallback).
-    //    → Pfeil bleibt "auf Ranking-Höhe" solange der Anker im Viewport ist.
-    //    → Beim Expand ändert sich nichts, weil der Anker (erste Zeile) oben
-    //       bleibt und die ergänzten Zeilen darunter angehängt werden.
-    // 2) Scrollt der User runter und der Anker verschwindet über den oberen
-    //    Viewport-Rand, wird der Pfeil sticky an einer kleinen Offset-Position
-    //    unter der Viewport-Oberkante gehalten — nur dann "läuft er mit".
-    // 3) Wenn der User so weit runter gescrollt hat, dass die Tabelle fast
-    //    verlassen ist, clampt der Pfeil auf den unteren Tabellenrand, damit
-    //    er nicht ins Nichts (oder den Footer) wandert.
-    function updateNavPosition(wrapper){
-        // Pfeile liegen jetzt im Root (Geschwister vom wrapper), nicht mehr im
-        // wrapper selbst. Dort suchen.
-        var rootEl = wrapper.closest(".vergleich-root") || wrapper.parentNode;
-        if (!rootEl) return;
-        var prev = rootEl.querySelector(".vergleich-nav--prev");
-        var next = rootEl.querySelector(".vergleich-nav--next");
-        if (!prev && !next) return;
-
-        var rect = wrapper.getBoundingClientRect();
-        var vh   = window.innerHeight || document.documentElement.clientHeight || 0;
-        if (vh <= 0) return;
-        if (rect.bottom <= 0 || rect.top >= vh) return;
-
-        var rootRect = rootEl.getBoundingClientRect();
-
-        // Anker: Mitte der zweiten Card-Zelle (meist Produkt-Name). Liegt
-        // optisch ein Stück unterhalb der Produktbilder — Autobild/Finanzfluss-
-        // Pattern. Fallback auf erste Zelle oder Wrapper-Mitte.
-        var anchor = wrapper.querySelector(".vergleich-card > .vergleich-zelle:nth-child(2)")
-                  || wrapper.querySelector(".vergleich-card > .vergleich-zelle")
-                  || wrapper;
-        var aRect = anchor.getBoundingClientRect();
-        var defaultScreenY = aRect.top + aRect.height / 2;
-
-        // Sticky-Fallback: bei 40px unter Viewport-Oberkante, sobald Anker oben raus.
-        var stickyScreenY = 40;
-        var screenY = Math.max(defaultScreenY, stickyScreenY);
-
-        // Clamp: nicht unter den Tabellenrand.
-        var maxScreenY = rect.bottom - 30;
-        if (screenY > maxScreenY) screenY = maxScreenY;
-
-        // Umrechnung Screen-Y → Root-Koordinaten (absolute ist zu Root relativ).
-        var topInRoot = screenY - rootRect.top;
-        var topVal = topInRoot + "px";
-        if (prev) prev.style.top = topVal;
-        if (next) next.style.top = topVal;
-    }
-
-    function updateNav(wrapper){
-        var scroll = wrapper.querySelector(".vergleich-scroll");
-        if (!scroll) return;
-
-        var counter = findCounter(wrapper);
-        // Pfeile liegen jetzt im Root (Geschwister vom wrapper) statt im
-        // wrapper selbst — dort suchen.
-        var rootEl  = wrapper.closest(".vergleich-root") || wrapper.parentNode;
-        var prev    = rootEl ? rootEl.querySelector(".vergleich-nav--prev") : null;
-        var next    = rootEl ? rootEl.querySelector(".vergleich-nav--next") : null;
-
-        var overflows = scroll.scrollWidth - scroll.clientWidth > 1;
-        var atStart   = scroll.scrollLeft <= 1;
-        var atEnd     = scroll.scrollLeft >= scroll.scrollWidth - scroll.clientWidth - 1;
-
-        if (prev && next) {
-            prev.hidden = !overflows || atStart;
-            next.hidden = !overflows || atEnd;
-        }
-
-        updateNavPosition(wrapper);
-
-        if (counter) {
-            var cards = scroll.querySelectorAll(".vergleich-card");
-            var total = cards.length;
-            if (total === 0) {
-                counter.textContent = "";
-            } else {
-                var firstCard = cards[0];
-                var cardW = firstCard ? firstCard.getBoundingClientRect().width : 0;
-                if (!cardW || cardW < 1) cardW = 1;
-                var cw = scroll.clientWidth || cardW;
-                var visible = Math.max(1, Math.round(cw / cardW));
-                var start = Math.floor(scroll.scrollLeft / cardW) + 1;
-                if (start < 1) start = 1;
-                if (start > total) start = total;
-                var end = Math.min(start + visible - 1, total);
-                var fmt = counter.getAttribute("data-format") || "{start}–{end} von {total}";
-                counter.textContent = fmt
-                    .replace("{start}", start)
-                    .replace("{end}",   end)
-                    .replace("{total}", total);
-            }
-        }
-    }
-
-    function bindNav(wrapper){
-        if (wrapper._vglNavBound) { updateNav(wrapper); return; }
-        wrapper._vglNavBound = true;
-
-        // Click-Events per Delegation am Root (nicht mehr am Wrapper), weil
-        // die Pfeile als Root-Geschwister außerhalb des Wrappers sitzen.
-        var rootForClicks = wrapper.closest(".vergleich-root") || wrapper.parentNode;
-        (rootForClicks || wrapper).addEventListener("click", function(e){
-            var btn = e.target && e.target.closest ? e.target.closest("[data-vgl-nav]") : null;
-            if (!btn) return;
-            // Sicherstellen, dass der Klick zu DIESEM Wrapper gehört (falls
-            // mehrere Tabellen auf der Seite sind, jeder Root hat seine eigene).
-            var clickRoot = btn.closest(".vergleich-root");
-            if (clickRoot && clickRoot !== rootForClicks) return;
-            var scroll = wrapper.querySelector(".vergleich-scroll");
-            if (!scroll) return;
-            var dir = btn.getAttribute("data-vgl-nav");
-            var card = scroll.querySelector(".vergleich-card");
-            var cardW = card ? card.getBoundingClientRect().width : 200;
-            var stepMode = wrapper.classList.contains("vgl-nav-step-view") ? "view" : "card";
-            var step = stepMode === "view" ? Math.max(scroll.clientWidth - 20, 100) : cardW;
-            scroll.scrollBy({ left: (dir === "prev" ? -step : step), behavior: "smooth" });
-        });
-
-        var handler = function(){ updateNav(wrapper); };
-        // Scroll/Resize auf Page-Level: nur die Arrow-Position updaten (nicht
-        // den ganzen updateNav, weil der auch den Counter erneut neu berechnet).
-        var posHandler = function(){ updateNavPosition(wrapper); };
-
-        var scroll = wrapper.querySelector(".vergleich-scroll");
-        if (scroll) scroll.addEventListener("scroll", handler, { passive: true });
-        window.addEventListener("resize", handler);
-        // Capture-Phase auf document: Scroll-Events bubblen nicht, aber Capture
-        // fängt sie auf jeder Ebene ab — auch wenn ein Parent-Container scrollt
-        // (z.B. ein Bricks-Section mit overflow:auto) statt window.
-        document.addEventListener("scroll", posHandler, { passive: true, capture: true });
-        window.addEventListener("scroll", posHandler, { passive: true });
-
-        // RAF-Loop als Fallback: solange der Wrapper im Viewport sichtbar ist,
-        // wird die Pfeil-Position jedes Frame neu berechnet. Robust gegen
-        // Themes mit Custom-Scroll-Container, Smooth-Scroll-Libraries oder
-        // anderen Quellen, die kein brauchbares scroll-Event liefern. Bei
-        // unsichtbarer Tabelle wird der Loop pausiert, also keine Perf-Kosten.
-        var rafId = 0;
-        var rafActive = false;
-        function rafLoop(){
-            if (!rafActive || !wrapper.isConnected) { rafId = 0; return; }
-            updateNavPosition(wrapper);
-            rafId = requestAnimationFrame(rafLoop);
-        }
-        function startRaf(){
-            if (rafActive) return;
-            rafActive = true;
-            if (!rafId) rafId = requestAnimationFrame(rafLoop);
-        }
-        function stopRaf(){
-            rafActive = false;
-            if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
-        }
-        if (typeof IntersectionObserver !== "undefined") {
-            var io = new IntersectionObserver(function(entries){
-                for (var i = 0; i < entries.length; i++) {
-                    if (entries[i].isIntersecting) startRaf();
-                    else stopRaf();
-                }
-            }, { threshold: 0 });
-            io.observe(wrapper);
-        } else {
-            // Ohne IntersectionObserver: Loop dauerhaft laufen lassen.
-            startRaf();
-        }
-
-        if (typeof ResizeObserver !== "undefined") {
-            var ro = new ResizeObserver(handler);
-            if (scroll) ro.observe(scroll);
-            ro.observe(wrapper);
-        }
-        requestAnimationFrame(handler);
-        setTimeout(handler, 250);
-        setTimeout(handler, 800);
-    }
-
-    // Horizontaler Scroll-Sync: die Produkt-Label-Leiste sitzt ausserhalb
-    // des Wrappers. Statt der Leiste selbst Scroll-Verhalten zu geben (was
-    // bei overflow:hidden unzuverlaessig ist), verschieben wir den Track per
-    // transform: translateX(-scrollLeft) synchron zur Haupt-Scroll-Position.
-    function bindLabelRowSync(wrapper){
-        if (!wrapper || wrapper._vglLabelRowBound) return;
-        var root = wrapper.closest(".vergleich-root") || wrapper.parentNode;
-        if (!root) return;
-        var track = root.querySelector(".vergleich-product-label-row__track");
-        if (!track) return;
-        var scroll = wrapper.querySelector(".vergleich-scroll");
-        if (!scroll) return;
-        wrapper._vglLabelRowBound = true;
-
-        var ticking = false;
-        function apply(){
-            track.style.transform = "translateX(" + (-scroll.scrollLeft) + "px)";
-        }
-        scroll.addEventListener("scroll", function(){
-            if (ticking) return;
-            ticking = true;
-            requestAnimationFrame(function(){
-                apply();
-                ticking = false;
-            });
-        }, { passive: true });
-        apply(); // initial
-    }
-
-    function bindRowHover(wrapper){
-        if (wrapper._vglRowHoverBound) return;
-        wrapper._vglRowHoverBound = true;
-
-        function rowEls(idx){
-            return wrapper.querySelectorAll(
-                '[data-row-index="' + idx + '"]'
-            );
-        }
-        function clearActive(){
-            var active = wrapper.querySelectorAll(".is-row-hover");
-            for (var i = 0; i < active.length; i++) active[i].classList.remove("is-row-hover");
-        }
-        wrapper.addEventListener("mouseover", function(e){
-            if (!wrapper.classList.contains("has-row-hover")) return;
-            var el = e.target && e.target.closest ? e.target.closest("[data-row-index]") : null;
-            if (!el || !wrapper.contains(el)) return;
-            var idx = el.getAttribute("data-row-index");
-            if (idx === null) return;
-            clearActive();
-            var els = rowEls(idx);
-            for (var i = 0; i < els.length; i++) els[i].classList.add("is-row-hover");
-        });
-        wrapper.addEventListener("mouseleave", clearActive);
-    }
-
-    function init(wrapper){
-        syncRows(wrapper);
-        bindExpand(wrapper);
-        bindNav(wrapper);
-        bindRowHover(wrapper);
-        bindLabelRowSync(wrapper);
-        var burst = 0;
-        (function tick(){
-            if (!wrapper.isConnected) return;
-            syncRows(wrapper);
-            if (++burst < 20) requestAnimationFrame(tick);
-        })();
-
-        if (typeof ResizeObserver !== "undefined") {
-            var ro = new ResizeObserver(function(){ syncRows(wrapper); });
-            ro.observe(wrapper);
-            wrapper.querySelectorAll("img").forEach(function(img){
-                if (!img.complete) img.addEventListener("load", function(){ syncRows(wrapper); }, { once: true });
-            });
-        }
-    }
-
-    function boot(){
-        document.querySelectorAll(".vergleich-wrapper").forEach(init);
-    }
-
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", boot);
-    } else {
-        boot();
-    }
-
-    // Bricks-Builder re-renders: MutationObserver — reagiert NUR wenn neue
-    // .vergleich-wrapper-Elemente ins DOM kommen. Text- oder Attribut-Aenderungen
-    // innerhalb vorhandener Wrapper (z.B. vom Counter selbst) duerfen nicht
-    // erneut boot() triggern, sonst Endlosschleife.
-    if (typeof MutationObserver !== "undefined") {
-        var mo = new MutationObserver(function(mutations){
-            for (var i = 0; i < mutations.length; i++) {
-                var added = mutations[i].addedNodes;
-                for (var j = 0; j < added.length; j++) {
-                    var n = added[j];
-                    if (!n || n.nodeType !== 1) continue;
-                    if ((n.classList && n.classList.contains("vergleich-wrapper")) ||
-                        (n.querySelector && n.querySelector(".vergleich-wrapper"))) {
-                        boot();
-                        return;
-                    }
-                }
-            }
-        });
-        mo.observe(document.body || document.documentElement, { childList: true, subtree: true });
-    }
-})();
-</script>
-        <?php
-    }
 }

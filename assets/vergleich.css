@@ -371,11 +371,11 @@
 }
 
 .vergleich-nav--prev {
-    left: calc(var(--vgl-label-width, 200px) + var(--vgl-nav-offset, 12px));
+    left: calc(var(--vgl-label-width, 200px) + var(--vgl-nav-offset, 12px) + var(--vgl-nav-offset-x, 0px));
 }
 
 .vergleich-nav--next {
-    right: var(--vgl-nav-offset, 12px);
+    right: calc(var(--vgl-nav-offset, 12px) - var(--vgl-nav-offset-x, 0px));
 }
 
 /* Zebra-Streifen — wirkt nur auf die Card-Zellen, nicht auf die linke
