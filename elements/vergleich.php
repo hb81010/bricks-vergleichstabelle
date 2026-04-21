@@ -1143,6 +1143,7 @@ class Element_Vergleich extends \Bricks\Element {
                     'button'  => esc_html__( 'Button', 'bricks-vergleich' ),
                     'rating'  => esc_html__( 'Sterne-Rating', 'bricks-vergleich' ),
                     'bool'    => esc_html__( 'Ja/Nein (Check / Cross)', 'bricks-vergleich' ),
+                    'score'   => esc_html__( 'Bewertung (Note / Punkte)', 'bricks-vergleich' ),
                     'list'    => esc_html__( 'Liste mit Icon (Vor-/Nachteile)', 'bricks-vergleich' ),
                     'manual'  => esc_html__( 'Manuell pro Spalte', 'bricks-vergleich' ),
                     'html'    => esc_html__( 'HTML / Shortcode', 'bricks-vergleich' ),
@@ -1392,6 +1393,107 @@ class Element_Vergleich extends \Bricks\Element {
                 'default'     => '',
                 'placeholder' => esc_html__( 'z.B. Nein — leer = nur Icon', 'bricks-vergleich' ),
                 'required'    => [ 'type', '=', 'bool' ],
+            ],
+
+            // ───── SCORE (Bewertung als Zelle, z.B. Note 1,5 oder 88 Punkte) ─────
+            'scoreKey' => [
+                'label'          => esc_html__( 'Meta-Key oder Dynamic Data', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'placeholder'    => esc_html__( 'z.B. bewertung oder {acf:bewertung}', 'bricks-vergleich' ),
+                'description'    => esc_html__( 'Entweder reiner Meta-Key oder ein DD-Tag. Nicht-numerische Werte werden unverändert ausgegeben.', 'bricks-vergleich' ),
+                'required'       => [ 'type', '=', 'score' ],
+            ],
+            'scoreDecimals' => [
+                'label'       => esc_html__( 'Dezimalstellen', 'bricks-vergleich' ),
+                'type'        => 'number',
+                'min'         => 0, 'max' => 4,
+                'placeholder' => '1',
+                'required'    => [ 'type', '=', 'score' ],
+            ],
+            'scoreDecSep' => [
+                'label'    => esc_html__( 'Dezimal-Trennzeichen', 'bricks-vergleich' ),
+                'type'     => 'select',
+                'options'  => [
+                    ',' => esc_html__( 'Komma (1,5)', 'bricks-vergleich' ),
+                    '.' => esc_html__( 'Punkt (1.5)', 'bricks-vergleich' ),
+                ],
+                'default'  => ',',
+                'required' => [ 'type', '=', 'score' ],
+            ],
+            'scorePrefix' => [
+                'label'          => esc_html__( 'Präfix', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'placeholder'    => esc_html__( 'z.B. Note', 'bricks-vergleich' ),
+                'required'       => [ 'type', '=', 'score' ],
+            ],
+            'scoreSuffix' => [
+                'label'          => esc_html__( 'Suffix', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'placeholder'    => esc_html__( 'z.B. /5', 'bricks-vergleich' ),
+                'required'       => [ 'type', '=', 'score' ],
+            ],
+            'scoreFallback' => [
+                'label'          => esc_html__( 'Fallback wenn leer', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'placeholder'    => '-',
+                'description'    => esc_html__( 'Wird angezeigt, wenn der Wert leer ist. Leer lassen um die Zelle komplett leer zu lassen.', 'bricks-vergleich' ),
+                'required'       => [ 'type', '=', 'score' ],
+            ],
+            'scoreHideEmpty' => [
+                'label'       => esc_html__( 'Zelle verbergen, wenn leer', 'bricks-vergleich' ),
+                'type'        => 'checkbox',
+                'description' => esc_html__( 'Kein Fallback anzeigen — Zelle bleibt leer, keine Ausgabe.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'score' ],
+            ],
+            '_sepScoreStyle' => [
+                'type'     => 'separator',
+                'label'    => esc_html__( 'Optisches Styling', 'bricks-vergleich' ),
+                'required' => [ 'type', '=', 'score' ],
+            ],
+            'scoreBadge' => [
+                'label'       => esc_html__( 'Als Kapsel / Badge rendern', 'bricks-vergleich' ),
+                'type'        => 'checkbox',
+                'description' => esc_html__( 'Zahl in einer farbigen Kapsel (Pill) — wie der Bewertungs-Badge auf dem Bild.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'score' ],
+            ],
+            'scoreBgColor' => [
+                'label'    => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
+                'type'     => 'color',
+                'required' => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
+            ],
+            'scoreTextColor' => [
+                'label'    => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
+                'type'     => 'color',
+                'required' => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
+            ],
+            'scoreFontSize' => [
+                'label'       => esc_html__( 'Schriftgröße', 'bricks-vergleich' ),
+                'type'        => 'number', 'units' => true,
+                'placeholder' => '16px',
+                'required'    => [ 'type', '=', 'score' ],
+            ],
+            'scoreFontWeight' => [
+                'label'    => esc_html__( 'Schriftstärke', 'bricks-vergleich' ),
+                'type'     => 'select',
+                'options'  => [ '400' => '400', '500' => '500', '600' => '600', '700' => '700', '800' => '800' ],
+                'placeholder' => '700',
+                'required' => [ 'type', '=', 'score' ],
+            ],
+            'scorePadding' => [
+                'label'       => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+                'type'        => 'spacing',
+                'placeholder' => [ 'top' => '6px', 'right' => '12px', 'bottom' => '6px', 'left' => '12px' ],
+                'required'    => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
+            ],
+            'scoreRadius' => [
+                'label'       => esc_html__( 'Ecken-Radius', 'bricks-vergleich' ),
+                'type'        => 'number', 'units' => true,
+                'placeholder' => '9999px',
+                'required'    => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
             ],
 
             // ───── LIST (Icon-Liste pro Spalte, z.B. Vorteile / Nachteile) ─────
@@ -2362,6 +2464,7 @@ class Element_Vergleich extends \Bricks\Element {
                 case 'button':  $content = $this->render_cell_button( $row, $idx );  break;
                 case 'rating':  $content = $this->render_cell_rating( $row );  break;
                 case 'bool':    $content = $this->render_cell_bool( $row );    break;
+                case 'score':   $content = $this->render_cell_score( $row );   break;
                 case 'list':    $content = $this->render_cell_list( $row );    break;
                 case 'manual':  $content = $this->render_cell_manual( $row );  break;
                 case 'html':    $content = $this->render_cell_html( $row );    break;
@@ -2780,6 +2883,79 @@ class Element_Vergleich extends \Bricks\Element {
      * Manuelle Werte pro Produkt-Spalte. Greift via Bricks-Query-Loop-Index
      * auf das i-te Sub-Repeater-Item zu. Ohne Loop (einzelne Demo-Card) → Index 0.
      */
+    private function render_cell_score( $row ) {
+        $key         = isset( $row['scoreKey'] ) ? trim( (string) $row['scoreKey'] ) : '';
+        $decimals    = isset( $row['scoreDecimals'] ) && $row['scoreDecimals'] !== '' ? max( 0, min( 4, (int) $row['scoreDecimals'] ) ) : 1;
+        $dec_sep     = isset( $row['scoreDecSep'] ) && $row['scoreDecSep'] === '.' ? '.' : ',';
+        $prefix      = $this->dd_string( (string) ( $row['scorePrefix'] ?? '' ) );
+        $suffix      = $this->dd_string( (string) ( $row['scoreSuffix'] ?? '' ) );
+        $hide_empty  = ! empty( $row['scoreHideEmpty'] );
+        $as_badge    = ! empty( $row['scoreBadge'] );
+
+        // Rohwert auflösen — DD-Tag oder reiner Meta-Key.
+        $raw_str = '';
+        if ( $key !== '' ) {
+            if ( strpos( $key, '{' ) !== false ) {
+                $resolved = $this->dd_string( $key );
+                $raw_str  = is_string( $resolved ) ? trim( $resolved ) : '';
+                // Wenn Bricks das Tag nicht auflösen konnte, bleibt der Roh-Tag
+                // stehen — dann werten wir als "leer".
+                if ( $raw_str === $key ) $raw_str = '';
+            } else {
+                $post_id = 0;
+                if ( class_exists( '\Bricks\Query' ) && method_exists( '\Bricks\Query', 'get_loop_object_id' ) && \Bricks\Query::is_looping() ) {
+                    $post_id = (int) \Bricks\Query::get_loop_object_id();
+                }
+                if ( ! $post_id ) $post_id = (int) get_the_ID();
+                if ( $post_id ) {
+                    $meta = get_post_meta( $post_id, $key, true );
+                    if ( is_array( $meta ) ) $meta = reset( $meta );
+                    $raw_str = is_scalar( $meta ) ? trim( (string) $meta ) : '';
+                }
+            }
+        }
+
+        $is_empty = ( $raw_str === '' );
+        if ( $is_empty ) {
+            if ( $hide_empty ) return '';
+            $fb = isset( $row['scoreFallback'] ) ? (string) $row['scoreFallback'] : '';
+            if ( $fb === '' ) return '';
+            $raw_str = (string) $this->dd_string( $fb );
+            if ( trim( $raw_str ) === '' ) return '';
+        }
+
+        // Numerisch? → mit Dezimalstellen formatieren (Komma→Punkt vor parseFloat,
+        // dann Ausgabe mit gewähltem Trennzeichen). Nicht-numerisches durchreichen.
+        $display    = $raw_str;
+        $normalized = str_replace( ',', '.', $raw_str );
+        if ( $normalized !== '' && is_numeric( $normalized ) ) {
+            $display = number_format( (float) $normalized, $decimals, $dec_sep, '' );
+        }
+
+        // Inline-Styling (Canvas-robust).
+        $font_size   = $this->get_css_value( $row['scoreFontSize'] ?? null, $as_badge ? '14px' : '16px' );
+        $font_weight = isset( $row['scoreFontWeight'] ) && $row['scoreFontWeight'] !== '' ? (string) $row['scoreFontWeight'] : '700';
+
+        $style = 'font-size:' . esc_attr( $font_size ) . ';font-weight:' . esc_attr( $font_weight ) . ';line-height:1.2;display:inline-flex;align-items:center;gap:4px;';
+
+        if ( $as_badge ) {
+            $bg      = $this->resolve_color( $row['scoreBgColor'] ?? null ) ?: '#111827';
+            $color   = $this->resolve_color( $row['scoreTextColor'] ?? null ) ?: '#ffffff';
+            $padding = $this->format_spacing( $row['scorePadding'] ?? null, '6px 12px' );
+            $radius  = $this->get_css_value( $row['scoreRadius'] ?? null, '9999px' );
+            $style .= 'background:' . esc_attr( $bg ) . ';color:' . esc_attr( $color ) . ';'
+                   .  'padding:' . esc_attr( $padding ) . ';border-radius:' . esc_attr( $radius ) . ';'
+                   .  'box-shadow:0 1px 2px rgba(0,0,0,.12);white-space:nowrap;';
+        }
+
+        $html  = '<span class="vergleich-score-cell' . ( $as_badge ? ' is-badge' : '' ) . '" style="' . esc_attr( $style ) . '">';
+        if ( $prefix !== '' ) $html .= '<span class="vergleich-score-cell__prefix" style="opacity:.85;">' . esc_html( $prefix ) . '</span>';
+        $html .= '<span class="vergleich-score-cell__value">' . esc_html( $display ) . '</span>';
+        if ( $suffix !== '' ) $html .= '<span class="vergleich-score-cell__suffix" style="opacity:.85;">' . esc_html( $suffix ) . '</span>';
+        $html .= '</span>';
+        return $html;
+    }
+
     private function render_cell_list( $row ) {
         $source       = isset( $row['listSource'] ) ? (string) $row['listSource'] : 'dynamic';
         $icon         = $row['listIcon'] ?? null;
