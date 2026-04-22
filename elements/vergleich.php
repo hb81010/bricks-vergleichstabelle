@@ -1842,6 +1842,41 @@ class Element_Vergleich extends \Bricks\Element {
                 'placeholder'    => esc_html__( 'z.B. Details ansehen', 'bricks-vergleich' ),
                 'required'       => [ 'type', '=', 'lightbox' ],
             ],
+            'lightboxTriggerIcon' => [
+                'label'       => esc_html__( 'Icon (optional)', 'bricks-vergleich' ),
+                'type'        => 'icon',
+                'description' => esc_html__( 'Wähle ein Icon aus der Bricks-Library oder füge ein eigenes SVG ein.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxTriggerIconPosition' => [
+                'label'    => esc_html__( 'Icon-Position', 'bricks-vergleich' ),
+                'type'     => 'select',
+                'options'  => [
+                    'left'  => esc_html__( 'Links vom Text', 'bricks-vergleich' ),
+                    'right' => esc_html__( 'Rechts vom Text', 'bricks-vergleich' ),
+                ],
+                'default'  => 'left',
+                'required' => [ 'type', '=', 'lightbox' ],
+                // Optische Sichtbarkeit nur, wenn Icon gesetzt ist.
+                // Bricks required unterstützt nur flache Bedingungen; hier
+                // akzeptieren wir, dass das Feld immer sichtbar ist, aber
+                // ohne Icon hat es schlicht keine Wirkung.
+            ],
+            'lightboxTriggerIconSize' => [
+                'label'       => esc_html__( 'Icon-Größe', 'bricks-vergleich' ),
+                'type'        => 'number',
+                'units'       => true,
+                'placeholder' => '1em',
+                'description' => esc_html__( 'Leer = 1em (scaled mit der Button-Schriftgröße). Eigener Wert z.B. 18px.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxTriggerIconGap' => [
+                'label'       => esc_html__( 'Abstand Icon ↔ Text', 'bricks-vergleich' ),
+                'type'        => 'number',
+                'units'       => true,
+                'placeholder' => '6px',
+                'required'    => [ 'type', '=', 'lightbox' ],
+            ],
             'lightboxTitle' => [
                 'label'          => esc_html__( 'Dialog-Titel (optional)', 'bricks-vergleich' ),
                 'type'           => 'text',
@@ -3676,13 +3711,47 @@ class Element_Vergleich extends \Bricks\Element {
         if ( $max_w !== '' ) $dlg_style .= '--vgl-lb-max-w:' . $max_w . ';';
         if ( $max_h !== '' ) $dlg_style .= '--vgl-lb-max-h:' . $max_h . ';';
 
+        // Icon rendern — gleicher Pfad wie render_cell_icon: nutzt
+        // Bricks\Element::render_icon(), damit Icon-Library und custom-SVGs
+        // beide automatisch unterstützt werden.
+        $icon_html = '';
+        $icon      = $row['lightboxTriggerIcon'] ?? null;
+        $icon_pos  = isset( $row['lightboxTriggerIconPosition'] ) ? (string) $row['lightboxTriggerIconPosition'] : 'left';
+        if ( $icon_pos !== 'right' ) $icon_pos = 'left';
+        if ( is_array( $icon ) && ( ! empty( $icon['icon'] ) || ! empty( $icon['svg'] ) ) ) {
+            $icon_size  = $this->get_css_value( $row['lightboxTriggerIconSize'] ?? null, '' );
+            $icon_style = '';
+            if ( $icon_size !== '' ) {
+                // Icon-Font nutzt font-size, inline-SVG nutzt width/height.
+                // Beides setzen, dann greift jeweils das Relevante.
+                $icon_style = 'font-size:' . esc_attr( $icon_size ) . ';width:' . esc_attr( $icon_size ) . ';height:' . esc_attr( $icon_size ) . ';';
+            }
+            $icon_attrs = [
+                'class' => [ 'vergleich-lightbox-trigger__icon' ],
+            ];
+            if ( $icon_style !== '' ) $icon_attrs['style'] = $icon_style;
+            $icon_html = \Bricks\Element::render_icon( $icon, $icon_attrs );
+        }
+
+        // Gap zwischen Icon und Text: Button-CSS hat Default 6px; nur
+        // überschreiben, wenn der User einen eigenen Wert gesetzt hat.
+        $icon_gap = $this->get_css_value( $row['lightboxTriggerIconGap'] ?? null, '' );
+        if ( $icon_html !== '' && $icon_gap !== '' ) {
+            $btn_inline .= 'gap:' . esc_attr( $icon_gap ) . ';';
+        }
+
         $btn_attrs = 'class="' . esc_attr( implode( ' ', $btn_classes ) ) . '"';
         if ( $btn_inline !== '' ) $btn_attrs .= ' style="' . esc_attr( $btn_inline ) . '"';
-        $html  = '<button type="button" ' . $btn_attrs
-               . ' data-vgl-lightbox-open="' . esc_attr( $dlg_id ) . '"'
-               . ' aria-haspopup="dialog">'
-               . '<span class="vergleich-lightbox-trigger__text">' . esc_html( $trigger_text ) . '</span>'
-               . '</button>';
+        $text_html = '<span class="vergleich-lightbox-trigger__text">' . esc_html( $trigger_text ) . '</span>';
+        $inner = ( $icon_pos === 'right' )
+            ? $text_html . $icon_html
+            : $icon_html . $text_html;
+
+        $html = '<button type="button" ' . $btn_attrs
+              . ' data-vgl-lightbox-open="' . esc_attr( $dlg_id ) . '"'
+              . ' aria-haspopup="dialog">'
+              . $inner
+              . '</button>';
 
         $html .= '<dialog class="' . esc_attr( $dlg_class ) . '" id="' . esc_attr( $dlg_id ) . '"';
         if ( $dlg_style !== '' ) {
@@ -4406,6 +4475,24 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-lightbox-trigger:focus-visible {
             outline: 2px solid currentColor;
             outline-offset: 2px;
+        }
+        .vergleich-lightbox-trigger__icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            line-height: 1;
+        }
+        .vergleich-lightbox-trigger__icon svg {
+            width: 1em;
+            height: 1em;
+            display: block;
+        }
+        /* Wenn der User eine fixe Größe gesetzt hat (inline style), soll das
+           SVG die width/height vom Wrapper übernehmen statt 1em. */
+        .vergleich-lightbox-trigger__icon[style*="width"] svg {
+            width: inherit;
+            height: inherit;
         }
 
         .vergleich-lightbox-dialog {
