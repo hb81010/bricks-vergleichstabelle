@@ -1657,36 +1657,132 @@ class Element_Vergleich extends \Bricks\Element {
                 'label'    => esc_html__( 'Optisches Styling', 'bricks-vergleich' ),
                 'required' => [ 'type', '=', 'score' ],
             ],
+            'scoreDisplay' => [
+                'label'    => esc_html__( 'Darstellung', 'bricks-vergleich' ),
+                'type'     => 'select',
+                'options'  => [
+                    'plain' => esc_html__( 'Nur Zahl (minimal)', 'bricks-vergleich' ),
+                    'badge' => esc_html__( 'Badge / Kapsel (Pill)', 'bricks-vergleich' ),
+                    'card'  => esc_html__( 'Karte mit Verdikt darunter', 'bricks-vergleich' ),
+                ],
+                'default'  => 'plain',
+                'required' => [ 'type', '=', 'score' ],
+            ],
             'scoreBadge' => [
-                'label'       => esc_html__( 'Als Kapsel / Badge rendern', 'bricks-vergleich' ),
+                'label'       => esc_html__( 'Als Kapsel / Badge rendern (Legacy)', 'bricks-vergleich' ),
                 'type'        => 'checkbox',
-                'description' => esc_html__( 'Zahl in einer farbigen Kapsel (Pill) — wie der Bewertungs-Badge auf dem Bild.', 'bricks-vergleich' ),
+                'description' => esc_html__( 'Ersetzt durch "Darstellung" oben. Bleibt aus Rückwärtskompatibilität.', 'bricks-vergleich' ),
                 'required'    => [ 'type', '=', 'score' ],
             ],
             'scoreBgColor' => [
                 'label'    => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
                 'type'     => 'color',
-                'required' => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
+                'required' => [ 'type', '=', 'score' ],
             ],
             'scoreTypography' => [
-                'label'    => esc_html__( 'Typografie', 'bricks-vergleich' ),
-                'type'     => 'typography',
-                'required' => [ 'type', '=', 'score' ],
+                'label'       => esc_html__( 'Typografie (Gesamtbereich)', 'bricks-vergleich' ),
+                'type'        => 'typography',
+                'description' => esc_html__( 'Fallback-Typografie für Zahl + Suffix. Im Karten-Modus gibt es eigene Typo-Controls weiter unten, die das überschreiben.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'score' ],
             ],
             'scorePadding' => [
                 'label'       => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
                 'type'        => 'spacing',
-                'required'    => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
+                'required'    => [ 'type', '=', 'score' ],
             ],
             'scoreBorder' => [
                 'label'       => esc_html__( 'Rahmen', 'bricks-vergleich' ),
                 'type'        => 'border',
-                'required'    => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
+                'required'    => [ 'type', '=', 'score' ],
             ],
             'scoreShadow' => [
                 'label'       => esc_html__( 'Schatten', 'bricks-vergleich' ),
                 'type'        => 'box-shadow',
-                'required'    => [ [ 'type', '=', 'score' ], [ 'scoreBadge', '=', true ] ],
+                'required'    => [ 'type', '=', 'score' ],
+            ],
+
+            // ─── Karten-Modus ───
+            '_sepScoreCard' => [
+                'type'     => 'separator',
+                'label'    => esc_html__( 'Karten-Modus: Zahl groß, Verdikt unten', 'bricks-vergleich' ),
+                'required' => [ 'scoreDisplay', '=', 'card' ],
+            ],
+            'scoreCardWidth' => [
+                'label'       => esc_html__( 'Karten-Breite', 'bricks-vergleich' ),
+                'type'        => 'text',
+                'placeholder' => '140px',
+                'description' => esc_html__( 'CSS-Wert — z.B. 140px, 8rem, 80%. Leer = Content-Breite.', 'bricks-vergleich' ),
+                'required'    => [ 'scoreDisplay', '=', 'card' ],
+            ],
+            'scoreValueTypography' => [
+                'label'       => esc_html__( 'Typografie: Zahl (groß)', 'bricks-vergleich' ),
+                'type'        => 'typography',
+                'description' => esc_html__( 'Default: fett, groß.', 'bricks-vergleich' ),
+                'required'    => [ 'scoreDisplay', '=', 'card' ],
+            ],
+            'scoreSuffixTypography' => [
+                'label'       => esc_html__( 'Typografie: Suffix (z.B. %)', 'bricks-vergleich' ),
+                'type'        => 'typography',
+                'description' => esc_html__( 'Default: deutlich kleiner als die Zahl, hochgestellt rechts daneben.', 'bricks-vergleich' ),
+                'required'    => [ 'scoreDisplay', '=', 'card' ],
+            ],
+            'scoreValuePadding' => [
+                'label'    => esc_html__( 'Innenabstand: Zahl-Bereich', 'bricks-vergleich' ),
+                'type'     => 'spacing',
+                'required' => [ 'scoreDisplay', '=', 'card' ],
+            ],
+            'scoreVerdictSource' => [
+                'label'   => esc_html__( 'Verdikt-Quelle', 'bricks-vergleich' ),
+                'type'    => 'select',
+                'options' => [
+                    'text'  => esc_html__( 'Fester Text / Dynamic Data', 'bricks-vergleich' ),
+                    'bands' => esc_html__( 'Automatisch nach Wertebereich', 'bricks-vergleich' ),
+                    'none'  => esc_html__( 'Kein Verdikt (nur Zahl)', 'bricks-vergleich' ),
+                ],
+                'default'  => 'text',
+                'required' => [ 'scoreDisplay', '=', 'card' ],
+            ],
+            'scoreVerdictText' => [
+                'label'          => esc_html__( 'Verdikt-Text', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'placeholder'    => esc_html__( 'z.B. Sehr Gut oder {cf:verdict}', 'bricks-vergleich' ),
+                'required'       => [ [ 'scoreDisplay', '=', 'card' ], [ 'scoreVerdictSource', '=', 'text' ] ],
+            ],
+            'scoreVerdictBands' => [
+                'label'         => esc_html__( 'Wertebereiche', 'bricks-vergleich' ),
+                'type'          => 'repeater',
+                'titleProperty' => 'label',
+                'description'   => esc_html__( 'Ab-Schwelle abwärts zuordnen. Der erste Treffer (Wert ≥ Schwelle) gewinnt — also Bänder von hoch nach niedrig anlegen (90 → „Sehr Gut", 75 → „Gut", 50 → „OK").', 'bricks-vergleich' ),
+                'required'      => [ [ 'scoreDisplay', '=', 'card' ], [ 'scoreVerdictSource', '=', 'bands' ] ],
+                'fields'        => [
+                    'min' => [
+                        'label'       => esc_html__( 'Ab-Schwelle', 'bricks-vergleich' ),
+                        'type'        => 'number',
+                        'placeholder' => '90',
+                    ],
+                    'label' => [
+                        'label'          => esc_html__( 'Label', 'bricks-vergleich' ),
+                        'type'           => 'text',
+                        'hasDynamicData' => 'text',
+                        'placeholder'    => esc_html__( 'z.B. Sehr Gut', 'bricks-vergleich' ),
+                    ],
+                ],
+            ],
+            'scoreVerdictBg' => [
+                'label'    => esc_html__( 'Hintergrundfarbe: Verdikt-Streifen', 'bricks-vergleich' ),
+                'type'     => 'color',
+                'required' => [ [ 'scoreDisplay', '=', 'card' ], [ 'scoreVerdictSource', '!=', 'none' ] ],
+            ],
+            'scoreVerdictTypography' => [
+                'label'    => esc_html__( 'Typografie: Verdikt', 'bricks-vergleich' ),
+                'type'     => 'typography',
+                'required' => [ [ 'scoreDisplay', '=', 'card' ], [ 'scoreVerdictSource', '!=', 'none' ] ],
+            ],
+            'scoreVerdictPadding' => [
+                'label'    => esc_html__( 'Innenabstand: Verdikt', 'bricks-vergleich' ),
+                'type'     => 'spacing',
+                'required' => [ [ 'scoreDisplay', '=', 'card' ], [ 'scoreVerdictSource', '!=', 'none' ] ],
             ],
 
             // ───── LIST (Icon-Liste pro Spalte, z.B. Vorteile / Nachteile) ─────
@@ -3566,7 +3662,15 @@ class Element_Vergleich extends \Bricks\Element {
         $prefix      = $this->dd_string( (string) ( $row['scorePrefix'] ?? '' ) );
         $suffix      = $this->dd_string( (string) ( $row['scoreSuffix'] ?? '' ) );
         $hide_empty  = ! empty( $row['scoreHideEmpty'] );
-        $as_badge    = ! empty( $row['scoreBadge'] );
+
+        // Darstellungs-Modus: neues scoreDisplay (plain/badge/card) hat
+        // Vorrang; Legacy-Checkbox scoreBadge bleibt als Fallback.
+        $display_mode = isset( $row['scoreDisplay'] ) ? (string) $row['scoreDisplay'] : '';
+        if ( ! in_array( $display_mode, [ 'plain', 'badge', 'card' ], true ) ) {
+            $display_mode = ! empty( $row['scoreBadge'] ) ? 'badge' : 'plain';
+        }
+        $as_badge = ( $display_mode === 'badge' );
+        $as_card  = ( $display_mode === 'card' );
 
         // Rohwert auflösen — DD-Tag oder reiner Meta-Key.
         $raw_str = '';
@@ -3608,8 +3712,16 @@ class Element_Vergleich extends \Bricks\Element {
             $display = number_format( (float) $normalized, $decimals, $dec_sep, '' );
         }
 
-        // Inline-Styling (Canvas-robust). Typografie aus dem Bricks-Control
-        // extrahieren, Defaults greifen nur, wenn nichts gesetzt.
+        // ═══════════════════════════════════════════════════════════════════
+        // CARD-Modus: eigene Struktur — Zahl groß oben, Verdikt unten
+        // ═══════════════════════════════════════════════════════════════════
+        if ( $as_card ) {
+            return $this->render_score_card( $row, $display, $prefix, $suffix );
+        }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // Plain / Badge — bisheriges Rendering
+        // ═══════════════════════════════════════════════════════════════════
         $typo_defaults = [
             'font-size'   => $as_badge ? '14px' : '16px',
             'font-weight' => '700',
@@ -3635,6 +3747,120 @@ class Element_Vergleich extends \Bricks\Element {
         $html .= '<span class="vergleich-score-cell__value">' . esc_html( $display ) . '</span>';
         if ( $suffix !== '' ) $html .= '<span class="vergleich-score-cell__suffix" style="opacity:.85;">' . esc_html( $suffix ) . '</span>';
         $html .= '</span>';
+        return $html;
+    }
+
+    /**
+     * Score-Karten-Modus: Outer-Box mit zwei Regionen.
+     * Oben: groß gesetzte Zahl + hochgestelltes Suffix.
+     * Unten: Verdikt-Streifen (z.B. "Sehr Gut"), optional, mit eigener
+     * Hintergrundfarbe und Typografie.
+     */
+    private function render_score_card( $row, $display, $prefix, $suffix ) {
+        // Verdikt ermitteln — je nach Quelle
+        $verdict_source = isset( $row['scoreVerdictSource'] ) ? (string) $row['scoreVerdictSource'] : 'text';
+        if ( ! in_array( $verdict_source, [ 'text', 'bands', 'none' ], true ) ) $verdict_source = 'text';
+        $verdict = '';
+
+        if ( $verdict_source === 'text' ) {
+            $v_raw = (string) ( $row['scoreVerdictText'] ?? '' );
+            $verdict = trim( $this->dd_string( $v_raw ) );
+        } elseif ( $verdict_source === 'bands' ) {
+            $bands = isset( $row['scoreVerdictBands'] ) && is_array( $row['scoreVerdictBands'] )
+                ? array_values( array_filter( $row['scoreVerdictBands'], 'is_array' ) )
+                : [];
+            // Bänder nach min desc sortieren: erster Treffer mit wert >= min gewinnt.
+            usort( $bands, function ( $a, $b ) {
+                $ma = isset( $a['min'] ) && $a['min'] !== '' ? (float) $a['min'] : -INF;
+                $mb = isset( $b['min'] ) && $b['min'] !== '' ? (float) $b['min'] : -INF;
+                return ( $ma < $mb ) ? 1 : ( ( $ma > $mb ) ? -1 : 0 );
+            } );
+            // Numerischen Wert aus $display zurückparsen (Komma → Punkt).
+            $num = null;
+            $norm = str_replace( ',', '.', $display );
+            if ( is_numeric( $norm ) ) $num = (float) $norm;
+            if ( $num !== null ) {
+                foreach ( $bands as $b ) {
+                    $min = isset( $b['min'] ) && $b['min'] !== '' ? (float) $b['min'] : null;
+                    if ( $min === null ) continue;
+                    if ( $num >= $min ) {
+                        $verdict = trim( $this->dd_string( (string) ( $b['label'] ?? '' ) ) );
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Outer-Box-Styling: nutzt die vorhandenen Controls (bg / border /
+        // padding / shadow) — die wirken im Card-Modus auf den Wrapper.
+        $card_bg     = $this->resolve_color( $row['scoreBgColor'] ?? null ) ?: '#e5e7eb';
+        $card_border = $this->format_border( $row['scoreBorder'] ?? null, [ 'radius' => '14px' ] );
+        $card_shadow = $this->format_box_shadow( $row['scoreShadow'] ?? null );
+        $card_width  = $this->get_css_value( $row['scoreCardWidth'] ?? null, '' );
+
+        $card_style = 'display:inline-flex;flex-direction:column;overflow:hidden;'
+                    . 'background:' . esc_attr( $card_bg ) . ';'
+                    . $card_border . $card_shadow;
+        if ( $card_width !== '' ) $card_style .= 'width:' . esc_attr( $card_width ) . ';';
+
+        // Zahl-Region: Typografie mit sinnvollem Default (groß + fett).
+        $value_typo = $this->format_typography( $row['scoreValueTypography'] ?? null, [
+            'font-size'   => '2.25rem',
+            'font-weight' => '800',
+            'line-height' => '1',
+        ] );
+        $suffix_typo = $this->format_typography( $row['scoreSuffixTypography'] ?? null, [
+            'font-size'   => '0.9rem',
+            'font-weight' => '600',
+            'line-height' => '1',
+        ] );
+        $value_pad = '';
+        if ( ! empty( $row['scoreValuePadding'] ) && is_array( $row['scoreValuePadding'] ) ) {
+            $vp_any = array_filter( $row['scoreValuePadding'], function ( $v ) { return $v !== '' && $v !== null; } );
+            if ( ! empty( $vp_any ) ) {
+                $value_pad = 'padding:' . esc_attr( $this->format_spacing( $row['scoreValuePadding'], '' ) ) . ';';
+            }
+        }
+        if ( $value_pad === '' ) $value_pad = 'padding:18px 16px;';
+
+        $value_region_style = 'display:flex;align-items:baseline;justify-content:center;gap:4px;'
+                            . $value_pad;
+
+        $html  = '<div class="vergleich-score-cell is-card" style="' . esc_attr( $card_style ) . '">';
+        $html .= '<div class="vergleich-score-cell__value-region" style="' . esc_attr( $value_region_style ) . '">';
+        if ( $prefix !== '' ) {
+            $html .= '<span class="vergleich-score-cell__prefix" style="' . esc_attr( $suffix_typo . 'opacity:.8;' ) . '">' . esc_html( $prefix ) . '</span>';
+        }
+        $html .= '<span class="vergleich-score-cell__value" style="' . esc_attr( $value_typo ) . '">' . esc_html( $display ) . '</span>';
+        if ( $suffix !== '' ) {
+            $html .= '<span class="vergleich-score-cell__suffix" style="' . esc_attr( $suffix_typo . 'align-self:flex-start;' ) . '">' . esc_html( $suffix ) . '</span>';
+        }
+        $html .= '</div>';
+
+        if ( $verdict_source !== 'none' && $verdict !== '' ) {
+            $verdict_bg   = $this->resolve_color( $row['scoreVerdictBg'] ?? null ) ?: 'rgba(0,0,0,0.08)';
+            $verdict_typo = $this->format_typography( $row['scoreVerdictTypography'] ?? null, [
+                'font-size'   => '0.875rem',
+                'font-weight' => '600',
+                'line-height' => '1.3',
+            ] );
+            $verdict_pad = '10px 12px';
+            if ( ! empty( $row['scoreVerdictPadding'] ) && is_array( $row['scoreVerdictPadding'] ) ) {
+                $vrp_any = array_filter( $row['scoreVerdictPadding'], function ( $v ) { return $v !== '' && $v !== null; } );
+                if ( ! empty( $vrp_any ) ) {
+                    $verdict_pad = $this->format_spacing( $row['scoreVerdictPadding'], $verdict_pad );
+                }
+            }
+            $verdict_style = 'background:' . esc_attr( $verdict_bg ) . ';'
+                           . 'padding:' . esc_attr( $verdict_pad ) . ';'
+                           . 'text-align:center;'
+                           . $verdict_typo;
+            $html .= '<div class="vergleich-score-cell__verdict" style="' . esc_attr( $verdict_style ) . '">'
+                   . esc_html( $verdict )
+                   . '</div>';
+        }
+
+        $html .= '</div>';
         return $html;
     }
 
