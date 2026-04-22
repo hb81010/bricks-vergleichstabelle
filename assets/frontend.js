@@ -472,6 +472,47 @@
         document.querySelectorAll(".vergleich-wrapper").forEach(init);
     }
 
+    // Lightbox-Zellen: ein globaler delegierter Click-Handler reicht. Der
+    // Dialog wird via showModal() geöffnet — damit landet er im Browser-
+    // Top-Layer, ignoriert overflow/transform/filter der Vorfahren und
+    // bekommt ESC + Backdrop-Click for free. Backdrop-Click schließen wir
+    // manuell, weil die Browser das nur über ::backdrop-Klicks auf dem
+    // <dialog>-Element zulassen, nicht automatisch.
+    if (!document._vglLightboxBound) {
+        document._vglLightboxBound = true;
+        document.addEventListener("click", function(e){
+            var t = e.target;
+            if (!t || !t.closest) return;
+            // Trigger
+            var trigger = t.closest("[data-vgl-lightbox-open]");
+            if (trigger) {
+                var id = trigger.getAttribute("data-vgl-lightbox-open");
+                var dlg = id ? document.getElementById(id) : null;
+                if (dlg && typeof dlg.showModal === "function") {
+                    try { dlg.showModal(); } catch (err) { /* already open */ }
+                } else if (dlg && typeof dlg.show === "function") {
+                    // Alter Fallback ohne Top-Layer — funktioniert visuell,
+                    // aber ohne Modal-Verhalten.
+                    try { dlg.show(); } catch (err) {}
+                }
+                return;
+            }
+            // Close-Button
+            var closer = t.closest("[data-vgl-lightbox-close]");
+            if (closer) {
+                var dlg2 = closer.closest("dialog.vergleich-lightbox-dialog");
+                if (dlg2 && typeof dlg2.close === "function") dlg2.close();
+                return;
+            }
+            // Backdrop-Click: Browser feuern click auf das <dialog>-Element
+            // selbst, wenn auf den Backdrop geklickt wird — nicht auf den
+            // inneren Content. Also: wenn target === dialog, schließen.
+            if (t.tagName === "DIALOG" && t.classList.contains("vergleich-lightbox-dialog")) {
+                if (typeof t.close === "function") t.close();
+            }
+        });
+    }
+
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", boot);
     } else {

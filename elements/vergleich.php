@@ -39,6 +39,9 @@ class Element_Vergleich extends \Bricks\Element {
     /** Index der ersten aufklappbaren Zeile (fuer Fade-Peek). -1 = keine. */
     public $_first_collapsible_idx = -1;
 
+    /** Zähler für eindeutige Lightbox-Dialog-IDs im aktuellen Render-Durchlauf. */
+    public $_lightbox_counter = 0;
+
     public function get_label() {
         return esc_html__( 'Produkt-Vergleichstabelle', 'bricks-vergleich' );
     }
@@ -1284,6 +1287,7 @@ class Element_Vergleich extends \Bricks\Element {
                     'manual'  => esc_html__( 'Manuell pro Spalte', 'bricks-vergleich' ),
                     'html'    => esc_html__( 'HTML / Shortcode', 'bricks-vergleich' ),
                     'dynamic' => esc_html__( 'Dynamische Daten (Tag)', 'bricks-vergleich' ),
+                    'lightbox'=> esc_html__( 'Lightbox / Popover (Mehr Infos)', 'bricks-vergleich' ),
                 ],
                 'default' => 'text',
             ],
@@ -1829,6 +1833,49 @@ class Element_Vergleich extends \Bricks\Element {
                 'required'       => [ 'type', '=', 'dynamic' ],
             ],
 
+            // ───── LIGHTBOX ─────
+            'lightboxTriggerText' => [
+                'label'          => esc_html__( 'Button-Text', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'default'        => esc_html__( 'Mehr Infos', 'bricks-vergleich' ),
+                'placeholder'    => esc_html__( 'z.B. Details ansehen', 'bricks-vergleich' ),
+                'required'       => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxTitle' => [
+                'label'          => esc_html__( 'Dialog-Titel (optional)', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'description'    => esc_html__( 'Erscheint als Überschrift im Popover. Leer = keine Überschrift.', 'bricks-vergleich' ),
+                'required'       => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxContent' => [
+                'label'       => esc_html__( 'Inhalt (HTML / Shortcode)', 'bricks-vergleich' ),
+                'type'        => 'code',
+                'mode'        => 'htmlmixed',
+                'description' => esc_html__( 'Dynamic-Data-Tags werden aufgelöst. Shortcodes werden ausgeführt. Mehrere Absätze/Blöcke stapeln sich automatisch untereinander — anders als bei normalen Zellen gibt es hier kein Flex-Layout, das den Inhalt horizontal quetscht.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxTriggerStyle' => [
+                'label'   => esc_html__( 'Button-Stil', 'bricks-vergleich' ),
+                'type'    => 'select',
+                'options' => [
+                    'link'    => esc_html__( 'Link (nur Text)', 'bricks-vergleich' ),
+                    'outline' => esc_html__( 'Outline (Rand)', 'bricks-vergleich' ),
+                    'solid'   => esc_html__( 'Solid (gefüllt)', 'bricks-vergleich' ),
+                ],
+                'default'  => 'link',
+                'required' => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxTriggerColor' => [
+                'label'    => esc_html__( 'Button-Farbe', 'bricks-vergleich' ),
+                'type'     => 'color',
+                'css'      => [
+                    [ 'property' => '--vgl-lb-trigger-color', 'selector' => '' ],
+                ],
+                'required' => [ 'type', '=', 'lightbox' ],
+            ],
+
             // ───── COMMON ─────
             'labelTooltip' => [
                 'label'          => esc_html__( 'Label-Tooltip', 'bricks-vergleich' ),
@@ -2039,6 +2086,13 @@ class Element_Vergleich extends \Bricks\Element {
 
         // Schema.org Runtime — pro Produkt wird später ein Item gesammelt.
         $this->_schema_items = [];
+
+        // Lightbox-Counter auf 0, damit jede gerenderte Tabelle ihre eigenen
+        // ID-Sequenzen kriegt (sonst würden mehrere Tabellen auf einer Seite
+        // kollidieren, falls beide zufällig bei Counter 1 starten — der
+        // Base-Präfix enthält die Bricks-Element-ID, das sollte reichen,
+        // aber sauberer ist reset pro Render).
+        $this->_lightbox_counter = 0;
         $schema_enabled = ! empty( $settings['schemaEnabled'] );
         if ( $schema_enabled ) {
             $this->_schema_runtime = [
@@ -2724,6 +2778,7 @@ class Element_Vergleich extends \Bricks\Element {
                 case 'manual':  $content = $this->render_cell_manual( $row );  break;
                 case 'html':    $content = $this->render_cell_html( $row );    break;
                 case 'dynamic': $content = $this->render_cell_dynamic( $row ); break;
+                case 'lightbox':$content = $this->render_cell_lightbox( $row );break;
                 case 'text':
                 default:        $content = $this->render_cell_text( $row );    break;
             }
@@ -3452,6 +3507,66 @@ class Element_Vergleich extends \Bricks\Element {
         return '<span class="vergleich-dynamic">' . wp_kses_post( $resolved ) . '</span>';
     }
 
+    /**
+     * Lightbox-Zelle: Trigger-Button in der Zelle + zugehöriges <dialog>
+     * direkt daneben. Nutzt natives <dialog> + showModal() — das rendert im
+     * Browser-Top-Layer, ist damit immun gegen overflow:clip der Umgebung
+     * und erbt kein flex-Layout von .vergleich-zelle, sodass mehrzeiliger
+     * Inhalt (Shortcodes, Absätze) naturgemäß untereinander stapelt.
+     *
+     * Der Dialog kriegt eine pro-Render eindeutige ID, damit mehrere
+     * Lightbox-Zellen (z.B. pro Produkt-Card) sich nicht gegenseitig
+     * triggern. Eindeutigkeit: Wrapper-Counter (siehe $_lightbox_counter).
+     */
+    private function render_cell_lightbox( $row ) {
+        $trigger_raw = isset( $row['lightboxTriggerText'] ) && $row['lightboxTriggerText'] !== ''
+            ? (string) $row['lightboxTriggerText']
+            : esc_html__( 'Mehr Infos', 'bricks-vergleich' );
+        $trigger_text = $this->dd_string( $trigger_raw );
+        if ( $trigger_text === '' ) $trigger_text = esc_html__( 'Mehr Infos', 'bricks-vergleich' );
+
+        $title_raw = isset( $row['lightboxTitle'] ) ? (string) $row['lightboxTitle'] : '';
+        $title     = $title_raw !== '' ? $this->dd_string( $title_raw ) : '';
+
+        $body_raw = isset( $row['lightboxContent'] ) ? (string) $row['lightboxContent'] : '';
+        // Dynamic-Data auflösen, dann Shortcodes ausführen — gleicher Pfad
+        // wie beim HTML-Zelltyp, damit Autoren einheitliche Erwartung haben.
+        $body = $body_raw !== '' ? do_shortcode( $this->dd_string( $body_raw ) ) : '';
+
+        // Eindeutige ID pro Dialog-Instanz.
+        if ( ! isset( $this->_lightbox_counter ) ) $this->_lightbox_counter = 0;
+        $this->_lightbox_counter++;
+        $base = isset( $this->id ) && $this->id !== ''
+            ? preg_replace( '/[^a-z0-9_-]/i', '', (string) $this->id )
+            : 'vgl';
+        $dlg_id = 'vgl-lb-' . $base . '-' . $this->_lightbox_counter;
+
+        // Trigger-Stil-Klasse
+        $style = isset( $row['lightboxTriggerStyle'] ) ? (string) $row['lightboxTriggerStyle'] : 'link';
+        if ( ! in_array( $style, [ 'link', 'outline', 'solid' ], true ) ) $style = 'link';
+        $btn_class = 'vergleich-lightbox-trigger is-style-' . $style;
+
+        $html  = '<button type="button" class="' . esc_attr( $btn_class ) . '"'
+               . ' data-vgl-lightbox-open="' . esc_attr( $dlg_id ) . '"'
+               . ' aria-haspopup="dialog">'
+               . '<span class="vergleich-lightbox-trigger__text">' . esc_html( $trigger_text ) . '</span>'
+               . '</button>';
+
+        $html .= '<dialog class="vergleich-lightbox-dialog" id="' . esc_attr( $dlg_id ) . '">';
+        $html .= '<div class="vergleich-lightbox-dialog__inner">';
+        // Close-Button als erstes Child für Tab-Order.
+        $html .= '<button type="button" class="vergleich-lightbox-close" data-vgl-lightbox-close aria-label="'
+               . esc_attr__( 'Schließen', 'bricks-vergleich' ) . '">&times;</button>';
+        if ( $title !== '' ) {
+            $html .= '<h3 class="vergleich-lightbox-dialog__title">' . wp_kses_post( $title ) . '</h3>';
+        }
+        $html .= '<div class="vergleich-lightbox-dialog__body">' . $body . '</div>';
+        $html .= '</div>';
+        $html .= '</dialog>';
+
+        return $html;
+    }
+
     // ==========================================================================
     // HELPERS
     // ==========================================================================
@@ -4119,6 +4234,147 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-wrapper.has-dividers .vergleich-label { border-bottom: 1px solid #e5e7eb; }
         .vergleich-wrapper.has-dividers .vergleich-label:last-child { border-bottom: none; }
         .vergleich-label.is-highlighted { background: #fef3c7; color: #92400e; }
+
+        /* === Lightbox-Zelle ===
+           Die .vergleich-zelle selbst bleibt flex (Plugin-default) — darin
+           liegt nur ein kompakter Trigger-Button. Der eigentliche Inhalt
+           wohnt im <dialog>, das via showModal() in den Browser-Top-Layer
+           gerendert wird: immun gegen overflow:clip/scale/transform der
+           Umgebung, eigener Stacking-Context, und die Kinder im Dialog-Body
+           stapeln natürlich als normaler Block-Flow — genau das, was User
+           erwarten, wenn sie Shortcodes oder mehrzeilige HTML-Blöcke
+           reinstecken. */
+        .vergleich-lightbox-trigger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 6px 12px;
+            margin: 0;
+            font: inherit;
+            font-size: 0.875em;
+            line-height: 1.3;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+            background: transparent;
+            color: var(--vgl-lb-trigger-color, #2563eb);
+            border: 1px solid transparent;
+        }
+        .vergleich-lightbox-trigger.is-style-link {
+            padding: 2px 4px;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .vergleich-lightbox-trigger.is-style-link:hover {
+            text-decoration-thickness: 2px;
+        }
+        .vergleich-lightbox-trigger.is-style-outline {
+            border-color: currentColor;
+        }
+        .vergleich-lightbox-trigger.is-style-outline:hover {
+            background-color: color-mix(in srgb, var(--vgl-lb-trigger-color, #2563eb) 10%, transparent);
+        }
+        .vergleich-lightbox-trigger.is-style-solid {
+            background-color: var(--vgl-lb-trigger-color, #2563eb);
+            color: #fff;
+        }
+        .vergleich-lightbox-trigger.is-style-solid:hover {
+            filter: brightness(0.92);
+        }
+        .vergleich-lightbox-trigger:focus-visible {
+            outline: 2px solid var(--vgl-lb-trigger-color, #2563eb);
+            outline-offset: 2px;
+        }
+
+        .vergleich-lightbox-dialog {
+            /* Natives <dialog>: bringt eigene Default-Styles mit. Wir reseten
+               die, damit unser Layout sauber greift. */
+            padding: 0;
+            border: none;
+            background: transparent;
+            max-width: min(640px, calc(100vw - 32px));
+            max-height: calc(100vh - 32px);
+            width: 100%;
+            color: inherit;
+            /* Textstyle aus der Umgebung erben, damit Lightbox sich an die
+               Seite anpasst statt an Browser-Defaults. */
+            font: inherit;
+            line-height: 1.55;
+        }
+        .vergleich-lightbox-dialog::backdrop {
+            background: rgba(15, 23, 42, 0.55);
+            /* Nur backdrop-filter wenn unterstützt — sonst bleibt die rgba
+               oben als Fallback. */
+            backdrop-filter: blur(3px);
+            -webkit-backdrop-filter: blur(3px);
+        }
+        .vergleich-lightbox-dialog__inner {
+            position: relative;
+            background: #fff;
+            border-radius: 10px;
+            padding: 24px 28px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+            max-height: inherit;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .vergleich-lightbox-dialog__title {
+            margin: 0 0 12px;
+            padding-right: 32px;
+            font-size: 1.25rem;
+            line-height: 1.3;
+            font-weight: 600;
+        }
+        .vergleich-lightbox-dialog__body {
+            /* KEIN flex, KEIN grid mit !important — damit Shortcodes, Listen
+               und HTML-Blöcke im normalen Block-Flow untereinander stapeln.
+               Das war der Grund für diesen Zelltyp. */
+            display: block;
+        }
+        /* Inhaltsblöcke im Body dürfen atmen: Standard-Abstände wie in
+           einem normalen Post-Content-Bereich. */
+        .vergleich-lightbox-dialog__body > * + * {
+            margin-top: 12px;
+        }
+        .vergleich-lightbox-dialog__body img {
+            max-width: 100%;
+            height: auto;
+        }
+        .vergleich-lightbox-close {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            margin: 0;
+            border: none;
+            background: transparent;
+            font-size: 28px;
+            line-height: 1;
+            cursor: pointer;
+            color: #64748b;
+            border-radius: 4px;
+            transition: background-color .15s ease, color .15s ease;
+        }
+        .vergleich-lightbox-close:hover {
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+        .vergleich-lightbox-close:focus-visible {
+            outline: 2px solid var(--vgl-lb-trigger-color, #2563eb);
+            outline-offset: 1px;
+        }
+        @media (max-width: 480px) {
+            .vergleich-lightbox-dialog__inner {
+                padding: 20px 18px;
+                border-radius: 8px;
+            }
+            .vergleich-lightbox-dialog__title {
+                font-size: 1.125rem;
+            }
+        }
 
         /* === Sticky-Zeilen === JS-gesteuert (siehe assets/frontend.js →
            bindStickyRows), weil position:sticky auf Grid-Items mit Subgrid in
