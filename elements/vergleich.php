@@ -1857,22 +1857,79 @@ class Element_Vergleich extends \Bricks\Element {
                 'required'    => [ 'type', '=', 'lightbox' ],
             ],
             'lightboxTriggerStyle' => [
-                'label'   => esc_html__( 'Button-Stil', 'bricks-vergleich' ),
-                'type'    => 'select',
-                'options' => [
-                    'link'    => esc_html__( 'Link (nur Text)', 'bricks-vergleich' ),
-                    'outline' => esc_html__( 'Outline (Rand)', 'bricks-vergleich' ),
-                    'solid'   => esc_html__( 'Solid (gefüllt)', 'bricks-vergleich' ),
+                'label'    => esc_html__( 'Button-Stil', 'bricks-vergleich' ),
+                'type'     => 'select',
+                'options'  => [
+                    'primary'   => esc_html__( 'Primär', 'bricks-vergleich' ),
+                    'secondary' => esc_html__( 'Sekundär', 'bricks-vergleich' ),
+                    'light'     => esc_html__( 'Hell', 'bricks-vergleich' ),
+                    'dark'      => esc_html__( 'Dunkel', 'bricks-vergleich' ),
+                    'muted'     => esc_html__( 'Gedämpft', 'bricks-vergleich' ),
+                    'info'      => esc_html__( 'Info', 'bricks-vergleich' ),
+                    'success'   => esc_html__( 'Erfolg', 'bricks-vergleich' ),
+                    'warning'   => esc_html__( 'Warnung', 'bricks-vergleich' ),
+                    'danger'    => esc_html__( 'Gefahr', 'bricks-vergleich' ),
                 ],
-                'default'  => 'link',
+                'default'  => 'primary',
                 'required' => [ 'type', '=', 'lightbox' ],
             ],
-            'lightboxTriggerColor' => [
-                'label'    => esc_html__( 'Button-Farbe', 'bricks-vergleich' ),
-                'type'     => 'color',
-                'css'      => [
-                    [ 'property' => '--vgl-lb-trigger-color', 'selector' => '' ],
-                ],
+            'lightboxTriggerCircle' => [
+                'label'    => esc_html__( 'Kreis (Pill-Form)', 'bricks-vergleich' ),
+                'type'     => 'checkbox',
+                'required' => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxTriggerOutline' => [
+                'label'    => esc_html__( 'Umriss', 'bricks-vergleich' ),
+                'type'     => 'checkbox',
+                'required' => [ 'type', '=', 'lightbox' ],
+            ],
+
+            // ─── Eigenes Button-Styling (überschreibt Preset) ───
+            '_sepLightboxTriggerCustom' => [
+                'type'     => 'separator',
+                'label'    => esc_html__( 'Eigenes Button-Styling (überschreibt Preset)', 'bricks-vergleich' ),
+                'required' => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxTriggerBgColor' => [
+                'label'       => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
+                'type'        => 'color',
+                'description' => esc_html__( 'Theme-Farben + globale Bricks-Farb-Variablen (z.B. {color-primary}) werden aufgelöst.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxTriggerTypography' => [
+                'label'       => esc_html__( 'Typografie', 'bricks-vergleich' ),
+                'type'        => 'typography',
+                'description' => esc_html__( 'Font-Size, Weight, Color, Letter-Spacing … Variablen-Picker verfügbar.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxTriggerBorder' => [
+                'label'    => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+                'type'     => 'border',
+                'required' => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxTriggerPadding' => [
+                'label'       => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+                'type'        => 'spacing',
+                'description' => esc_html__( 'Top / Right / Bottom / Left. CSS-Variablen erlaubt (z.B. var(--space-sm), 10px, 0.75rem).', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxTriggerMinWidth' => [
+                'label'       => esc_html__( 'Mindestbreite', 'bricks-vergleich' ),
+                'type'        => 'number',
+                'units'       => true,
+                'placeholder' => '140',
+                'description' => esc_html__( 'z.B. 140px oder 85%. Leer = auto.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxTriggerShadow' => [
+                'label'    => esc_html__( 'Schatten', 'bricks-vergleich' ),
+                'type'     => 'box-shadow',
+                'required' => [ 'type', '=', 'lightbox' ],
+            ],
+
+            '_sepLightboxLayout' => [
+                'type'     => 'separator',
+                'label'    => esc_html__( 'Dialog-Layout', 'bricks-vergleich' ),
                 'required' => [ 'type', '=', 'lightbox' ],
             ],
             'lightboxPosition' => [
@@ -3567,10 +3624,38 @@ class Element_Vergleich extends \Bricks\Element {
             : 'vgl';
         $dlg_id = 'vgl-lb-' . $base . '-' . $this->_lightbox_counter;
 
-        // Trigger-Stil-Klasse
-        $style = isset( $row['lightboxTriggerStyle'] ) ? (string) $row['lightboxTriggerStyle'] : 'link';
-        if ( ! in_array( $style, [ 'link', 'outline', 'solid' ], true ) ) $style = 'link';
-        $btn_class = 'vergleich-lightbox-trigger is-style-' . $style;
+        // Trigger-Styling — gleiches Muster wie render_cell_button:
+        // Bricks-Preset-Klassen (bricks-background-*/bricks-color-*) als Basis,
+        // plus optionale Inline-Overrides aus Typography/Border/Padding/Shadow.
+        $style   = isset( $row['lightboxTriggerStyle'] ) ? preg_replace( '/[^a-z]/i', '', strtolower( (string) $row['lightboxTriggerStyle'] ) ) : 'primary';
+        if ( $style === '' ) $style = 'primary';
+        $circle  = ! empty( $row['lightboxTriggerCircle'] );
+        $outline = ! empty( $row['lightboxTriggerOutline'] );
+
+        $btn_classes = [ 'vergleich-lightbox-trigger', 'bricks-button' ];
+        if ( $outline ) {
+            $btn_classes[] = 'outline';
+            $btn_classes[] = 'bricks-color-' . $style;
+        } else {
+            $btn_classes[] = 'bricks-background-' . $style;
+        }
+        if ( $circle ) $btn_classes[] = 'circle';
+
+        // Inline-Overrides (nur wenn User Werte gesetzt hat).
+        $btn_inline = '';
+        $bg_override = $this->resolve_color( $row['lightboxTriggerBgColor'] ?? null );
+        if ( $bg_override !== '' ) $btn_inline .= 'background:' . esc_attr( $bg_override ) . ';';
+        $btn_inline .= $this->format_typography( $row['lightboxTriggerTypography'] ?? null );
+        $btn_inline .= $this->format_border( $row['lightboxTriggerBorder'] ?? null );
+        if ( ! empty( $row['lightboxTriggerPadding'] ) && is_array( $row['lightboxTriggerPadding'] ) ) {
+            $pad_any = array_filter( $row['lightboxTriggerPadding'], function ( $v ) { return $v !== '' && $v !== null; } );
+            if ( ! empty( $pad_any ) ) {
+                $btn_inline .= 'padding:' . esc_attr( $this->format_spacing( $row['lightboxTriggerPadding'], '' ) ) . ';';
+            }
+        }
+        $min_w = $this->get_css_value( $row['lightboxTriggerMinWidth'] ?? null, '' );
+        if ( $min_w !== '' ) $btn_inline .= 'min-width:' . esc_attr( $min_w ) . ';';
+        $btn_inline .= $this->format_box_shadow( $row['lightboxTriggerShadow'] ?? null );
 
         // Position & Größe
         $position = isset( $row['lightboxPosition'] ) ? (string) $row['lightboxPosition'] : 'center';
@@ -3591,7 +3676,9 @@ class Element_Vergleich extends \Bricks\Element {
         if ( $max_w !== '' ) $dlg_style .= '--vgl-lb-max-w:' . $max_w . ';';
         if ( $max_h !== '' ) $dlg_style .= '--vgl-lb-max-h:' . $max_h . ';';
 
-        $html  = '<button type="button" class="' . esc_attr( $btn_class ) . '"'
+        $btn_attrs = 'class="' . esc_attr( implode( ' ', $btn_classes ) ) . '"';
+        if ( $btn_inline !== '' ) $btn_attrs .= ' style="' . esc_attr( $btn_inline ) . '"';
+        $html  = '<button type="button" ' . $btn_attrs
                . ' data-vgl-lightbox-open="' . esc_attr( $dlg_id ) . '"'
                . ' aria-haspopup="dialog">'
                . '<span class="vergleich-lightbox-trigger__text">' . esc_html( $trigger_text ) . '</span>'
@@ -4293,46 +4380,31 @@ class Element_Vergleich extends \Bricks\Element {
            stapeln natürlich als normaler Block-Flow — genau das, was User
            erwarten, wenn sie Shortcodes oder mehrzeilige HTML-Blöcke
            reinstecken. */
+        /* Trigger-Button: nur Layout-Reset + Cursor. Farben / Typografie /
+           Border / Padding / Shadow kommen entweder aus den Bricks-Preset-
+           Klassen (bricks-background-primary etc.) oder aus Inline-Overrides
+           — exakt derselbe Pattern wie render_cell_button. */
         .vergleich-lightbox-trigger {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            padding: 6px 12px;
             margin: 0;
-            font: inherit;
-            font-size: 0.875em;
-            line-height: 1.3;
             cursor: pointer;
-            border-radius: 4px;
-            transition: background-color .15s ease, color .15s ease, border-color .15s ease;
-            background: transparent;
-            color: var(--vgl-lb-trigger-color, #2563eb);
-            border: 1px solid transparent;
+            line-height: 1.3;
+            transition: background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .05s ease;
         }
-        .vergleich-lightbox-trigger.is-style-link {
-            padding: 2px 4px;
-            text-decoration: underline;
-            text-underline-offset: 3px;
+        .vergleich-lightbox-trigger.circle {
+            border-radius: 999px;
         }
-        .vergleich-lightbox-trigger.is-style-link:hover {
-            text-decoration-thickness: 2px;
+        .vergleich-lightbox-trigger:hover {
+            filter: brightness(0.95);
         }
-        .vergleich-lightbox-trigger.is-style-outline {
-            border-color: currentColor;
-        }
-        .vergleich-lightbox-trigger.is-style-outline:hover {
-            background-color: color-mix(in srgb, var(--vgl-lb-trigger-color, #2563eb) 10%, transparent);
-        }
-        .vergleich-lightbox-trigger.is-style-solid {
-            background-color: var(--vgl-lb-trigger-color, #2563eb);
-            color: #fff;
-        }
-        .vergleich-lightbox-trigger.is-style-solid:hover {
-            filter: brightness(0.92);
+        .vergleich-lightbox-trigger:active {
+            transform: translateY(1px);
         }
         .vergleich-lightbox-trigger:focus-visible {
-            outline: 2px solid var(--vgl-lb-trigger-color, #2563eb);
+            outline: 2px solid currentColor;
             outline-offset: 2px;
         }
 
@@ -4349,46 +4421,60 @@ class Element_Vergleich extends \Bricks\Element {
             padding: 0;
             border: none;
             background: transparent;
-            /* width: auto → Dialog wird so breit wie sein Content, gekappt
-               durch max-width. Vorher erzwang `width:100%` volle Viewport-
-               Breite, sobald max-width aus ungültigem Wert wegfiel. */
-            width: auto;
-            max-width: min(var(--vgl-lb-max-w, 640px), calc(100vw - 32px));
+            /* Dialog rendert IMMER auf der konfigurierten Breite — nur auf
+               schmalen Viewports wird zusätzlich auf "100vw − 32px" gekappt,
+               damit er nie über den Bildschirmrand hinausläuft. Vorher nur
+               max-width → bei wenig Content schrumpfte der Dialog auf
+               Content-Breite, obwohl der User eine feste Breite eingestellt
+               hatte. Das war UX-mäßig verwirrend. */
+            width: min(var(--vgl-lb-max-w, 640px), calc(100vw - 32px));
+            max-width: calc(100vw - 32px);
             max-height: min(var(--vgl-lb-max-h, calc(100vh - 32px)), calc(100vh - 32px));
             color: inherit;
             /* Textstyle aus der Umgebung erben. */
             font: inherit;
             line-height: 1.55;
         }
-        /* Positionsklassen. Jede setzt ALLE vier Kanten + margin explizit,
-           damit keine UA-Defaults durchsickern. */
+        /* Positionsklassen. transform-basiertes Centering: bulletproof,
+           weil es keinen UA-Default-Zusammenspielkram mit inset/margin gibt.
+           !important auf top/left/transform, weil das UA-Stylesheet für
+           :modal sehr aggressiv ist (setzt inset-block-start/end + margin:auto,
+           und manche Browser respektieren unsere Overrides je nach Reihenfolge
+           des Cascade nicht zuverlässig). */
         .vergleich-lightbox-dialog.is-pos-center {
-            inset: 0;
-            margin: auto;
+            top: 50% !important;
+            left: 50% !important;
+            right: auto !important;
+            bottom: auto !important;
+            transform: translate(-50%, -50%) !important;
+            margin: 0 !important;
         }
         .vergleich-lightbox-dialog.is-pos-top {
-            top: var(--vgl-lb-offset, 24px);
-            right: 0;
-            bottom: auto;
-            left: 0;
-            margin-inline: auto;
+            top: var(--vgl-lb-offset, 24px) !important;
+            left: 50% !important;
+            right: auto !important;
+            bottom: auto !important;
+            transform: translateX(-50%) !important;
+            margin: 0 !important;
         }
         .vergleich-lightbox-dialog.is-pos-bottom {
-            top: auto;
-            right: 0;
-            bottom: var(--vgl-lb-offset, 24px);
-            left: 0;
-            margin-inline: auto;
+            top: auto !important;
+            left: 50% !important;
+            right: auto !important;
+            bottom: var(--vgl-lb-offset, 24px) !important;
+            transform: translateX(-50%) !important;
+            margin: 0 !important;
         }
         /* Bottom-Sheet auf Mobile: volle Breite, oben abgerundet, unten am Rand. */
         @media (max-width: 560px) {
             .vergleich-lightbox-dialog.is-pos-bottom {
-                bottom: 0;
-                left: 0;
-                right: 0;
-                margin: 0;
-                width: 100vw;
-                max-width: 100vw;
+                bottom: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                transform: none !important;
+                margin: 0 !important;
+                width: 100vw !important;
+                max-width: 100vw !important;
             }
             .vergleich-lightbox-dialog.is-pos-bottom .vergleich-lightbox-dialog__inner {
                 border-radius: 14px 14px 0 0;
