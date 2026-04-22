@@ -257,33 +257,13 @@
         document.addEventListener("scroll", posHandler, { passive: true, capture: true });
         window.addEventListener("scroll", posHandler, { passive: true });
 
-        var rafId = 0;
-        var rafActive = false;
-        function rafLoop(){
-            if (!rafActive || !wrapper.isConnected) { rafId = 0; return; }
-            updateNavPosition(wrapper);
-            rafId = requestAnimationFrame(rafLoop);
-        }
-        function startRaf(){
-            if (rafActive) return;
-            rafActive = true;
-            if (!rafId) rafId = requestAnimationFrame(rafLoop);
-        }
-        function stopRaf(){
-            rafActive = false;
-            if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
-        }
-        if (typeof IntersectionObserver !== "undefined") {
-            var io = new IntersectionObserver(function(entries){
-                for (var i = 0; i < entries.length; i++) {
-                    if (entries[i].isIntersecting) startRaf();
-                    else stopRaf();
-                }
-            }, { threshold: 0 });
-            io.observe(wrapper);
-        } else {
-            startRaf();
-        }
+        // Kein Dauer-RAF-Loop für die Pfeil-Position: die Pfeile müssen nur
+        // neu positioniert werden, wenn entweder die Seite scrollt, das Fenster
+        // resized wird oder die Tabelle ihre Größe ändert. Die entsprechenden
+        // Listener/Observer sind schon oben gebunden. Ein 60fps-RAF-Loop lief
+        // permanent, solange die Tabelle im Viewport war, rief pro Frame
+        // getBoundingClientRect() + getComputedStyle() auf und war auf Mobile
+        // die Hauptquelle für Ruckler an den Navigationspfeilen.
 
         if (typeof ResizeObserver !== "undefined") {
             var ro = new ResizeObserver(handler);
@@ -346,18 +326,28 @@
         wrapper.addEventListener("mouseleave", clearActive);
     }
 
-    // Sticky-Zeilen per transform:translateY. Hintergrund: position:sticky auf
+    // Sticky-Zeilen per transform:translate3d. Hintergrund: position:sticky auf
     // Grid-Items innerhalb von Subgrid funktioniert in Chrome nicht zuverlässig
     // (Containing-Block-Berechnung + Subgrid-Interaktion). Statt das Element aus
     // dem Grid-Flow zu reißen, lassen wir die Zellen in ihren Slots und
-    // verschieben sie beim Scrollen rein visuell per Transform nach unten — so
-    // bleiben sie am Viewport-Rand und das Layout dahinter rührt sich nicht.
+    // verschieben sie beim Scrollen rein visuell per Transform nach unten.
+    //
+    // Mobile-Performance: Die frühere Implementierung las pro Scroll-Frame
+    // getBoundingClientRect() jeder Sticky-Zelle UND setzte vorher
+    // `style.transform = ""` zurück — das erzwingt einen synchronen Layout-
+    // Reflow pro Zelle pro Frame, was iOS Safari im Momentum-Scroll sichtbar
+    // ruckeln ließ. Jetzt:
+    //   - Natürliche Position + Zellhöhe einmal messen (auf Init/Resize/RO),
+    //     gecached als Offset relativ zum Wrapper.
+    //   - Im Scroll-Frame nur EIN getBoundingClientRect() (Wrapper) + Writes
+    //     von translate3d (Compositor-Layer, kein Repaint).
+    //   - will-change: transform in CSS sorgt für GPU-Layer — auf Mobile
+    //     läuft das Scrollen dann auf dem Compositor-Thread, nicht Main.
     function bindStickyRows(wrapper){
         if (wrapper._vglStickyBound) return;
         var root = wrapper.closest(".vergleich-root") || wrapper.parentNode;
         if (!root) return;
 
-        // Alle Sticky-Zellen gruppieren nach Zeilen-Index
         var rowMap = {};
         root.querySelectorAll(".is-sticky-row").forEach(function(cell){
             var idx = cell.getAttribute("data-row-index");
@@ -371,51 +361,73 @@
             return parseInt(a, 10) - parseInt(b, 10);
         });
 
-        function update(){
+        // Cache: wird auf Init/Resize neu befüllt, NICHT pro Scroll-Frame.
+        // rows[i] = { cells, offsetInWrap, height }
+        var baseOffset = 0;
+        var rows = [];
+        // Letzte gesetzte Translations pro Row — verhindert redundante DOM-Writes.
+        var lastTy = [];
+
+        function measure(){
             var cs = window.getComputedStyle(wrapper);
             var offsetRaw = parseFloat(cs.getPropertyValue("--vgl-sticky-row-top"));
-            var baseOffset = isNaN(offsetRaw) ? 0 : offsetRaw;
+            baseOffset = isNaN(offsetRaw) ? 0 : offsetRaw;
 
+            rows = [];
+            lastTy = [];
+            // Transforms für die Messung temporär zurücksetzen, damit die
+            // gemessenen Positionen die NATÜRLICHEN Positionen sind, nicht
+            // die aktuell translatierten.
+            for (var k = 0; k < sortedIdxs.length; k++) {
+                var cellsK = rowMap[sortedIdxs[k]];
+                for (var i = 0; i < cellsK.length; i++) cellsK[i].style.transform = "";
+            }
             var wrapRect = wrapper.getBoundingClientRect();
-            // Untergrenze: wenn die Tabelle rausscrollt, bleibt die sticky Zeile
-            // am unteren Tabellenrand kleben und verschwindet mit der Tabelle.
-            var wrapBottom = wrapRect.bottom;
+            var wrapTop = wrapRect.top;
+            for (var m = 0; m < sortedIdxs.length; m++) {
+                var cellsM = rowMap[sortedIdxs[m]];
+                if (!cellsM.length) continue;
+                var r = cellsM[0].getBoundingClientRect();
+                rows.push({
+                    cells: cellsM,
+                    offsetInWrap: r.top - wrapTop,
+                    height: r.height
+                });
+                lastTy.push(-1);
+            }
+        }
 
-            // Akkumulierte Höhe aller bereits oben klebenden Sticky-Zeilen, damit
-            // mehrere sticky Zeilen sich übereinander stapeln statt sich zu
-            // überlappen.
+        function update(){
+            if (!rows.length) return;
+            var wrapRect = wrapper.getBoundingClientRect();
+            var wrapTop = wrapRect.top;
+            var wrapBottom = wrapRect.bottom;
             var topAccum = baseOffset;
 
-            sortedIdxs.forEach(function(idx){
-                var cells = rowMap[idx];
-                if (!cells.length) return;
-
-                // Transform temporär rausnehmen, um die natürliche Position zu
-                // messen. Ohne das würde der gemessene rect den bereits gesetzten
-                // Transform mitrechnen und wir bekämen kumulative Drift.
-                cells.forEach(function(c){ c.style.transform = ""; });
-                var firstRect = cells[0].getBoundingClientRect();
-                var naturalTop = firstRect.top;
-                var cellH = firstRect.height;
-
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                var naturalTop = wrapTop + row.offsetInWrap;
                 var translateY = 0;
                 if (naturalTop < topAccum) {
                     translateY = topAccum - naturalTop;
-                    // Clamp: nicht unter den Tabellenrand schieben. Sobald die
-                    // Zeile den Table-Boden erreicht, stehen bleiben und mit
-                    // der Tabelle aus dem Viewport wandern.
-                    var maxTranslate = wrapBottom - naturalTop - cellH;
+                    // Clamp: Zeile bleibt am Tabellenboden stehen, wenn der
+                    // Wrapper rausscrollt.
+                    var maxTranslate = wrapBottom - naturalTop - row.height;
                     if (maxTranslate < 0) maxTranslate = 0;
                     if (translateY > maxTranslate) translateY = maxTranslate;
                 }
-
-                if (translateY > 0) {
-                    var t = "translateY(" + translateY + "px)";
-                    cells.forEach(function(c){ c.style.transform = t; });
-                    // Nächste sticky Zeile klebt darunter, nicht am selben Top.
-                    topAccum += cellH;
+                // Nur schreiben wenn sich der Wert (auf ganze Pixel gerundet)
+                // geändert hat — spart DOM-Writes im Momentum-Scroll.
+                var tyRounded = Math.round(translateY);
+                if (tyRounded !== lastTy[i]) {
+                    var t = tyRounded > 0 ? "translate3d(0," + tyRounded + "px,0)" : "";
+                    for (var c = 0; c < row.cells.length; c++) {
+                        row.cells[c].style.transform = t;
+                    }
+                    lastTy[i] = tyRounded;
                 }
-            });
+                if (translateY > 0) topAccum += row.height;
+            }
         }
 
         var pending = false;
@@ -424,20 +436,26 @@
             pending = true;
             requestAnimationFrame(function(){ update(); pending = false; });
         }
+        function remeasure(){
+            measure();
+            schedule();
+        }
 
-        // Capture-Phase auf document: fängt auch Scrolls auf Ancestor-Containern
-        // (z.B. Bricks-Section mit overflow:auto) ab.
-        document.addEventListener("scroll", schedule, { passive: true, capture: true });
+        measure();
+        update();
+
+        // Nur window.scroll binden — document+capture feuerte zuvor
+        // zusätzlich bei jedem Scroll, ohne neue Information zu liefern
+        // (doppelte Kosten auf Mobile). Page-Scrolls bubblen an window.
         window.addEventListener("scroll", schedule, { passive: true });
-        window.addEventListener("resize", schedule);
+        window.addEventListener("resize", remeasure);
         if (typeof ResizeObserver !== "undefined") {
-            var ro = new ResizeObserver(schedule);
+            var ro = new ResizeObserver(remeasure);
             ro.observe(wrapper);
         }
-        // Erster Frame sofort + Nachzügler nach Layout (Bilder laden, Fonts etc.).
-        schedule();
-        setTimeout(schedule, 100);
-        setTimeout(schedule, 500);
+        // Nachzügler für Layout-Settling (Fonts, Bilder).
+        setTimeout(remeasure, 100);
+        setTimeout(remeasure, 500);
     }
 
     function init(wrapper){

@@ -4132,6 +4132,13 @@ class Element_Vergleich extends \Bricks\Element {
                über dem Rest schwebt und nicht transparent wird. Das Transform
                selbst kommt aus JS. */
             z-index: 4;
+            /* will-change: transform → Browser hebt die Zelle auf einen eigenen
+               Compositor-Layer (GPU). Ohne das würden die Sticky-Zellen auf
+               Mobile (insbesondere iOS Safari) bei jedem Scroll-Frame neu
+               gepaintet, was im Momentum-Scroll sichtbar ruckelt. Mit Layer:
+               Scroll läuft auf dem Compositor-Thread, Transform-Writes sind
+               reines Compositor-Update. */
+            will-change: transform;
         }
         /* .vergleich-root-Prefix hebt Specificity auf 0,3,0, damit eigene
            Row-Highlights (0,2,0) geschlagen werden. Bricks-User-Controls setzen
