@@ -3714,22 +3714,29 @@ class Element_Vergleich extends \Bricks\Element {
         // Icon rendern — gleicher Pfad wie render_cell_icon: nutzt
         // Bricks\Element::render_icon(), damit Icon-Library und custom-SVGs
         // beide automatisch unterstützt werden.
+        //
+        // Größen-Handling: Wrapper kriegt IMMER eine explizite width/height
+        // (Default 1em), das innere SVG wird per CSS-Regel darunter auf
+        // 100% gezwungen. Grund: Custom-SVG-Uploads haben oft native
+        // width/height-Attribute (meist 24×24 oder 512×512), die ohne
+        // !important die CSS-Größe ignorieren — das war bei allen Icon-
+        // Zellen das gleiche Problem.
         $icon_html = '';
         $icon      = $row['lightboxTriggerIcon'] ?? null;
         $icon_pos  = isset( $row['lightboxTriggerIconPosition'] ) ? (string) $row['lightboxTriggerIconPosition'] : 'left';
         if ( $icon_pos !== 'right' ) $icon_pos = 'left';
         if ( is_array( $icon ) && ( ! empty( $icon['icon'] ) || ! empty( $icon['svg'] ) ) ) {
-            $icon_size  = $this->get_css_value( $row['lightboxTriggerIconSize'] ?? null, '' );
-            $icon_style = '';
-            if ( $icon_size !== '' ) {
-                // Icon-Font nutzt font-size, inline-SVG nutzt width/height.
-                // Beides setzen, dann greift jeweils das Relevante.
-                $icon_style = 'font-size:' . esc_attr( $icon_size ) . ';width:' . esc_attr( $icon_size ) . ';height:' . esc_attr( $icon_size ) . ';';
-            }
+            $icon_size = $this->get_css_value( $row['lightboxTriggerIconSize'] ?? null, '1em' );
+            // Icon-Font nutzt font-size, inline-SVG nutzt width/height —
+            // beides inline setzen.
+            $icon_style = sprintf(
+                'width:%s;height:%s;font-size:%s;line-height:1;flex:0 0 auto;',
+                esc_attr( $icon_size ), esc_attr( $icon_size ), esc_attr( $icon_size )
+            );
             $icon_attrs = [
                 'class' => [ 'vergleich-lightbox-trigger__icon' ],
+                'style' => $icon_style,
             ];
-            if ( $icon_style !== '' ) $icon_attrs['style'] = $icon_style;
             $icon_html = \Bricks\Element::render_icon( $icon, $icon_attrs );
         }
 
@@ -4476,23 +4483,32 @@ class Element_Vergleich extends \Bricks\Element {
             outline: 2px solid currentColor;
             outline-offset: 2px;
         }
+        /* Icon-Wrapper: fixe Größe kommt IMMER aus dem Inline-Style (Default 1em),
+           damit das darunterliegende SVG/Icon eine deterministische Box hat.
+           overflow:hidden als Safety Net, falls ein SVG trotzdem ausbricht. */
         .vergleich-lightbox-trigger__icon {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             flex: 0 0 auto;
             line-height: 1;
+            overflow: hidden;
         }
-        .vergleich-lightbox-trigger__icon svg {
-            width: 1em;
-            height: 1em;
+        /* SVG-Uploads haben oft native width/height-Attribute (z.B. 512×512),
+           die CSS ohne !important ignorieren. Erzwingen, dass das SVG die
+           Wrapper-Größe übernimmt. */
+        .vergleich-lightbox-trigger__icon > svg {
+            width: 100% !important;
+            height: 100% !important;
             display: block;
         }
-        /* Wenn der User eine fixe Größe gesetzt hat (inline style), soll das
-           SVG die width/height vom Wrapper übernehmen statt 1em. */
-        .vergleich-lightbox-trigger__icon[style*="width"] svg {
-            width: inherit;
-            height: inherit;
+        /* Font-Icons (Font Awesome, Ionicons, …) skalieren über font-size —
+           Wrapper hat font-size schon gesetzt, hier nur inherit erzwingen,
+           damit Theme-Regeln das nicht überschreiben. */
+        .vergleich-lightbox-trigger__icon > i,
+        .vergleich-lightbox-trigger__icon > .bricks-icon {
+            font-size: inherit !important;
+            line-height: 1 !important;
         }
 
         .vergleich-lightbox-dialog {
