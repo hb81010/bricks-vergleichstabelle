@@ -5106,6 +5106,27 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-wrapper.has-nav .vergleich-scroll {
             scrollbar-width: none;
             -ms-overflow-style: none;
+            /* Card-by-card Snapping auch bei Touch-Swipe und Wheel. Gleiche
+               Schrittgroesse wie die Nav-Pfeile: eine Card pro Gesture.
+               Nur im Card-Step-Modus aktiv — View-Step-Modus (per Button
+               eine Viewport-Breite) behaelt freies Scrollen zwischen den
+               Cards, damit mehrere Cards auf einmal sichtbar bleiben. */
+            scroll-behavior: smooth;
+            /* overscroll-behavior-x: contain verhindert, dass ein schneller
+               horizontaler Touch-Swipe auf iOS den Browser-Back-Gesture
+               oder das Page-Scroll triggert. */
+            overscroll-behavior-x: contain;
+        }
+        .vergleich-wrapper.has-nav.vgl-nav-step-card .vergleich-scroll {
+            scroll-snap-type: x mandatory;
+        }
+        .vergleich-wrapper.has-nav.vgl-nav-step-card .vergleich-card {
+            scroll-snap-align: start;
+            /* snap-stop: always → auch bei schnellen Swipes stoppt der
+               Browser an der naechsten Card, statt mehrere auf einmal zu
+               ueberspringen. Das ist der „eine Swipe = eine Card"-Effekt
+               den die User erwarten. */
+            scroll-snap-stop: always;
         }
         .vergleich-wrapper.has-nav .vergleich-scroll::-webkit-scrollbar {
             display: none;
