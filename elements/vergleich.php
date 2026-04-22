@@ -2002,13 +2002,66 @@ class Element_Vergleich extends \Bricks\Element {
             ],
 
             // ───── COUPON ─────
+            'couponMode' => [
+                'label'       => esc_html__( 'Modus', 'bricks-vergleich' ),
+                'type'        => 'select',
+                'options'     => [
+                    'single' => esc_html__( 'Gleicher Code für alle Spalten', 'bricks-vergleich' ),
+                    'manual' => esc_html__( 'Pro Spalte manuell', 'bricks-vergleich' ),
+                ],
+                'default'     => 'single',
+                'description' => esc_html__( 'Manuell pro Spalte = jedes Produkt bekommt individuell Code, Shop-Link oder kann ausgeblendet werden. Ideal für gemischte Vergleiche, wo nicht jedes Produkt einen Gutscheincode hat.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'coupon' ],
+            ],
             'couponCode' => [
                 'label'          => esc_html__( 'Gutscheincode', 'bricks-vergleich' ),
                 'type'           => 'text',
                 'hasDynamicData' => 'text',
                 'placeholder'    => 'SOMMER20',
-                'description'    => esc_html__( 'Der Code, der beim Klick in die Zwischenablage kopiert wird. Dynamic-Data-Tags wie {cf:coupon_code} werden aufgelöst.', 'bricks-vergleich' ),
+                'description'    => esc_html__( 'Der Code, der beim Klick in die Zwischenablage kopiert wird. Dynamic-Data-Tags wie {cf:coupon_code} werden aufgelöst. Im Manuell-Modus ist das der Fallback für Spalten ohne eigenen Code.', 'bricks-vergleich' ),
                 'required'       => [ 'type', '=', 'coupon' ],
+            ],
+            'couponColumns' => [
+                'label'         => esc_html__( 'Werte pro Spalte', 'bricks-vergleich' ),
+                'type'          => 'repeater',
+                'titleProperty' => 'code',
+                'placeholder'   => esc_html__( 'Spalte', 'bricks-vergleich' ),
+                'description'   => esc_html__( 'Pro Produkt-Spalte einen Eintrag. Reihenfolge matched den Query-Loop. Felder leer lassen, um den globalen Wert zu übernehmen. "Ausblenden" = Zelle bleibt leer.', 'bricks-vergleich' ),
+                'required'      => [ 'couponMode', '=', 'manual' ],
+                'fields'        => [
+                    'code' => [
+                        'label'          => esc_html__( 'Gutscheincode', 'bricks-vergleich' ),
+                        'type'           => 'text',
+                        'hasDynamicData' => 'text',
+                        'placeholder'    => esc_html__( 'leer = globaler Code', 'bricks-vergleich' ),
+                    ],
+                    'shopText' => [
+                        'label'          => esc_html__( 'Shop-Button-Text', 'bricks-vergleich' ),
+                        'type'           => 'text',
+                        'hasDynamicData' => 'text',
+                        'placeholder'    => esc_html__( 'leer = globaler Text', 'bricks-vergleich' ),
+                    ],
+                    'shopLink' => [
+                        'label' => esc_html__( 'Shop-Link', 'bricks-vergleich' ),
+                        'type'  => 'link',
+                    ],
+                    'hide' => [
+                        'label'       => esc_html__( 'Diese Spalte ausblenden', 'bricks-vergleich' ),
+                        'type'        => 'checkbox',
+                        'description' => esc_html__( 'Für Produkte ohne Gutscheincode — Zelle bleibt komplett leer.', 'bricks-vergleich' ),
+                    ],
+                ],
+            ],
+            'couponManualFallback' => [
+                'label'          => esc_html__( 'Fallback für fehlende Spalten-Einträge', 'bricks-vergleich' ),
+                'type'           => 'select',
+                'options'        => [
+                    'global' => esc_html__( 'Globalen Code verwenden', 'bricks-vergleich' ),
+                    'hide'   => esc_html__( 'Zelle ausblenden', 'bricks-vergleich' ),
+                ],
+                'default'        => 'global',
+                'description'    => esc_html__( 'Was passiert, wenn es mehr Produkte im Loop gibt als Einträge im Repeater.', 'bricks-vergleich' ),
+                'required'       => [ 'couponMode', '=', 'manual' ],
             ],
             'couponLabel' => [
                 'label'          => esc_html__( 'Vortext (optional)', 'bricks-vergleich' ),
@@ -3963,7 +4016,44 @@ class Element_Vergleich extends \Bricks\Element {
      *    Link-Control-Daten abgeleitet
      */
     private function render_cell_coupon( $row ) {
-        $code = trim( $this->dd_string( (string) ( $row['couponCode'] ?? '' ) ) );
+        $mode = isset( $row['couponMode'] ) ? (string) $row['couponMode'] : 'single';
+        if ( ! in_array( $mode, [ 'single', 'manual' ], true ) ) $mode = 'single';
+
+        // Globale Defaults — dienen im manuellen Modus als Fallback.
+        $global_code      = trim( $this->dd_string( (string) ( $row['couponCode'] ?? '' ) ) );
+        $global_shop_text = $this->dd_string( (string) ( $row['couponShopText'] ?? '' ) );
+
+        // Per-Spalte-Overrides im Manuell-Modus.
+        $col_override = null;
+        if ( $mode === 'manual' ) {
+            $columns = isset( $row['couponColumns'] ) && is_array( $row['couponColumns'] )
+                ? array_values( array_filter( $row['couponColumns'], 'is_array' ) )
+                : [];
+            $loop_idx = 0;
+            if ( class_exists( '\Bricks\Query' ) && method_exists( '\Bricks\Query', 'get_loop_index' ) ) {
+                $li = \Bricks\Query::get_loop_index();
+                if ( $li !== '' && $li !== null ) $loop_idx = (int) $li;
+            }
+            if ( isset( $columns[ $loop_idx ] ) ) {
+                $col_override = $columns[ $loop_idx ];
+                // Spalte explizit ausgeblendet → leere Zelle rendern.
+                if ( ! empty( $col_override['hide'] ) ) return '';
+            } else {
+                // Kein Eintrag fuer diese Spalte. Je nach Fallback-Setting:
+                // "hide" → gar nichts rendern, "global" → mit globalen Werten weiter.
+                $fb = isset( $row['couponManualFallback'] ) ? (string) $row['couponManualFallback'] : 'global';
+                if ( $fb === 'hide' ) return '';
+            }
+        }
+
+        // Code bestimmen: Spalten-Override, sonst global.
+        $code = $global_code;
+        if ( is_array( $col_override ) ) {
+            $col_code_raw = isset( $col_override['code'] ) ? (string) $col_override['code'] : '';
+            if ( trim( $col_code_raw ) !== '' ) {
+                $code = trim( $this->dd_string( $col_code_raw ) );
+            }
+        }
         if ( $code === '' ) return '';
 
         $label_text = $this->dd_string( (string) ( $row['couponLabel'] ?? '' ) );
@@ -4014,9 +4104,25 @@ class Element_Vergleich extends \Bricks\Element {
 
         // Optional Shop-Button
         if ( ! empty( $row['couponShopEnabled'] ) ) {
-            $shop_text = $this->dd_string( (string) ( $row['couponShopText'] ?? '' ) );
+            // Spalten-Override fuer Text + Link, sonst globale Einstellung.
+            $shop_text_raw = '';
+            if ( is_array( $col_override ) && isset( $col_override['shopText'] ) && trim( (string) $col_override['shopText'] ) !== '' ) {
+                $shop_text_raw = (string) $col_override['shopText'];
+            } else {
+                $shop_text_raw = (string) ( $row['couponShopText'] ?? '' );
+            }
+            $shop_text = $this->dd_string( $shop_text_raw );
             if ( $shop_text === '' ) $shop_text = esc_html__( 'Zum Shop', 'bricks-vergleich' );
-            $link = $this->resolve_link( $row['couponShopLink'] ?? null );
+
+            // Link: Spalten-Override nur, wenn dort ein gueltiger Link gesetzt ist,
+            // sonst globaler Link.
+            $col_link = ( is_array( $col_override ) && ! empty( $col_override['shopLink'] ) )
+                ? $col_override['shopLink']
+                : null;
+            $col_link_resolved = $col_link !== null ? $this->resolve_link( $col_link ) : [ 'url' => '' ];
+            $link = ! empty( $col_link_resolved['url'] )
+                ? $col_link_resolved
+                : $this->resolve_link( $row['couponShopLink'] ?? null );
 
             $style   = isset( $row['couponShopStyle'] ) ? preg_replace( '/[^a-z]/i', '', strtolower( (string) $row['couponShopStyle'] ) ) : 'primary';
             if ( $style === '' ) $style = 'primary';
