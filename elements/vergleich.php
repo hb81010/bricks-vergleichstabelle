@@ -29,6 +29,13 @@ class Element_Vergleich extends \Bricks\Element {
     /** Runtime-State für Produkt-Labels (manueller Top-Balken pro Spalte). */
     public $_product_label_runtime = null;
 
+    /** ID-Präfix für aria-labelledby (verknüpft Zellen mit ihrem Row-Label). */
+    public $_aria_id_prefix = '';
+
+    /** Runtime-State für Schema.org JSON-LD (von render_inner befüllt, von render_card_inner pro Produkt ergänzt). */
+    public $_schema_runtime = null;
+    public $_schema_items = [];
+
     /** Index der ersten aufklappbaren Zeile (fuer Fade-Peek). -1 = keine. */
     public $_first_collapsible_idx = -1;
 
@@ -47,6 +54,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->control_groups['scroll']  = [ 'title' => esc_html__( 'Scroll & Navigation', 'bricks-vergleich' ), 'tab' => 'content' ];
         $this->control_groups['effects'] = [ 'title' => esc_html__( 'Zeilen-Effekte', 'bricks-vergleich' ),    'tab' => 'content' ];
         $this->control_groups['style']   = [ 'title' => esc_html__( 'Farben & Rahmen', 'bricks-vergleich' ),   'tab' => 'content' ];
+        $this->control_groups['a11y']    = [ 'title' => esc_html__( 'Zugänglichkeit & SEO', 'bricks-vergleich' ), 'tab' => 'content' ];
     }
 
     public function set_controls() {
@@ -139,6 +147,100 @@ class Element_Vergleich extends \Bricks\Element {
             'type'  => 'box-shadow',
             'description' => esc_html__( 'Für den Finanzfluss-Look: subtiler Schatten unterhalb der Zeile.', 'bricks-vergleich' ),
             'css'   => [ [ 'property' => 'box-shadow', 'selector' => '.is-sticky-row' ] ],
+        ];
+
+        // ======================================================================
+        // ZUGÄNGLICHKEIT & SEO
+        // ======================================================================
+        $this->controls['a11yInfo'] = [
+            'tab'     => 'content', 'group' => 'a11y',
+            'type'    => 'info',
+            'content' => esc_html__( 'Die Tabelle wird mit ARIA-Rollen ausgestattet (role="table", role="rowheader" für Labels, role="cell" für Produktspalten) und jede Zelle ist per aria-labelledby mit ihrem Zeilen-Label verknüpft. Screenreader und KI-Modelle können dadurch die Struktur als Vergleichstabelle erkennen.', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['tableAriaLabel'] = [
+            'tab'         => 'content', 'group' => 'a11y',
+            'label'       => esc_html__( 'ARIA-Label der Tabelle', 'bricks-vergleich' ),
+            'type'        => 'text',
+            'hasDynamicData' => 'text',
+            'default'     => esc_html__( 'Produkt-Vergleichstabelle', 'bricks-vergleich' ),
+            'description' => esc_html__( 'Beschreibt die Tabelle für Screenreader und Suchmaschinen. Z.B. "Vergleich Rudergeräte 2025".', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['tableCaption'] = [
+            'tab'         => 'content', 'group' => 'a11y',
+            'label'       => esc_html__( 'Sichtbare Überschrift (optional)', 'bricks-vergleich' ),
+            'type'        => 'text',
+            'hasDynamicData' => 'text',
+            'description' => esc_html__( 'Rendert als <h3> direkt über der Tabelle. Hilft Google dabei zu verstehen, was verglichen wird. Leer = keine Überschrift.', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['tableCaptionTag'] = [
+            'tab'       => 'content', 'group' => 'a11y',
+            'label'     => esc_html__( 'Überschrift-Tag', 'bricks-vergleich' ),
+            'type'      => 'select',
+            'options'   => [ 'h2' => 'H2', 'h3' => 'H3', 'h4' => 'H4', 'h5' => 'H5', 'h6' => 'H6', 'div' => 'DIV (keine Heading)' ],
+            'default'   => 'h3',
+            'required'  => [ 'tableCaption', '!=', '' ],
+        ];
+
+        $this->controls['tableCaptionVisible'] = [
+            'tab'       => 'content', 'group' => 'a11y',
+            'label'     => esc_html__( 'Überschrift visuell anzeigen', 'bricks-vergleich' ),
+            'type'      => 'checkbox',
+            'default'   => true,
+            'description' => esc_html__( 'Aus = Überschrift bleibt für Screenreader/SEO im DOM, wird aber visuell versteckt (sr-only-Pattern).', 'bricks-vergleich' ),
+            'required'  => [ 'tableCaption', '!=', '' ],
+        ];
+
+        $this->controls['_sepSchema'] = [
+            'tab'   => 'content', 'group' => 'a11y',
+            'type'  => 'separator',
+            'label' => esc_html__( 'Schema.org / JSON-LD', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['schemaEnabled'] = [
+            'tab'         => 'content', 'group' => 'a11y',
+            'label'       => esc_html__( 'JSON-LD Schema.org ausgeben', 'bricks-vergleich' ),
+            'type'        => 'checkbox',
+            'description' => esc_html__( 'Emittiert eine ItemList mit Produkten (Name, Bild, Preis, Rating, URL). Google kann die Tabelle dann als Produktvergleich erkennen. Zeilen pro Feld über "Schema.org-Rolle" im jeweiligen Repeater-Eintrag verknüpfen.', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['schemaListName'] = [
+            'tab'         => 'content', 'group' => 'a11y',
+            'label'       => esc_html__( 'Name der Liste', 'bricks-vergleich' ),
+            'type'        => 'text',
+            'hasDynamicData' => 'text',
+            'placeholder' => esc_html__( 'z.B. Die besten Rudergeräte 2025', 'bricks-vergleich' ),
+            'description' => esc_html__( 'Erscheint als "name" auf der ItemList. Standardmäßig wird der Tabellen-ARIA-Label verwendet.', 'bricks-vergleich' ),
+            'required'    => [ 'schemaEnabled', '=', true ],
+        ];
+
+        $this->controls['schemaCurrency'] = [
+            'tab'         => 'content', 'group' => 'a11y',
+            'label'       => esc_html__( 'Währung (ISO 4217)', 'bricks-vergleich' ),
+            'type'        => 'text',
+            'default'     => 'EUR',
+            'placeholder' => 'EUR',
+            'description' => esc_html__( 'z.B. EUR, USD, GBP. Wird auf Offer → priceCurrency gesetzt.', 'bricks-vergleich' ),
+            'required'    => [ 'schemaEnabled', '=', true ],
+        ];
+
+        $this->controls['schemaRatingBest'] = [
+            'tab'         => 'content', 'group' => 'a11y',
+            'label'       => esc_html__( 'Max. Rating-Wert', 'bricks-vergleich' ),
+            'type'        => 'number',
+            'default'     => 5,
+            'description' => esc_html__( 'Wird als bestRating auf AggregateRating gesetzt. 5 für Sterne-Bewertung, 100 für Prozent-Scores etc.', 'bricks-vergleich' ),
+            'required'    => [ 'schemaEnabled', '=', true ],
+        ];
+
+        $this->controls['schemaRatingCount'] = [
+            'tab'         => 'content', 'group' => 'a11y',
+            'label'       => esc_html__( 'Anzahl Bewertungen (optional)', 'bricks-vergleich' ),
+            'type'        => 'number',
+            'description' => esc_html__( 'Google Rich-Snippets zeigen AggregateRating nur mit ratingCount. Eigene Redaktions-Note = 1. Leer lassen, wenn du keine Rating-Snippets erzwingen willst.', 'bricks-vergleich' ),
+            'required'    => [ 'schemaEnabled', '=', true ],
         ];
 
         // ======================================================================
@@ -1784,6 +1886,21 @@ class Element_Vergleich extends \Bricks\Element {
                     'right'  => esc_html__( 'Rechts', 'bricks-vergleich' ),
                 ],
             ],
+            'schemaRole' => [
+                'label'   => esc_html__( 'Schema.org-Rolle (SEO)', 'bricks-vergleich' ),
+                'type'    => 'select',
+                'options' => [
+                    ''             => esc_html__( '— Keine —', 'bricks-vergleich' ),
+                    'name'         => esc_html__( 'Produkt-Name', 'bricks-vergleich' ),
+                    'image'        => esc_html__( 'Produkt-Bild', 'bricks-vergleich' ),
+                    'url'          => esc_html__( 'Produkt-URL (Offer)', 'bricks-vergleich' ),
+                    'price'        => esc_html__( 'Preis', 'bricks-vergleich' ),
+                    'ratingValue'  => esc_html__( 'Bewertung (0–max)', 'bricks-vergleich' ),
+                    'brand'        => esc_html__( 'Marke', 'bricks-vergleich' ),
+                    'description'  => esc_html__( 'Kurzbeschreibung', 'bricks-vergleich' ),
+                ],
+                'description' => esc_html__( 'Verknüpft diese Zeile mit einem Schema.org-Feld. Nur aktiv, wenn "JSON-LD Schema.org ausgeben" auf Element-Ebene aktiviert ist.', 'bricks-vergleich' ),
+            ],
         ];
     }
 
@@ -1906,6 +2023,36 @@ class Element_Vergleich extends \Bricks\Element {
             'fallback' => $product_labels_fallback,
             'left'     => $product_labels_left_lbl,
         ];
+
+        // Zugänglichkeit & SEO
+        $table_aria_label   = $this->dd_string( (string) ( $settings['tableAriaLabel'] ?? '' ) );
+        if ( $table_aria_label === '' ) $table_aria_label = esc_html__( 'Produkt-Vergleichstabelle', 'bricks-vergleich' );
+        $table_caption      = $this->dd_string( (string) ( $settings['tableCaption'] ?? '' ) );
+        $table_caption_tag  = $settings['tableCaptionTag'] ?? 'h3';
+        if ( ! in_array( $table_caption_tag, [ 'h2', 'h3', 'h4', 'h5', 'h6', 'div' ], true ) ) $table_caption_tag = 'h3';
+        $table_caption_vis  = ! isset( $settings['tableCaptionVisible'] ) ? true : ! empty( $settings['tableCaptionVisible'] );
+
+        // Eindeutiges ID-Präfix für aria-labelledby. Nutzt Bricks-Element-ID,
+        // damit mehrere Tabellen auf einer Seite nicht kollidieren.
+        $aria_id_prefix = 'vgl-' . ( isset( $this->id ) && $this->id !== '' ? preg_replace( '/[^a-z0-9_-]/i', '', (string) $this->id ) : uniqid() ) . '-lbl';
+        $this->_aria_id_prefix = $aria_id_prefix;
+
+        // Schema.org Runtime — pro Produkt wird später ein Item gesammelt.
+        $this->_schema_items = [];
+        $schema_enabled = ! empty( $settings['schemaEnabled'] );
+        if ( $schema_enabled ) {
+            $this->_schema_runtime = [
+                'enabled'      => true,
+                'currency'     => strtoupper( preg_replace( '/[^A-Z]/i', '', (string) ( $settings['schemaCurrency'] ?? 'EUR' ) ) ) ?: 'EUR',
+                'rating_best'  => max( 1, (int) ( $settings['schemaRatingBest'] ?? 5 ) ),
+                'rating_count' => isset( $settings['schemaRatingCount'] ) && $settings['schemaRatingCount'] !== ''
+                    ? max( 0, (int) $settings['schemaRatingCount'] )
+                    : 0,
+                'list_name'    => $this->dd_string( (string) ( $settings['schemaListName'] ?? '' ) ) ?: $table_aria_label,
+            ];
+        } else {
+            $this->_schema_runtime = null;
+        }
 
         // Navigation
         $nav_enabled      = ! empty( $settings['navEnabled'] );
@@ -2133,15 +2280,37 @@ class Element_Vergleich extends \Bricks\Element {
             echo '</div>'; // /.vergleich-product-label-row
         }
 
-        // Innerer Table-Wrapper (Bordered, enthält Labels + Cards)
+        // Optionale Überschrift (a11y + SEO). Sichtbar oder sr-only — entweder
+        // als semantisches Heading-Tag (h2-h6) für Google / Reader, oder als
+        // neutraler <div> falls der User nur eine optische Beschriftung will.
+        if ( $table_caption !== '' ) {
+            $cap_cls = 'vergleich-caption';
+            if ( ! $table_caption_vis ) $cap_cls .= ' is-sr-only';
+            echo '<' . esc_attr( $table_caption_tag ) . ' class="' . esc_attr( $cap_cls ) . '">'
+                . wp_kses_post( $table_caption )
+                . '</' . esc_attr( $table_caption_tag ) . '>';
+        }
+
+        // Innerer Table-Wrapper (Bordered, enthält Labels + Cards).
+        // role="table" + aria-label macht die Struktur für Screenreader und KI-
+        // Parser als Vergleichstabelle erkennbar. aria-rowcount = Gesamtzahl
+        // der Zeilen (inkl. eingeklappter).
         $wrapper_data_attrs = 'data-row-count="' . (int) $row_count . '"';
         if ( $nav_counter_enabled ) {
             $wrapper_data_attrs .= ' data-counter="' . esc_attr( $counter_id ) . '"';
         }
-        echo '<div class="' . esc_attr( implode( ' ', $wrapper_classes ) ) . '" ' . $wrapper_data_attrs . '>';
+        $wrapper_a11y_attrs = 'role="table"'
+            . ' aria-label="' . esc_attr( $table_aria_label ) . '"'
+            . ' aria-rowcount="' . (int) $row_count . '"';
+        echo '<div class="' . esc_attr( implode( ' ', $wrapper_classes ) ) . '" '
+            . $wrapper_data_attrs . ' ' . $wrapper_a11y_attrs . '>';
 
         // ─── LABEL COLUMN ──────────────────────────────────────────────────
-        echo '<div class="vergleich-labels">';
+        // role="presentation" auf den strukturellen Wrappern (Labels/Scroll/
+        // Track/Card), damit sie das ARIA-Table-Modell nicht unterbrechen —
+        // Rollen role="rowheader" (Labels) und role="cell" (Zellen) zählen
+        // dann direkt unter role="table".
+        echo '<div class="vergleich-labels" role="presentation">';
 
         if ( empty( $rows ) ) {
             echo '<div class="vergleich-label" style="color:#9ca3af;font-style:italic;">'
@@ -2187,6 +2356,13 @@ class Element_Vergleich extends \Bricks\Element {
             if ( $label_inline !== '' ) {
                 $extra .= ' style="' . esc_attr( $label_inline ) . '"';
             }
+            // ARIA: Label ist der Row-Header. Eindeutige ID, damit die Zellen in
+            // den Produkt-Spalten per aria-labelledby darauf zeigen können
+            // („Preis: 1.299 €" statt nur „1.299 €" für Screenreader/KI).
+            $label_id = $aria_id_prefix . '-' . (int) $idx;
+            $extra .= ' role="rowheader"'
+                   . ' id="' . esc_attr( $label_id ) . '"'
+                   . ' aria-rowindex="' . ( (int) $idx + 1 ) . '"';
 
             echo '<div class="' . esc_attr( $cls ) . '"' . $extra . '>';
             echo '<span class="vergleich-label__text">' . wp_kses_post( $this->dd_string( $label ) ) . '</span>';
@@ -2210,7 +2386,7 @@ class Element_Vergleich extends \Bricks\Element {
         echo '</div>';
 
         // ─── SCROLL / TRACK (Cards) ────────────────────────────────────────
-        echo '<div class="vergleich-scroll"><div class="vergleich-track">';
+        echo '<div class="vergleich-scroll" role="presentation"><div class="vergleich-track" role="presentation">';
 
         if ( $prepared_query instanceof \Bricks\Query ) {
             try {
@@ -2282,6 +2458,13 @@ class Element_Vergleich extends \Bricks\Element {
             echo '</button></div>';
         }
 
+        // JSON-LD Schema.org Output: nachdem alle Produkte gerendert wurden,
+        // emittieren wir eine ItemList mit allen gesammelten Produkt-Items.
+        // Pro Produkt wurde `_schema_items[]` in render_card_inner befüllt.
+        if ( ! empty( $this->_schema_runtime ) && ! empty( $this->_schema_items ) ) {
+            echo $this->render_schema_jsonld();
+        }
+
         echo '</div>'; // .vergleich-root
     }
 
@@ -2341,6 +2524,12 @@ class Element_Vergleich extends \Bricks\Element {
                     $GLOBALS['product'] = $wc_product;
                 }
             }
+        }
+
+        // Schema.org: pro Produkt ein Item sammeln. Läuft im Loop-Kontext, damit
+        // DD-Tags gegen das richtige Produkt aufgelöst werden.
+        if ( ! empty( $this->_schema_runtime ) ) {
+            $this->collect_schema_item( $rows, $loop_post_id );
         }
 
         // Ranking-Badge
@@ -2438,7 +2627,7 @@ class Element_Vergleich extends \Bricks\Element {
         }
 
         ob_start();
-        echo '<div class="' . esc_attr( $card_class ) . '"' . $card_data . '>';
+        echo '<div class="' . esc_attr( $card_class ) . '"' . $card_data . ' role="presentation">';
         echo $rank_html;
 
         foreach ( $rows as $idx => $row ) {
@@ -2510,6 +2699,15 @@ class Element_Vergleich extends \Bricks\Element {
         $extra = ' data-row-index="' . (int) $idx . '"';
         if ( $collapsible ) $extra .= ' data-vergleich-row-id="' . esc_attr( $row_key ) . '"';
         if ( ! empty( $styles ) ) $extra .= ' style="' . esc_attr( implode( ';', $styles ) ) . '"';
+
+        // ARIA: Zelle ist eine Daten-Zelle der Tabelle, gehört zum Row-Header
+        // mit gleicher row-index. aria-labelledby verknüpft beide → Reader
+        // liest „Preis: 1.299 €" statt nur „1.299 €".
+        $extra .= ' role="cell"';
+        $extra .= ' aria-rowindex="' . ( (int) $idx + 1 ) . '"';
+        if ( $this->_aria_id_prefix !== '' ) {
+            $extra .= ' aria-labelledby="' . esc_attr( $this->_aria_id_prefix . '-' . (int) $idx ) . '"';
+        }
 
         // Zelleninhalt defensiv rendern — Fehler eines einzelnen Renderers
         // dürfen nicht den ganzen Card-Render abschießen.
@@ -3365,6 +3563,257 @@ class Element_Vergleich extends \Bricks\Element {
         return 'row-' . (int) $idx;
     }
 
+    // ==========================================================================
+    // SCHEMA.ORG JSON-LD
+    // ==========================================================================
+
+    /**
+     * Pro Produkt (im Loop-Kontext) die Zeilen durchgehen und Schema.org-Felder
+     * aus den zugeordneten Rollen extrahieren. Das Item wird an _schema_items
+     * angehängt und am Ende von render_inner als ItemList ausgegeben.
+     */
+    private function collect_schema_item( $rows, $loop_post_id ) {
+        $item = [];
+        foreach ( $rows as $row ) {
+            $role = isset( $row['schemaRole'] ) ? (string) $row['schemaRole'] : '';
+            if ( $role === '' ) continue;
+            $value = $this->extract_row_value_for_schema( $row, $role, $loop_post_id );
+            if ( $value === '' || $value === null ) continue;
+
+            switch ( $role ) {
+                case 'name':
+                    $item['name'] = $value;
+                    break;
+                case 'image':
+                    $item['image'] = $value;
+                    break;
+                case 'url':
+                    // URL bleibt auch als Top-Level Product.url für Reichweite.
+                    $item['url'] = $value;
+                    break;
+                case 'price':
+                    if ( ! isset( $item['offers'] ) ) $item['offers'] = [ '@type' => 'Offer' ];
+                    $item['offers']['price']         = $value;
+                    $item['offers']['priceCurrency'] = $this->_schema_runtime['currency'];
+                    break;
+                case 'ratingValue':
+                    $item['aggregateRating'] = [
+                        '@type'       => 'AggregateRating',
+                        'ratingValue' => (string) $value,
+                        'bestRating'  => (string) $this->_schema_runtime['rating_best'],
+                    ];
+                    if ( (int) $this->_schema_runtime['rating_count'] > 0 ) {
+                        $item['aggregateRating']['ratingCount'] = (string) $this->_schema_runtime['rating_count'];
+                    }
+                    break;
+                case 'brand':
+                    $item['brand'] = [ '@type' => 'Brand', 'name' => $value ];
+                    break;
+                case 'description':
+                    $item['description'] = $value;
+                    break;
+            }
+        }
+
+        // Offer.url = Product.url (falls beides vorhanden), hilft Google die Verknüpfung sauber zu erkennen.
+        if ( isset( $item['offers'] ) && isset( $item['url'] ) && ! isset( $item['offers']['url'] ) ) {
+            $item['offers']['url'] = $item['url'];
+        }
+
+        if ( ! empty( $item ) ) {
+            $this->_schema_items[] = $item;
+        }
+    }
+
+    /**
+     * Reinen Wert aus einer Zeile für das Schema-Feld extrahieren. Je nach
+     * Zelltyp wird unterschiedlich aufgelöst — Text/Price als plain string,
+     * Image als URL, Button als Offer-URL, Rating/Score als Zahl.
+     */
+    private function extract_row_value_for_schema( $row, $role, $loop_post_id ) {
+        $type = $row['type'] ?? 'text';
+
+        // URL-Rollen kommen typischerweise aus button-Zellen.
+        if ( $role === 'url' && $type === 'button' ) {
+            return $this->resolve_button_url( $row );
+        }
+
+        // Image-Rollen aus image-Zellen (Meta-Key o.ä.).
+        if ( $role === 'image' && $type === 'image' ) {
+            return $this->resolve_image_url( $row, $loop_post_id );
+        }
+
+        // Rating aus rating- oder score-Zellen.
+        if ( $role === 'ratingValue' ) {
+            if ( $type === 'rating' ) {
+                $raw = $this->dd_string( (string) ( $row['ratingValue'] ?? '' ) );
+                return $this->parse_number( $raw );
+            }
+            if ( $type === 'score' ) {
+                return $this->resolve_score_value( $row, $loop_post_id );
+            }
+        }
+
+        // Preis: text- oder score-Zelle (Zahl extrahieren).
+        if ( $role === 'price' ) {
+            if ( $type === 'text' ) {
+                $raw = $this->dd_string( (string) ( $row['text'] ?? '' ) );
+                return $this->parse_number( $raw );
+            }
+            if ( $type === 'score' ) {
+                return $this->resolve_score_value( $row, $loop_post_id );
+            }
+        }
+
+        // Fallback für name/brand/description → text-Zellen.
+        if ( $type === 'text' ) {
+            $raw = $this->dd_string( (string) ( $row['text'] ?? '' ) );
+            return $this->clean_schema_string( $raw );
+        }
+
+        // Dynamic-Zelle: DD auflösen
+        if ( $type === 'dynamic' ) {
+            $dd = (string) ( $row['dynamic'] ?? '' );
+            if ( $dd !== '' ) {
+                $resolved = $this->dd_string( $dd );
+                return $this->clean_schema_string( $resolved );
+            }
+        }
+
+        return '';
+    }
+
+    private function resolve_button_url( $row ) {
+        $link = $row['btnLink'] ?? [];
+        if ( ! is_array( $link ) ) return is_string( $link ) ? $this->dd_string( $link ) : '';
+        $type = $link['type'] ?? '';
+        if ( $type === 'internal' && ! empty( $link['postId'] ) ) {
+            return (string) ( get_permalink( (int) $link['postId'] ) ?: '' );
+        }
+        if ( $type === 'external' && ! empty( $link['url'] ) ) {
+            return $this->dd_string( (string) $link['url'] );
+        }
+        if ( $type === 'meta' && ! empty( $link['useDynamicData'] ) ) {
+            $dd = is_array( $link['useDynamicData'] )
+                ? (string) ( $link['useDynamicData']['name'] ?? '' )
+                : (string) $link['useDynamicData'];
+            return $this->dd_string( $dd );
+        }
+        if ( ! empty( $link['url'] ) ) return $this->dd_string( (string) $link['url'] );
+        return '';
+    }
+
+    private function resolve_image_url( $row, $loop_post_id ) {
+        $image = $row['image'] ?? null;
+        if ( is_array( $image ) ) {
+            // Direkt-Upload: id oder url
+            if ( ! empty( $image['id'] ) ) {
+                $url = wp_get_attachment_image_url( (int) $image['id'], 'full' );
+                if ( $url ) return $url;
+            }
+            if ( ! empty( $image['url'] ) && is_string( $image['url'] ) ) {
+                return (string) $image['url'];
+            }
+            // Dynamic Data (z.B. {featured_image})
+            $dyn = is_string( $image['useDynamicData'] ?? null ) ? trim( $image['useDynamicData'] ) : '';
+            if ( $dyn !== '' ) {
+                if ( preg_match( '/^\{\s*featured_image\s*\}$/', $dyn ) && $loop_post_id > 0 ) {
+                    $thumb = get_the_post_thumbnail_url( $loop_post_id, 'full' );
+                    if ( $thumb ) return $thumb;
+                }
+                if ( function_exists( 'bricks_render_dynamic_data' ) ) {
+                    $resolved = bricks_render_dynamic_data( $dyn, $loop_post_id ?: null );
+                    if ( is_string( $resolved ) && $resolved !== '' && $resolved !== $dyn ) {
+                        return $resolved;
+                    }
+                }
+            }
+        }
+        // Fallback: Post-Thumbnail
+        if ( $loop_post_id > 0 ) {
+            $thumb = get_the_post_thumbnail_url( $loop_post_id, 'full' );
+            if ( $thumb ) return $thumb;
+        }
+        return '';
+    }
+
+    private function resolve_score_value( $row, $loop_post_id ) {
+        $key = isset( $row['scoreKey'] ) ? trim( (string) $row['scoreKey'] ) : '';
+        if ( $key === '' ) return '';
+        $raw = '';
+        if ( strpos( $key, '{' ) !== false && function_exists( 'bricks_render_dynamic_data' ) ) {
+            $resolved = bricks_render_dynamic_data( $key, $loop_post_id ?: null );
+            $raw = is_string( $resolved ) ? $resolved : '';
+        } elseif ( $loop_post_id > 0 ) {
+            $meta = get_post_meta( $loop_post_id, $key, true );
+            $raw = is_scalar( $meta ) ? (string) $meta : '';
+        }
+        return $this->parse_number( $raw );
+    }
+
+    /**
+     * Zahl aus einem String extrahieren — "1.299,00 €" → "1299.00", "4,5" → "4.5".
+     * Google akzeptiert Preise als String im Punkt-Format.
+     */
+    private function parse_number( $str ) {
+        $str = (string) $str;
+        if ( $str === '' ) return '';
+        // Nur Zahlen, Komma, Punkt, Minus behalten.
+        $clean = preg_replace( '/[^0-9.,\-]/', '', $str );
+        if ( $clean === '' ) return '';
+        // Wenn sowohl , als auch . vorhanden: Tausender-Trenner entfernen (der
+        // Trenner, der weiter links steht, ist Tausender).
+        if ( strpos( $clean, ',' ) !== false && strpos( $clean, '.' ) !== false ) {
+            if ( strrpos( $clean, ',' ) > strrpos( $clean, '.' ) ) {
+                // Deutsches Format: "1.299,00" → "1299.00"
+                $clean = str_replace( '.', '', $clean );
+                $clean = str_replace( ',', '.', $clean );
+            } else {
+                // US-Format: "1,299.00" → "1299.00"
+                $clean = str_replace( ',', '', $clean );
+            }
+        } elseif ( strpos( $clean, ',' ) !== false ) {
+            // Nur Komma: Dezimaltrenner.
+            $clean = str_replace( ',', '.', $clean );
+        }
+        return $clean;
+    }
+
+    private function clean_schema_string( $str ) {
+        $str = wp_strip_all_tags( (string) $str );
+        $str = trim( preg_replace( '/\s+/', ' ', $str ) );
+        return $str;
+    }
+
+    /**
+     * Die gesammelten Items als Schema.org ItemList emittieren.
+     */
+    private function render_schema_jsonld() {
+        $list_name = $this->_schema_runtime['list_name'] ?? 'Produktvergleich';
+        $elements  = [];
+        foreach ( $this->_schema_items as $i => $item ) {
+            $product = array_merge( [ '@type' => 'Product' ], $item );
+            $elements[] = [
+                '@type'    => 'ListItem',
+                'position' => $i + 1,
+                'item'     => $product,
+            ];
+        }
+        $data = [
+            '@context'        => 'https://schema.org',
+            '@type'           => 'ItemList',
+            'name'            => $list_name,
+            'numberOfItems'   => count( $elements ),
+            'itemListElement' => $elements,
+        ];
+        // JSON_UNESCAPED_UNICODE für Umlaute; Slashes bewusst NICHT unescaped,
+        // damit in JSON-String-Werten vorkommende "</script>"-Sequenzen als
+        // "<\/script>" escaped bleiben (Sicherheit gegen HTML-Parse-Breakout).
+        $json = wp_json_encode( $data, JSON_UNESCAPED_UNICODE );
+        if ( $json === false ) return '';
+        return '<script type="application/ld+json" class="vergleich-jsonld">' . $json . '</script>';
+    }
+
     private function resolve_color( $color ) {
         if ( is_string( $color ) ) return $this->sanitize_css_value( $color );
         if ( is_array( $color ) ) {
@@ -3610,9 +4059,10 @@ class Element_Vergleich extends \Bricks\Element {
             box-sizing: border-box;
         }
         .vergleich-label__text { min-width: 0; }
-        /* Info-Icon-Button + Tooltip via ::after (content: attr()). Erscheint
-           rechts vom Icon, schmal, mit Umbruch. Uebersteht auch laengere Texte. */
+        /* Info-Icon-Button + Tooltip via ::after (content: attr()). Tooltip
+           erscheint unter dem Icon, damit er nicht in die Nachbar-Card clipt. */
         .vergleich-tooltip {
+            position: relative;
             flex: 0 0 auto;
             display: inline-flex;
             align-items: center;
@@ -3636,10 +4086,14 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-tooltip svg { width: 1em; height: 1em; display: block; }
         .vergleich-tooltip::after {
             content: attr(data-tooltip);
+            /* Position: nach UNTEN statt rechts. Grund: rechts von der Label-
+               Spalte beginnt direkt die erste Card, deren overflow:clip einen
+               eigenen Stacking-Context erzeugt und den Tooltip visuell clippt.
+               Nach unten bleibt der Tooltip vertikal in der Label-Spalten-Höhe
+               und umgeht das Problem. */
             position: absolute;
-            left: calc(100% + 10px);
-            top: 50%;
-            transform: translateY(-50%);
+            left: 0;
+            top: calc(100% + 6px);
             min-width: 180px;
             max-width: 280px;
             padding: 8px 12px;
@@ -4038,6 +4492,22 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-wrapper.has-row-hover .vergleich-zelle.is-row-hover {
             background-color: var(--vgl-row-hover-bg, rgba(0,0,0,.04));
             transition: background-color .12s ease;
+        }
+
+        /* Table-Caption (a11y + SEO). Sichtbar oder sr-only. */
+        .vergleich-caption {
+            margin: 0 0 12px;
+        }
+        .vergleich-caption.is-sr-only {
+            position: absolute !important;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
         }
 
         /* Counter-Element (z.B. "1–4 von 80") */
