@@ -1875,6 +1875,32 @@ class Element_Vergleich extends \Bricks\Element {
                 ],
                 'required' => [ 'type', '=', 'lightbox' ],
             ],
+            'lightboxPosition' => [
+                'label'   => esc_html__( 'Position', 'bricks-vergleich' ),
+                'type'    => 'select',
+                'options' => [
+                    'center' => esc_html__( 'Mitte (Standard)', 'bricks-vergleich' ),
+                    'top'    => esc_html__( 'Oben', 'bricks-vergleich' ),
+                    'bottom' => esc_html__( 'Unten (Bottom-Sheet)', 'bricks-vergleich' ),
+                ],
+                'default'     => 'center',
+                'description' => esc_html__( 'Mobile-Tipp: "Unten" fühlt sich auf dem Smartphone wie ein nativer Bottom-Sheet an.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxMaxWidth' => [
+                'label'       => esc_html__( 'Max. Breite', 'bricks-vergleich' ),
+                'type'        => 'text',
+                'placeholder' => '640px',
+                'description' => esc_html__( 'Einheiten erlaubt: px, %, vw, rem. Auf kleinen Viewports wird zusätzlich auf "100vw − 32px" gekappt. Leer = 640px.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'lightbox' ],
+            ],
+            'lightboxMaxHeight' => [
+                'label'       => esc_html__( 'Max. Höhe', 'bricks-vergleich' ),
+                'type'        => 'text',
+                'placeholder' => 'calc(100vh - 32px)',
+                'description' => esc_html__( 'Einheiten erlaubt: px, %, vh. Leer = automatisch (Viewport-Höhe minus Abstand).', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'lightbox' ],
+            ],
 
             // ───── COMMON ─────
             'labelTooltip' => [
@@ -3546,13 +3572,31 @@ class Element_Vergleich extends \Bricks\Element {
         if ( ! in_array( $style, [ 'link', 'outline', 'solid' ], true ) ) $style = 'link';
         $btn_class = 'vergleich-lightbox-trigger is-style-' . $style;
 
+        // Position & Größe
+        $position = isset( $row['lightboxPosition'] ) ? (string) $row['lightboxPosition'] : 'center';
+        if ( ! in_array( $position, [ 'center', 'top', 'bottom' ], true ) ) $position = 'center';
+        $dlg_class = 'vergleich-lightbox-dialog is-pos-' . $position;
+
+        // Größen-Inlines: nur sanitize, was wir einbauen. Als CSS-Custom-
+        // Properties auf dem <dialog> — so kann die CSS-Regel eine Kombination
+        // aus User-Wert UND „100vw − 32px" als Obergrenze bilden.
+        $max_w = $this->sanitize_css_value( isset( $row['lightboxMaxWidth'] ) ? (string) $row['lightboxMaxWidth'] : '' );
+        $max_h = $this->sanitize_css_value( isset( $row['lightboxMaxHeight'] ) ? (string) $row['lightboxMaxHeight'] : '' );
+        $dlg_style = '';
+        if ( trim( $max_w ) !== '' ) $dlg_style .= '--vgl-lb-max-w:' . $max_w . ';';
+        if ( trim( $max_h ) !== '' ) $dlg_style .= '--vgl-lb-max-h:' . $max_h . ';';
+
         $html  = '<button type="button" class="' . esc_attr( $btn_class ) . '"'
                . ' data-vgl-lightbox-open="' . esc_attr( $dlg_id ) . '"'
                . ' aria-haspopup="dialog">'
                . '<span class="vergleich-lightbox-trigger__text">' . esc_html( $trigger_text ) . '</span>'
                . '</button>';
 
-        $html .= '<dialog class="vergleich-lightbox-dialog" id="' . esc_attr( $dlg_id ) . '">';
+        $html .= '<dialog class="' . esc_attr( $dlg_class ) . '" id="' . esc_attr( $dlg_id ) . '"';
+        if ( $dlg_style !== '' ) {
+            $html .= ' style="' . esc_attr( $dlg_style ) . '"';
+        }
+        $html .= '>';
         $html .= '<div class="vergleich-lightbox-dialog__inner">';
         // Close-Button als erstes Child für Tab-Order.
         $html .= '<button type="button" class="vergleich-lightbox-close" data-vgl-lightbox-close aria-label="'
@@ -4289,18 +4333,47 @@ class Element_Vergleich extends \Bricks\Element {
 
         .vergleich-lightbox-dialog {
             /* Natives <dialog>: bringt eigene Default-Styles mit. Wir reseten
-               die, damit unser Layout sauber greift. */
+               die, damit unser Layout sauber greift.
+               max-width/max-height-Logik:
+                 - User-Wert via --vgl-lb-max-w / --vgl-lb-max-h (leer ⇒ Default)
+                 - Zusätzlich hart auf Viewport − 32px kappen, damit der Dialog
+                   auf Mobile nie über den Rand hinausragt. */
             padding: 0;
             border: none;
             background: transparent;
-            max-width: min(640px, calc(100vw - 32px));
-            max-height: calc(100vh - 32px);
             width: 100%;
+            max-width: min(var(--vgl-lb-max-w, 640px), calc(100vw - 32px));
+            max-height: min(var(--vgl-lb-max-h, calc(100vh - 32px)), calc(100vh - 32px));
             color: inherit;
             /* Textstyle aus der Umgebung erben, damit Lightbox sich an die
                Seite anpasst statt an Browser-Defaults. */
             font: inherit;
             line-height: 1.55;
+        }
+        /* Position: Browser-Default für <dialog> ist "margin:auto" → zentriert.
+           Für top/bottom setzen wir margin-top bzw. -bottom auf auto und das
+           andere auf einen festen Abstand zum Viewport-Rand. */
+        .vergleich-lightbox-dialog.is-pos-center {
+            margin: auto;
+        }
+        .vergleich-lightbox-dialog.is-pos-top {
+            margin: var(--vgl-lb-offset, 24px) auto auto;
+        }
+        .vergleich-lightbox-dialog.is-pos-bottom {
+            margin: auto auto var(--vgl-lb-offset, 24px);
+        }
+        /* Bottom-Sheet-Feel auf Mobile: wenn "Unten" gewählt und Viewport
+           schmal, volle Breite + runde Oberkante statt schwebender Karte.
+           Gibt dem User genau das, was native iOS/Android Bottom-Sheets tun. */
+        @media (max-width: 560px) {
+            .vergleich-lightbox-dialog.is-pos-bottom {
+                margin: auto 0 0;
+                max-width: 100vw;
+                width: 100vw;
+            }
+            .vergleich-lightbox-dialog.is-pos-bottom .vergleich-lightbox-dialog__inner {
+                border-radius: 14px 14px 0 0;
+            }
         }
         .vergleich-lightbox-dialog::backdrop {
             background: rgba(15, 23, 42, 0.55);
