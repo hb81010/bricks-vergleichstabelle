@@ -3580,11 +3580,16 @@ class Element_Vergleich extends \Bricks\Element {
         // Größen-Inlines: nur sanitize, was wir einbauen. Als CSS-Custom-
         // Properties auf dem <dialog> — so kann die CSS-Regel eine Kombination
         // aus User-Wert UND „100vw − 32px" als Obergrenze bilden.
-        $max_w = $this->sanitize_css_value( isset( $row['lightboxMaxWidth'] ) ? (string) $row['lightboxMaxWidth'] : '' );
-        $max_h = $this->sanitize_css_value( isset( $row['lightboxMaxHeight'] ) ? (string) $row['lightboxMaxHeight'] : '' );
+        $max_w = trim( $this->sanitize_css_value( isset( $row['lightboxMaxWidth'] ) ? (string) $row['lightboxMaxWidth'] : '' ) );
+        $max_h = trim( $this->sanitize_css_value( isset( $row['lightboxMaxHeight'] ) ? (string) $row['lightboxMaxHeight'] : '' ) );
+        // Einheitenlose Zahlen als px interpretieren — sonst ergibt z.B. „640"
+        // CSS `max-width: 640`, was ungültig ist, die gesamte max-width-Regel
+        // unwirksam macht und den Dialog auf UA-Default-Breite (≈ 100vw) läuft.
+        if ( $max_w !== '' && preg_match( '/^[0-9]+(\.[0-9]+)?$/', $max_w ) ) $max_w .= 'px';
+        if ( $max_h !== '' && preg_match( '/^[0-9]+(\.[0-9]+)?$/', $max_h ) ) $max_h .= 'px';
         $dlg_style = '';
-        if ( trim( $max_w ) !== '' ) $dlg_style .= '--vgl-lb-max-w:' . $max_w . ';';
-        if ( trim( $max_h ) !== '' ) $dlg_style .= '--vgl-lb-max-h:' . $max_h . ';';
+        if ( $max_w !== '' ) $dlg_style .= '--vgl-lb-max-w:' . $max_w . ';';
+        if ( $max_h !== '' ) $dlg_style .= '--vgl-lb-max-h:' . $max_h . ';';
 
         $html  = '<button type="button" class="' . esc_attr( $btn_class ) . '"'
                . ' data-vgl-lightbox-open="' . esc_attr( $dlg_id ) . '"'
@@ -4332,44 +4337,58 @@ class Element_Vergleich extends \Bricks\Element {
         }
 
         .vergleich-lightbox-dialog {
-            /* Natives <dialog>: bringt eigene Default-Styles mit. Wir reseten
-               die, damit unser Layout sauber greift.
+            /* Deterministisches Positionieren: Browser-UA-Defaults für
+               <dialog> variieren (Chrome/Firefox/Safari setzen unterschiedlich
+               `inset` und `margin`). Wir legen es explizit fest, damit die
+               Positionsklassen vorhersagbar greifen.
                max-width/max-height-Logik:
                  - User-Wert via --vgl-lb-max-w / --vgl-lb-max-h (leer ⇒ Default)
                  - Zusätzlich hart auf Viewport − 32px kappen, damit der Dialog
                    auf Mobile nie über den Rand hinausragt. */
+            position: fixed;
             padding: 0;
             border: none;
             background: transparent;
-            width: 100%;
+            /* width: auto → Dialog wird so breit wie sein Content, gekappt
+               durch max-width. Vorher erzwang `width:100%` volle Viewport-
+               Breite, sobald max-width aus ungültigem Wert wegfiel. */
+            width: auto;
             max-width: min(var(--vgl-lb-max-w, 640px), calc(100vw - 32px));
             max-height: min(var(--vgl-lb-max-h, calc(100vh - 32px)), calc(100vh - 32px));
             color: inherit;
-            /* Textstyle aus der Umgebung erben, damit Lightbox sich an die
-               Seite anpasst statt an Browser-Defaults. */
+            /* Textstyle aus der Umgebung erben. */
             font: inherit;
             line-height: 1.55;
         }
-        /* Position: Browser-Default für <dialog> ist "margin:auto" → zentriert.
-           Für top/bottom setzen wir margin-top bzw. -bottom auf auto und das
-           andere auf einen festen Abstand zum Viewport-Rand. */
+        /* Positionsklassen. Jede setzt ALLE vier Kanten + margin explizit,
+           damit keine UA-Defaults durchsickern. */
         .vergleich-lightbox-dialog.is-pos-center {
+            inset: 0;
             margin: auto;
         }
         .vergleich-lightbox-dialog.is-pos-top {
-            margin: var(--vgl-lb-offset, 24px) auto auto;
+            top: var(--vgl-lb-offset, 24px);
+            right: 0;
+            bottom: auto;
+            left: 0;
+            margin-inline: auto;
         }
         .vergleich-lightbox-dialog.is-pos-bottom {
-            margin: auto auto var(--vgl-lb-offset, 24px);
+            top: auto;
+            right: 0;
+            bottom: var(--vgl-lb-offset, 24px);
+            left: 0;
+            margin-inline: auto;
         }
-        /* Bottom-Sheet-Feel auf Mobile: wenn "Unten" gewählt und Viewport
-           schmal, volle Breite + runde Oberkante statt schwebender Karte.
-           Gibt dem User genau das, was native iOS/Android Bottom-Sheets tun. */
+        /* Bottom-Sheet auf Mobile: volle Breite, oben abgerundet, unten am Rand. */
         @media (max-width: 560px) {
             .vergleich-lightbox-dialog.is-pos-bottom {
-                margin: auto 0 0;
-                max-width: 100vw;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                margin: 0;
                 width: 100vw;
+                max-width: 100vw;
             }
             .vergleich-lightbox-dialog.is-pos-bottom .vergleich-lightbox-dialog__inner {
                 border-radius: 14px 14px 0 0;
