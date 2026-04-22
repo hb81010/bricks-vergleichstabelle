@@ -1729,6 +1729,9 @@ class Element_Vergleich extends \Bricks\Element {
             'scoreValuePadding' => [
                 'label'    => esc_html__( 'Innenabstand: Zahl-Bereich', 'bricks-vergleich' ),
                 'type'     => 'spacing',
+                // Default ausgegraut im UI anzeigen, wird auch als effektiver
+                // Wert genutzt, wenn User nichts eingibt.
+                'default'  => [ 'top' => '18px', 'right' => '16px', 'bottom' => '18px', 'left' => '16px' ],
                 'required' => [ 'scoreDisplay', '=', 'card' ],
             ],
             'scoreVerdictSource' => [
@@ -1782,6 +1785,7 @@ class Element_Vergleich extends \Bricks\Element {
             'scoreVerdictPadding' => [
                 'label'    => esc_html__( 'Innenabstand: Verdikt', 'bricks-vergleich' ),
                 'type'     => 'spacing',
+                'default'  => [ 'top' => '10px', 'right' => '12px', 'bottom' => '10px', 'left' => '12px' ],
                 'required' => [ [ 'scoreDisplay', '=', 'card' ], [ 'scoreVerdictSource', '!=', 'none' ] ],
             ],
 
@@ -3833,7 +3837,9 @@ class Element_Vergleich extends \Bricks\Element {
         }
         $html .= '<span class="vergleich-score-cell__value" style="' . esc_attr( $value_typo ) . '">' . esc_html( $display ) . '</span>';
         if ( $suffix !== '' ) {
-            $html .= '<span class="vergleich-score-cell__suffix" style="' . esc_attr( $suffix_typo . 'align-self:flex-start;' ) . '">' . esc_html( $suffix ) . '</span>';
+            // Kein align-self:flex-start — Suffix soll auf der Baseline sitzen,
+            // nicht als Superscript (Container hat align-items:baseline).
+            $html .= '<span class="vergleich-score-cell__suffix" style="' . esc_attr( $suffix_typo ) . '">' . esc_html( $suffix ) . '</span>';
         }
         $html .= '</div>';
 
