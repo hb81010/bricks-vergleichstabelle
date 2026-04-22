@@ -2782,10 +2782,23 @@ class Element_Vergleich extends \Bricks\Element {
                 $s_prefix = (string) $score_cfg['prefix'];
                 $s_suffix = (string) $score_cfg['suffix'];
 
-                $score_html  = '<div class="vergleich-score" aria-label="' . esc_attr__( 'Bewertung', 'bricks-vergleich' ) . '">';
-                if ( $s_prefix !== '' ) $score_html .= '<span class="vergleich-score__prefix">' . esc_html( $s_prefix ) . '</span>';
-                $score_html .= '<span class="vergleich-score__value">' . esc_html( $display ) . '</span>';
-                if ( $s_suffix !== '' ) $score_html .= '<span class="vergleich-score__suffix">' . esc_html( $s_suffix ) . '</span>';
+                // ARIA: aria-label enthaelt den tatsaechlichen Wert, sonst
+                // maskiert "Bewertung" den <span>-Textinhalt fuer Screenreader.
+                // Reader hoert dann "Bewertung 80 %" statt nur "Bewertung".
+                $score_aria = trim(
+                    sprintf(
+                        /* translators: 1: prefix, 2: wert, 3: suffix */
+                        esc_html__( 'Bewertung: %1$s%2$s%3$s', 'bricks-vergleich' ),
+                        $s_prefix !== '' ? $s_prefix . ' ' : '',
+                        $display,
+                        $s_suffix !== '' ? ' ' . $s_suffix : ''
+                    )
+                );
+
+                $score_html  = '<div class="vergleich-score" role="img" aria-label="' . esc_attr( $score_aria ) . '">';
+                if ( $s_prefix !== '' ) $score_html .= '<span class="vergleich-score__prefix" aria-hidden="true">' . esc_html( $s_prefix ) . '</span>';
+                $score_html .= '<span class="vergleich-score__value" aria-hidden="true">' . esc_html( $display ) . '</span>';
+                if ( $s_suffix !== '' ) $score_html .= '<span class="vergleich-score__suffix" aria-hidden="true">' . esc_html( $s_suffix ) . '</span>';
                 $score_html .= '</div>';
             }
         }
@@ -3255,23 +3268,42 @@ class Element_Vergleich extends \Bricks\Element {
                     . '</span>';
             }
 
-            return '<div class="vergleich-rating has-custom-icons" style="display:inline-flex;align-items:center;gap:6px;">'
-                . '<span class="vergleich-rating__icons" style="display:inline-flex;align-items:center;gap:' . esc_attr( $gap ) . ';">'
+            // ARIA: komplette Rating-Angabe in einem aria-label, damit
+            // Screenreader "4,5 von 5 Sternen" hoeren statt 5 Einzel-Icons.
+            // Nummer und Icons sind aria-hidden, weil der Label das schon
+            // enthaelt (sonst doppelte Ansage).
+            $rating_decimals = ( $value_clamped == (int) $value_clamped ) ? 0 : 1;
+            $rating_aria = sprintf(
+                /* translators: 1: wert, 2: max */
+                esc_html__( '%1$s von %2$s', 'bricks-vergleich' ),
+                number_format_i18n( $value_clamped, $rating_decimals ),
+                (string) $max
+            );
+
+            return '<div class="vergleich-rating has-custom-icons" role="img" aria-label="' . esc_attr( $rating_aria ) . '" style="display:inline-flex;align-items:center;gap:6px;">'
+                . '<span class="vergleich-rating__icons" aria-hidden="true" style="display:inline-flex;align-items:center;gap:' . esc_attr( $gap ) . ';">'
                 . $parts
                 . '</span>'
-                . $number_html
+                . ( $number_html !== '' ? '<span aria-hidden="true">' . $number_html . '</span>' : '' )
                 . '</div>';
         }
 
         // ─── Fallback: ★-Zeichen mit CSS-Overlay für Teilfüllung ─────────
         $pct = ( $value_clamped / $max ) * 100;
-        $html  = '<div class="vergleich-rating" style="display:inline-flex;align-items:center;gap:6px;font-size:' . esc_attr( $size ) . ';">';
-        $html .= '<span class="vergleich-rating__stars" style="position:relative;color:' . esc_attr( $empty_color ) . ';letter-spacing:' . esc_attr( $gap ) . ';font-family:Arial,sans-serif;">';
+        $rating_decimals = ( $value_clamped == (int) $value_clamped ) ? 0 : 1;
+        $rating_aria = sprintf(
+            /* translators: 1: wert, 2: max */
+            esc_html__( '%1$s von %2$s Sternen', 'bricks-vergleich' ),
+            number_format_i18n( $value_clamped, $rating_decimals ),
+            (string) $max
+        );
+        $html  = '<div class="vergleich-rating" role="img" aria-label="' . esc_attr( $rating_aria ) . '" style="display:inline-flex;align-items:center;gap:6px;font-size:' . esc_attr( $size ) . ';">';
+        $html .= '<span class="vergleich-rating__stars" aria-hidden="true" style="position:relative;color:' . esc_attr( $empty_color ) . ';letter-spacing:' . esc_attr( $gap ) . ';font-family:Arial,sans-serif;">';
         $html .= str_repeat( '★', $max );
         $html .= '<span class="vergleich-rating__fill" style="position:absolute;inset:0;width:' . esc_attr( $pct ) . '%;overflow:hidden;color:' . esc_attr( $fill_color ) . ';white-space:nowrap;">';
         $html .= str_repeat( '★', $max );
         $html .= '</span></span>';
-        $html .= $number_html;
+        if ( $number_html !== '' ) $html .= '<span aria-hidden="true">' . $number_html . '</span>';
         $html .= '</div>';
         return $html;
     }
@@ -3769,7 +3801,9 @@ class Element_Vergleich extends \Bricks\Element {
 
         $html = '<button type="button" ' . $btn_attrs
               . ' data-vgl-lightbox-open="' . esc_attr( $dlg_id ) . '"'
-              . ' aria-haspopup="dialog">'
+              . ' aria-haspopup="dialog"'
+              . ' aria-expanded="false"'
+              . ' aria-controls="' . esc_attr( $dlg_id ) . '">'
               . $inner
               . '</button>';
 

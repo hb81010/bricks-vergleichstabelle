@@ -480,6 +480,17 @@
     // <dialog>-Element zulassen, nicht automatisch.
     if (!document._vglLightboxBound) {
         document._vglLightboxBound = true;
+        // Hilfsfunktion: ARIA-State am Trigger synchron zum Dialog-State.
+        // Screenreader-Nutzer hoeren "expanded"/"collapsed", wenn sie zum
+        // Trigger zurueckfokussieren (z.B. nach ESC).
+        function setTriggerExpanded(dlgId, expanded) {
+            if (!dlgId) return;
+            var triggers = document.querySelectorAll('[data-vgl-lightbox-open="' + dlgId + '"]');
+            for (var i = 0; i < triggers.length; i++) {
+                triggers[i].setAttribute("aria-expanded", expanded ? "true" : "false");
+            }
+        }
+
         document.addEventListener("click", function(e){
             var t = e.target;
             if (!t || !t.closest) return;
@@ -489,11 +500,11 @@
                 var id = trigger.getAttribute("data-vgl-lightbox-open");
                 var dlg = id ? document.getElementById(id) : null;
                 if (dlg && typeof dlg.showModal === "function") {
-                    try { dlg.showModal(); } catch (err) { /* already open */ }
+                    try { dlg.showModal(); setTriggerExpanded(id, true); } catch (err) { /* already open */ }
                 } else if (dlg && typeof dlg.show === "function") {
                     // Alter Fallback ohne Top-Layer — funktioniert visuell,
                     // aber ohne Modal-Verhalten.
-                    try { dlg.show(); } catch (err) {}
+                    try { dlg.show(); setTriggerExpanded(id, true); } catch (err) {}
                 }
                 return;
             }
@@ -511,6 +522,15 @@
                 if (typeof t.close === "function") t.close();
             }
         });
+
+        // 'close'-Event feuert bei ESC, Close-Button und Backdrop-Click —
+        // zentral dort den Trigger-State zuruecksetzen, statt an drei Stellen.
+        document.addEventListener("close", function(e){
+            var dlg = e.target;
+            if (!dlg || dlg.tagName !== "DIALOG") return;
+            if (!dlg.classList || !dlg.classList.contains("vergleich-lightbox-dialog")) return;
+            setTriggerExpanded(dlg.id, false);
+        }, true);
     }
 
     if (document.readyState === "loading") {
