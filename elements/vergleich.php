@@ -1095,10 +1095,12 @@ class Element_Vergleich extends \Bricks\Element {
             'label' => esc_html__( 'Zähler-Position', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [
-                'above' => esc_html__( 'Über der Tabelle', 'bricks-vergleich' ),
-                'below' => esc_html__( 'Unter der Tabelle', 'bricks-vergleich' ),
+                'above'    => esc_html__( 'Über der Tabelle', 'bricks-vergleich' ),
+                'below'    => esc_html__( 'Unter der Tabelle', 'bricks-vergleich' ),
+                'labelrow' => esc_html__( 'In der Produkt-Label-Zeile (über Label-Spalte)', 'bricks-vergleich' ),
             ],
             'placeholder' => esc_html__( 'Über der Tabelle', 'bricks-vergleich' ),
+            'description' => esc_html__( '„In der Produkt-Label-Zeile" setzt den Zähler auf die gleiche Linie wie die Testsieger-/Platz-Badges, direkt im linken Spacer. Voraussetzung: Produkt-Labels sind aktiviert.', 'bricks-vergleich' ),
             'required' => [ 'navCounterEnabled', '=', true ],
         ];
 
@@ -1116,9 +1118,10 @@ class Element_Vergleich extends \Bricks\Element {
             'label' => esc_html__( 'Zähler-Ausrichtung', 'bricks-vergleich' ),
             'type' => 'select',
             'options' => [
-                'left'   => esc_html__( 'Links', 'bricks-vergleich' ),
-                'center' => esc_html__( 'Zentriert', 'bricks-vergleich' ),
-                'right'  => esc_html__( 'Rechts', 'bricks-vergleich' ),
+                'left'       => esc_html__( 'Links (volle Breite)', 'bricks-vergleich' ),
+                'center'     => esc_html__( 'Zentriert', 'bricks-vergleich' ),
+                'right'      => esc_html__( 'Rechts', 'bricks-vergleich' ),
+                'labelcol'   => esc_html__( 'Über Label-Spalte (links, schmal)', 'bricks-vergleich' ),
             ],
             'placeholder' => esc_html__( 'Rechts', 'bricks-vergleich' ),
             'required' => [ 'navCounterEnabled', '=', true ],
@@ -2520,12 +2523,13 @@ class Element_Vergleich extends \Bricks\Element {
         if ( $nav_scroll_step !== 'view' ) $nav_scroll_step = 'card';
 
         $nav_counter_enabled  = ! empty( $settings['navCounterEnabled'] );
-        $nav_counter_position = ( $settings['navCounterPosition'] ?? 'above' ) === 'below' ? 'below' : 'above';
+        $nav_counter_position = $settings['navCounterPosition'] ?? 'above';
+        if ( ! in_array( $nav_counter_position, [ 'above', 'below', 'labelrow' ], true ) ) $nav_counter_position = 'above';
         $nav_counter_format   = isset( $settings['navCounterFormat'] ) && $settings['navCounterFormat'] !== ''
             ? (string) $settings['navCounterFormat']
             : '{start}–{end} von {total}';
         $nav_counter_align = $settings['navCounterAlign'] ?? 'right';
-        if ( ! in_array( $nav_counter_align, [ 'left', 'center', 'right' ], true ) ) $nav_counter_align = 'right';
+        if ( ! in_array( $nav_counter_align, [ 'left', 'center', 'right', 'labelcol' ], true ) ) $nav_counter_align = 'right';
 
         // Rows
         $rows = $this->get_rows();
@@ -2637,6 +2641,8 @@ class Element_Vergleich extends \Bricks\Element {
         if ( $nav_counter_enabled && $nav_counter_position === 'above' ) {
             echo $counter_html;
         }
+        // Bei "labelrow" wird der Zaehler weiter unten im Spacer der
+        // Produkt-Label-Zeile inline gerendert — nicht oberhalb/unterhalb.
 
         // Query bereits hier erzeugen (statt erst unten), damit die Anzahl
         // Produkte fuer die Produkt-Label-Leiste verfuegbar ist. Dasselbe
@@ -2692,10 +2698,17 @@ class Element_Vergleich extends \Bricks\Element {
 
             echo '<div class="vergleich-product-label-row" aria-hidden="true" style="' . esc_attr( $row_style ) . '">';
 
-            // Linker Spacer — gleiche Breite wie die Label-Spalte; optionaler Text.
+            // Linker Spacer — gleiche Breite wie die Label-Spalte; optionaler
+            // Text; optional der Nav-Zaehler, wenn Position == 'labelrow'.
             echo '<div class="vergleich-product-label-row__spacer" style="' . esc_attr( $spacer_style ) . '">';
             if ( $pl_left !== '' ) {
                 echo '<span class="vergleich-product-label-row__spacer-text">' . wp_kses_post( $pl_left ) . '</span>';
+            }
+            if ( $nav_counter_enabled && $nav_counter_position === 'labelrow' ) {
+                // Inline-Zaehler im Spacer. Eigene Modifier-Klasse, damit das
+                // Styling (kein padding-top/bottom, auf Spacer-Hoehe zentriert)
+                // nicht mit den regulaeren Above/Below-Varianten kollidiert.
+                echo $counter_html;
             }
             echo '</div>';
 
@@ -5904,6 +5917,22 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-counter.is-align-left   { text-align: left; }
         .vergleich-counter.is-align-center { text-align: center; }
         .vergleich-counter.is-align-right  { text-align: right; }
+        /* labelcol-Variante: nur so breit wie die Label-Spalte, links
+           ausgerichtet — sitzt optisch direkt ueber der Label-Spalte. */
+        .vergleich-counter.is-align-labelcol {
+            width: var(--vgl-label-width, 200px);
+            max-width: 100%;
+            text-align: left;
+        }
+        /* Inline-Variante im Spacer der Produkt-Label-Zeile: kein eigenes
+           Padding/Min-Height, stattdessen vom Flex-Spacer geregelt. Wird
+           automatisch vertikal zentriert, weil der Spacer align-items:
+           center vererbt. */
+        .vergleich-product-label-row__spacer .vergleich-counter {
+            padding: 0;
+            min-height: 0;
+            width: 100%;
+        }
 
         /* Wenn Nav-Pfeile aktiv sind, Scrollbar ausblenden — Scrollen bleibt
            per Pfeil-Click, Wheel und Touch-Swipe moeglich. */
