@@ -3,7 +3,7 @@
  * Plugin Name: Bricks Vergleich
  * Plugin URI: https://example.com
  * Description: Custom Bricks Element für Produktvergleich mit Produkten als Spalten (Finanzfluss-Style).
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: Du
  * Text Domain: bricks-vergleich
  * Requires at least: 6.0
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'BRICKS_VERGLEICH_VERSION', '1.2.0' );
+define( 'BRICKS_VERGLEICH_VERSION', '1.2.1' );
 define( 'BRICKS_VERGLEICH_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BRICKS_VERGLEICH_URL', plugin_dir_url( __FILE__ ) );
 

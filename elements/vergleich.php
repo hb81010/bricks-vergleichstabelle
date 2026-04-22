@@ -3992,9 +3992,12 @@ class Element_Vergleich extends \Bricks\Element {
         }
 
         $html .= '<div class="vergleich-coupon__row">';
-        $html .= '<code class="vergleich-coupon__code"'
+        // <span> statt <code>: Bricks-Canvas (und manche Themes) injizieren
+        // UA-/Editor-Styles fuer <code>, die das Flex-/Grid-Layout aufbrechen.
+        // Semantik via data-Attribut; der user-select:all verhaelt sich gleich.
+        $html .= '<span class="vergleich-coupon__code" data-vgl-coupon-code'
                . ( $code_inline !== '' ? ' style="' . esc_attr( $code_inline ) . '"' : '' )
-               . '>' . esc_html( $code ) . '</code>';
+               . '>' . esc_html( $code ) . '</span>';
         // Copy-Button: SVG-Icon (zwei Rechtecke = Clipboard-Metapher), Success-
         // Variante (Häkchen) wird per JS bei Bedarf eingeblendet.
         $html .= '<button type="button" class="vergleich-coupon__copy"'
@@ -4962,30 +4965,38 @@ class Element_Vergleich extends \Bricks\Element {
         /* === Gutscheincode-Zelle ===
            .vergleich-zelle bleibt flex-centered (Plugin-Default), der innere
            .vergleich-coupon-Container gibt einen eigenen vertikalen Stack —
-           Code-Box + Kopier-Button oben, Shop-Button darunter. */
+           Code-Box + Kopier-Button oben, Shop-Button darunter.
+
+           !important auf die Layout-Eigenschaften (display/flex-direction),
+           weil der Bricks-Canvas-Iframe in seltenen Faellen Reset-/Theme-
+           Regeln mit gleicher Specificity aber spaeterer Kaskadenposition
+           einschleust. Frontend sieht ok aus, Canvas kollabiert das Layout —
+           mit !important greift die Regel in beiden Kontexten deterministisch. */
         .vergleich-coupon {
-            display: flex;
-            flex-direction: column;
-            align-items: stretch;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: stretch !important;
             gap: 8px;
             width: 100%;
             max-width: 100%;
         }
         .vergleich-coupon__label {
+            display: block;
             font-size: 0.85em;
             opacity: 0.75;
             text-align: center;
         }
         .vergleich-coupon__row {
-            display: flex;
-            align-items: stretch;
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: stretch !important;
             gap: 6px;
             width: 100%;
             min-width: 0;
         }
         .vergleich-coupon__code {
-            flex: 1 1 auto;
-            display: inline-flex;
+            flex: 1 1 auto !important;
+            display: inline-flex !important;
             align-items: center;
             justify-content: center;
             min-width: 0;
@@ -5005,11 +5016,12 @@ class Element_Vergleich extends \Bricks\Element {
             -webkit-user-select: all;
         }
         .vergleich-coupon__copy {
-            flex: 0 0 auto;
-            display: inline-flex;
+            flex: 0 0 auto !important;
+            display: inline-flex !important;
             align-items: center;
             justify-content: center;
             width: 40px;
+            height: auto;
             padding: 0;
             margin: 0;
             border: 1px solid #cbd5e1;
@@ -5033,15 +5045,17 @@ class Element_Vergleich extends \Bricks\Element {
         }
         .vergleich-coupon__copy-icons {
             position: relative;
-            display: inline-flex;
-            width: 18px;
-            height: 18px;
+            display: inline-flex !important;
+            width: 18px !important;
+            height: 18px !important;
+            flex: 0 0 auto !important;
         }
         .vergleich-coupon__copy-icon {
             position: absolute;
             inset: 0;
-            width: 100%;
-            height: 100%;
+            width: 100% !important;
+            height: 100% !important;
+            display: block;
             transition: opacity .15s ease, transform .15s ease;
         }
         .vergleich-coupon__copy-icon.is-success {
