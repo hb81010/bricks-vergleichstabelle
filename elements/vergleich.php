@@ -4502,6 +4502,18 @@ class Element_Vergleich extends \Bricks\Element {
             height: 100% !important;
             display: block;
         }
+        /* Custom-SVGs haben oft hardcoded fill/stroke-Attribute an den
+           <path>/<rect>/… Elementen (typischerweise fill="#000"). Das
+           Bricks-Fill-Control setzt die Farbe nur am <svg>-Root, daher
+           ignorieren die Children das. Erzwingen, dass alle SVG-Kinder
+           fill/stroke vom Root erben — so greift die Füllfarbe bzw.
+           Strichfarbe aus Bricks universell. !important, weil SVGs oft
+           auch style="fill:..." inline mitbringen, was ohne !important
+           CSS gewinnen würde. */
+        .vergleich-lightbox-trigger__icon > svg * {
+            fill: inherit !important;
+            stroke: inherit !important;
+        }
         /* Font-Icons (Font Awesome, Ionicons, …) skalieren über font-size —
            Wrapper hat font-size schon gesetzt, hier nur inherit erzwingen,
            damit Theme-Regeln das nicht überschreiben. */
