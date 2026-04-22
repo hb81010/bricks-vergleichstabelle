@@ -1877,6 +1877,12 @@ class Element_Vergleich extends \Bricks\Element {
                 'placeholder' => '6px',
                 'required'    => [ 'type', '=', 'lightbox' ],
             ],
+            'lightboxTriggerIconColor' => [
+                'label'       => esc_html__( 'Icon-Farbe', 'bricks-vergleich' ),
+                'type'        => 'color',
+                'description' => esc_html__( 'Färbt das Icon zuverlässig, unabhängig davon, ob das SVG fill="currentColor" oder hartcodierte Farbwerte enthält. Die Bricks-internen Fill- und Stroke-Felder am Icon oben greifen bei manchen SVG-Uploads nicht — dieses Feld schon.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'lightbox' ],
+            ],
             'lightboxTitle' => [
                 'label'          => esc_html__( 'Dialog-Titel (optional)', 'bricks-vergleich' ),
                 'type'           => 'text',
@@ -3727,12 +3733,19 @@ class Element_Vergleich extends \Bricks\Element {
         if ( $icon_pos !== 'right' ) $icon_pos = 'left';
         if ( is_array( $icon ) && ( ! empty( $icon['icon'] ) || ! empty( $icon['svg'] ) ) ) {
             $icon_size = $this->get_css_value( $row['lightboxTriggerIconSize'] ?? null, '1em' );
-            // Icon-Font nutzt font-size, inline-SVG nutzt width/height —
-            // beides inline setzen.
+            $icon_color = $this->resolve_color( $row['lightboxTriggerIconColor'] ?? null );
+            // Bricks rendert je nach Icon-Typ anders: bei SVG-Uploads wird
+            // die class+style direkt auf das <svg>-Element gesetzt (KEIN
+            // Wrapper), bei Font-Icons auf ein <span> mit einem <i>-Child.
+            // Deshalb immer BEIDES setzen: color (Font-Icons) + fill (SVG).
             $icon_style = sprintf(
                 'width:%s;height:%s;font-size:%s;line-height:1;flex:0 0 auto;',
                 esc_attr( $icon_size ), esc_attr( $icon_size ), esc_attr( $icon_size )
             );
+            if ( $icon_color !== '' ) {
+                $icon_style .= 'color:' . esc_attr( $icon_color ) . ';';
+                $icon_style .= 'fill:' . esc_attr( $icon_color ) . ';';
+            }
             $icon_attrs = [
                 'class' => [ 'vergleich-lightbox-trigger__icon' ],
                 'style' => $icon_style,
@@ -4483,40 +4496,51 @@ class Element_Vergleich extends \Bricks\Element {
             outline: 2px solid currentColor;
             outline-offset: 2px;
         }
-        /* Icon-Wrapper: fixe Größe kommt IMMER aus dem Inline-Style (Default 1em),
-           damit das darunterliegende SVG/Icon eine deterministische Box hat.
-           overflow:hidden als Safety Net, falls ein SVG trotzdem ausbricht. */
+        /* Icon-Wrapper-Styling: Bricks-render_icon setzt die Klasse je nach
+           Icon-Typ an unterschiedlichen Stellen ins DOM — bei Font-Icons auf
+           einen Container-<span> mit einem <i>-Child, bei SVG-Uploads direkt
+           auf das <svg>-Element selbst (ohne Wrapper). Deshalb müssen unsere
+           Selektoren BEIDE Varianten treffen.
+           Gemeinsame Wrapper-Eigenschaften: Flex-Box, Breite/Höhe/Line-Height
+           kommen aus dem Inline-Style (siehe PHP). */
         .vergleich-lightbox-trigger__icon {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             flex: 0 0 auto;
             line-height: 1;
-            overflow: hidden;
         }
-        /* SVG-Uploads haben oft native width/height-Attribute (z.B. 512×512),
-           die CSS ohne !important ignorieren. Erzwingen, dass das SVG die
-           Wrapper-Größe übernimmt. */
+        /* SVG-Uploads kommen oft mit nativen width/height-Attributen (z.B.
+           512×512). Das SVG ist selbst das Icon-Element → inline width/height
+           vom Plugin greift direkt darauf. Wenn das SVG nested in einem
+           Wrapper sitzt (manche Icon-Renderings), bleibt der Wrapper
+           maßgebend und das SVG-Child wird auf 100% gezogen. */
         .vergleich-lightbox-trigger__icon > svg {
             width: 100% !important;
             height: 100% !important;
             display: block;
         }
-        /* Custom-SVGs haben oft hardcoded fill/stroke-Attribute an den
-           <path>/<rect>/… Elementen (typischerweise fill="#000"). Das
-           Bricks-Fill-Control setzt die Farbe nur am <svg>-Root, daher
-           ignorieren die Children das. Erzwingen, dass alle SVG-Kinder
-           fill/stroke vom Root erben — so greift die Füllfarbe bzw.
-           Strichfarbe aus Bricks universell. !important, weil SVGs oft
-           auch style="fill:..." inline mitbringen, was ohne !important
-           CSS gewinnen würde. */
+        /* Farb-Inheritance in SVG-Kindern:
+           Wenn die Icon-Farbe per Plugin-Feld gesetzt ist, bekommt das SVG
+           bzw. der Wrapper inline "fill: <color>". Kinder mit hartcodiertem
+           fill="#000" oder style="fill:..." würden das normalerweise
+           ignorieren — deshalb erzwingen wir mit !important, dass alle
+           SVG-Descendant-Elemente fill vom Root erben.
+           Gilt sowohl, wenn das SVG SELBST der Wrapper ist
+           (svg.vergleich-lightbox-trigger__icon *) als auch, wenn das SVG
+           ein Child des Wrappers ist (.vergleich-lightbox-trigger__icon > svg *). */
+        svg.vergleich-lightbox-trigger__icon *,
         .vergleich-lightbox-trigger__icon > svg * {
             fill: inherit !important;
-            stroke: inherit !important;
         }
-        /* Font-Icons (Font Awesome, Ionicons, …) skalieren über font-size —
-           Wrapper hat font-size schon gesetzt, hier nur inherit erzwingen,
-           damit Theme-Regeln das nicht überschreiben. */
+        /* Stroke bleibt weicher (kein !important), damit Outline-Icons, die
+           explizit eine Strichfarbe am Path gesetzt haben, sie behalten. */
+        svg.vergleich-lightbox-trigger__icon *,
+        .vergleich-lightbox-trigger__icon > svg * {
+            stroke: inherit;
+        }
+        /* Font-Icons (Font Awesome, Ionicons, …) — <i>/.bricks-icon Child im
+           Wrapper. color vom Wrapper wird geerbt, font-size ebenfalls. */
         .vergleich-lightbox-trigger__icon > i,
         .vergleich-lightbox-trigger__icon > .bricks-icon {
             font-size: inherit !important;
