@@ -1288,6 +1288,7 @@ class Element_Vergleich extends \Bricks\Element {
                     'html'    => esc_html__( 'HTML / Shortcode', 'bricks-vergleich' ),
                     'dynamic' => esc_html__( 'Dynamische Daten (Tag)', 'bricks-vergleich' ),
                     'lightbox'=> esc_html__( 'Lightbox / Popover (Mehr Infos)', 'bricks-vergleich' ),
+                    'coupon'  => esc_html__( 'Gutscheincode (mit Kopieren-Button)', 'bricks-vergleich' ),
                 ],
                 'default' => 'text',
             ],
@@ -1998,6 +1999,129 @@ class Element_Vergleich extends \Bricks\Element {
                 'placeholder' => 'calc(100vh - 32px)',
                 'description' => esc_html__( 'Einheiten erlaubt: px, %, vh. Leer = automatisch (Viewport-Höhe minus Abstand).', 'bricks-vergleich' ),
                 'required'    => [ 'type', '=', 'lightbox' ],
+            ],
+
+            // ───── COUPON ─────
+            'couponCode' => [
+                'label'          => esc_html__( 'Gutscheincode', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'placeholder'    => 'SOMMER20',
+                'description'    => esc_html__( 'Der Code, der beim Klick in die Zwischenablage kopiert wird. Dynamic-Data-Tags wie {cf:coupon_code} werden aufgelöst.', 'bricks-vergleich' ),
+                'required'       => [ 'type', '=', 'coupon' ],
+            ],
+            'couponLabel' => [
+                'label'          => esc_html__( 'Vortext (optional)', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'placeholder'    => esc_html__( 'z.B. Gutschein:', 'bricks-vergleich' ),
+                'description'    => esc_html__( 'Erscheint über dem Code-Feld. Leer = kein Vortext.', 'bricks-vergleich' ),
+                'required'       => [ 'type', '=', 'coupon' ],
+            ],
+            'couponCopyTooltip' => [
+                'label'          => esc_html__( 'Button-Tooltip', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'default'        => esc_html__( 'Code kopieren', 'bricks-vergleich' ),
+                'required'       => [ 'type', '=', 'coupon' ],
+            ],
+            'couponCopiedMessage' => [
+                'label'          => esc_html__( 'Toast-Meldung (nach Klick)', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'default'        => esc_html__( 'Code kopiert!', 'bricks-vergleich' ),
+                'description'    => esc_html__( 'Kurze Bestätigung, die rechts unten eingeblendet wird. %code% wird durch den kopierten Code ersetzt.', 'bricks-vergleich' ),
+                'required'       => [ 'type', '=', 'coupon' ],
+            ],
+
+            // ─── Code-Box-Styling ───
+            '_sepCouponCode' => [
+                'type'     => 'separator',
+                'label'    => esc_html__( 'Code-Box-Styling', 'bricks-vergleich' ),
+                'required' => [ 'type', '=', 'coupon' ],
+            ],
+            'couponCodeBg' => [
+                'label'    => esc_html__( 'Hintergrundfarbe', 'bricks-vergleich' ),
+                'type'     => 'color',
+                'required' => [ 'type', '=', 'coupon' ],
+            ],
+            'couponCodeTypography' => [
+                'label'    => esc_html__( 'Typografie', 'bricks-vergleich' ),
+                'type'     => 'typography',
+                'required' => [ 'type', '=', 'coupon' ],
+            ],
+            'couponCodeBorder' => [
+                'label'       => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+                'type'        => 'border',
+                'description' => esc_html__( 'Tipp: gestrichelter Rahmen (dashed) sieht bei Gutscheincodes klassisch gut aus.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'coupon' ],
+            ],
+            'couponCodePadding' => [
+                'label'    => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+                'type'     => 'spacing',
+                'required' => [ 'type', '=', 'coupon' ],
+            ],
+
+            // ─── Shop-Button (optional) ───
+            '_sepCouponShop' => [
+                'type'     => 'separator',
+                'label'    => esc_html__( 'Shop-Button (optional, unter dem Code)', 'bricks-vergleich' ),
+                'required' => [ 'type', '=', 'coupon' ],
+            ],
+            'couponShopEnabled' => [
+                'label'    => esc_html__( 'Shop-Button anzeigen', 'bricks-vergleich' ),
+                'type'     => 'checkbox',
+                'required' => [ 'type', '=', 'coupon' ],
+            ],
+            'couponShopText' => [
+                'label'          => esc_html__( 'Button-Text', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'default'        => esc_html__( 'Zum Shop', 'bricks-vergleich' ),
+                'required'       => [ 'couponShopEnabled', '=', true ],
+            ],
+            'couponShopLink' => [
+                'label'    => esc_html__( 'Shop-Link', 'bricks-vergleich' ),
+                'type'     => 'link',
+                'required' => [ 'couponShopEnabled', '=', true ],
+            ],
+            'couponShopStyle' => [
+                'label'   => esc_html__( 'Button-Stil', 'bricks-vergleich' ),
+                'type'    => 'select',
+                'options' => [
+                    'primary'   => esc_html__( 'Primär', 'bricks-vergleich' ),
+                    'secondary' => esc_html__( 'Sekundär', 'bricks-vergleich' ),
+                    'light'     => esc_html__( 'Hell', 'bricks-vergleich' ),
+                    'dark'      => esc_html__( 'Dunkel', 'bricks-vergleich' ),
+                    'success'   => esc_html__( 'Erfolg', 'bricks-vergleich' ),
+                ],
+                'default'  => 'primary',
+                'required' => [ 'couponShopEnabled', '=', true ],
+            ],
+            'couponShopOutline' => [
+                'label'    => esc_html__( 'Umriss', 'bricks-vergleich' ),
+                'type'     => 'checkbox',
+                'required' => [ 'couponShopEnabled', '=', true ],
+            ],
+            'couponShopBgColor' => [
+                'label'    => esc_html__( 'Hintergrundfarbe (Override)', 'bricks-vergleich' ),
+                'type'     => 'color',
+                'required' => [ 'couponShopEnabled', '=', true ],
+            ],
+            'couponShopTypography' => [
+                'label'    => esc_html__( 'Typografie', 'bricks-vergleich' ),
+                'type'     => 'typography',
+                'required' => [ 'couponShopEnabled', '=', true ],
+            ],
+            'couponShopPadding' => [
+                'label'    => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+                'type'     => 'spacing',
+                'required' => [ 'couponShopEnabled', '=', true ],
+            ],
+            'couponShopBorder' => [
+                'label'    => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+                'type'     => 'border',
+                'required' => [ 'couponShopEnabled', '=', true ],
             ],
 
             // ───── COMMON ─────
@@ -2916,6 +3040,7 @@ class Element_Vergleich extends \Bricks\Element {
                 case 'html':    $content = $this->render_cell_html( $row );    break;
                 case 'dynamic': $content = $this->render_cell_dynamic( $row ); break;
                 case 'lightbox':$content = $this->render_cell_lightbox( $row );break;
+                case 'coupon':  $content = $this->render_cell_coupon( $row );  break;
                 case 'text':
                 default:        $content = $this->render_cell_text( $row );    break;
             }
@@ -3826,6 +3951,113 @@ class Element_Vergleich extends \Bricks\Element {
         return $html;
     }
 
+    /**
+     * Gutschein-Zelle: Code-Box + Kopieren-Button, optional Shop-Button darunter.
+     * Der eigentliche Copy-Vorgang + Toast läuft in assets/frontend.js.
+     *
+     * Barrierefreiheit:
+     *  - Copy-Button: aria-label + title (Tooltip)
+     *  - Code: <code>-Tag (semantisch korrekt) mit aria-live nicht noetig, weil
+     *    der Toast die Bestaetigung gibt
+     *  - Shop-Button: <a> mit rel=nofollow sponsored, wenn Affiliate — aus
+     *    Link-Control-Daten abgeleitet
+     */
+    private function render_cell_coupon( $row ) {
+        $code = trim( $this->dd_string( (string) ( $row['couponCode'] ?? '' ) ) );
+        if ( $code === '' ) return '';
+
+        $label_text = $this->dd_string( (string) ( $row['couponLabel'] ?? '' ) );
+        $tooltip    = $this->dd_string( (string) ( $row['couponCopyTooltip'] ?? '' ) );
+        if ( $tooltip === '' ) $tooltip = esc_html__( 'Code kopieren', 'bricks-vergleich' );
+        $copied_msg = $this->dd_string( (string) ( $row['couponCopiedMessage'] ?? '' ) );
+        if ( $copied_msg === '' ) $copied_msg = esc_html__( 'Code kopiert!', 'bricks-vergleich' );
+
+        // Code-Box Inline-Styling aus Bricks-Controls.
+        $code_inline = '';
+        $bg = $this->resolve_color( $row['couponCodeBg'] ?? null );
+        if ( $bg !== '' ) $code_inline .= 'background-color:' . esc_attr( $bg ) . ';';
+        $code_inline .= $this->format_typography( $row['couponCodeTypography'] ?? null );
+        $code_inline .= $this->format_border( $row['couponCodeBorder'] ?? null );
+        if ( ! empty( $row['couponCodePadding'] ) && is_array( $row['couponCodePadding'] ) ) {
+            $pad_any = array_filter( $row['couponCodePadding'], function ( $v ) { return $v !== '' && $v !== null; } );
+            if ( ! empty( $pad_any ) ) {
+                $code_inline .= 'padding:' . esc_attr( $this->format_spacing( $row['couponCodePadding'], '' ) ) . ';';
+            }
+        }
+
+        $html  = '<div class="vergleich-coupon">';
+
+        if ( $label_text !== '' ) {
+            $html .= '<div class="vergleich-coupon__label">' . esc_html( $label_text ) . '</div>';
+        }
+
+        $html .= '<div class="vergleich-coupon__row">';
+        $html .= '<code class="vergleich-coupon__code"'
+               . ( $code_inline !== '' ? ' style="' . esc_attr( $code_inline ) . '"' : '' )
+               . '>' . esc_html( $code ) . '</code>';
+        // Copy-Button: SVG-Icon (zwei Rechtecke = Clipboard-Metapher), Success-
+        // Variante (Häkchen) wird per JS bei Bedarf eingeblendet.
+        $html .= '<button type="button" class="vergleich-coupon__copy"'
+               . ' data-vgl-copy-code="' . esc_attr( $code ) . '"'
+               . ' data-vgl-copy-toast="' . esc_attr( str_replace( '%code%', $code, $copied_msg ) ) . '"'
+               . ' aria-label="' . esc_attr( $tooltip ) . '"'
+               . ' title="' . esc_attr( $tooltip ) . '">'
+               . '<span class="vergleich-coupon__copy-icons" aria-hidden="true">'
+               . '<svg class="vergleich-coupon__copy-icon is-default" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>'
+               . '<svg class="vergleich-coupon__copy-icon is-success" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+               . '</span>'
+               . '</button>';
+        $html .= '</div>';
+
+        // Optional Shop-Button
+        if ( ! empty( $row['couponShopEnabled'] ) ) {
+            $shop_text = $this->dd_string( (string) ( $row['couponShopText'] ?? '' ) );
+            if ( $shop_text === '' ) $shop_text = esc_html__( 'Zum Shop', 'bricks-vergleich' );
+            $link = $this->resolve_link( $row['couponShopLink'] ?? null );
+
+            $style   = isset( $row['couponShopStyle'] ) ? preg_replace( '/[^a-z]/i', '', strtolower( (string) $row['couponShopStyle'] ) ) : 'primary';
+            if ( $style === '' ) $style = 'primary';
+            $outline = ! empty( $row['couponShopOutline'] );
+
+            $cls = [ 'vergleich-coupon__shop', 'bricks-button' ];
+            if ( $outline ) {
+                $cls[] = 'outline';
+                $cls[] = 'bricks-color-' . $style;
+            } else {
+                $cls[] = 'bricks-background-' . $style;
+            }
+
+            $shop_inline = '';
+            $shop_bg = $this->resolve_color( $row['couponShopBgColor'] ?? null );
+            if ( $shop_bg !== '' ) $shop_inline .= 'background:' . esc_attr( $shop_bg ) . ';';
+            $shop_inline .= $this->format_typography( $row['couponShopTypography'] ?? null );
+            $shop_inline .= $this->format_border( $row['couponShopBorder'] ?? null );
+            if ( ! empty( $row['couponShopPadding'] ) && is_array( $row['couponShopPadding'] ) ) {
+                $sp_any = array_filter( $row['couponShopPadding'], function ( $v ) { return $v !== '' && $v !== null; } );
+                if ( ! empty( $sp_any ) ) {
+                    $shop_inline .= 'padding:' . esc_attr( $this->format_spacing( $row['couponShopPadding'], '' ) ) . ';';
+                }
+            }
+
+            $shop_attrs = 'class="' . esc_attr( implode( ' ', $cls ) ) . '"';
+            if ( $shop_inline !== '' )     $shop_attrs .= ' style="' . esc_attr( $shop_inline ) . '"';
+            if ( ! empty( $link['aria'] ) ) $shop_attrs .= ' aria-label="' . esc_attr( $link['aria'] ) . '"';
+            if ( ! empty( $link['title'] ) )$shop_attrs .= ' title="' . esc_attr( $link['title'] ) . '"';
+
+            if ( ! empty( $link['url'] ) ) {
+                $shop_attrs .= ' href="' . esc_url( $link['url'] ) . '"';
+                if ( ! empty( $link['target'] ) ) $shop_attrs .= ' target="' . esc_attr( $link['target'] ) . '"';
+                if ( ! empty( $link['rel'] ) )    $shop_attrs .= ' rel="' . esc_attr( trim( $link['rel'] ) ) . '"';
+                $html .= '<a ' . $shop_attrs . '>' . esc_html( $shop_text ) . '</a>';
+            } else {
+                $html .= '<button type="button" ' . $shop_attrs . '>' . esc_html( $shop_text ) . '</button>';
+            }
+        }
+
+        $html .= '</div>';
+        return $html;
+    }
+
     // ==========================================================================
     // HELPERS
     // ==========================================================================
@@ -4724,6 +4956,192 @@ class Element_Vergleich extends \Bricks\Element {
             }
             .vergleich-lightbox-dialog__title {
                 font-size: 1.125rem;
+            }
+        }
+
+        /* === Gutscheincode-Zelle ===
+           .vergleich-zelle bleibt flex-centered (Plugin-Default), der innere
+           .vergleich-coupon-Container gibt einen eigenen vertikalen Stack —
+           Code-Box + Kopier-Button oben, Shop-Button darunter. */
+        .vergleich-coupon {
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+            width: 100%;
+            max-width: 100%;
+        }
+        .vergleich-coupon__label {
+            font-size: 0.85em;
+            opacity: 0.75;
+            text-align: center;
+        }
+        .vergleich-coupon__row {
+            display: flex;
+            align-items: stretch;
+            gap: 6px;
+            width: 100%;
+            min-width: 0;
+        }
+        .vergleich-coupon__code {
+            flex: 1 1 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+            padding: 8px 12px;
+            border: 2px dashed #94a3b8;
+            border-radius: 6px;
+            background: #f8fafc;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-weight: 700;
+            font-size: 0.95em;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            user-select: all;
+            -webkit-user-select: all;
+        }
+        .vergleich-coupon__copy {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            padding: 0;
+            margin: 0;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #fff;
+            color: #334155;
+            cursor: pointer;
+            transition: background-color .15s ease, color .15s ease, border-color .15s ease, transform .05s ease;
+        }
+        .vergleich-coupon__copy:hover {
+            background: #f1f5f9;
+            border-color: #94a3b8;
+            color: #0f172a;
+        }
+        .vergleich-coupon__copy:active {
+            transform: translateY(1px);
+        }
+        .vergleich-coupon__copy:focus-visible {
+            outline: 2px solid #2563eb;
+            outline-offset: 2px;
+        }
+        .vergleich-coupon__copy-icons {
+            position: relative;
+            display: inline-flex;
+            width: 18px;
+            height: 18px;
+        }
+        .vergleich-coupon__copy-icon {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            transition: opacity .15s ease, transform .15s ease;
+        }
+        .vergleich-coupon__copy-icon.is-success {
+            opacity: 0;
+            transform: scale(0.6);
+            color: #16a34a;
+        }
+        /* Success-State: default-Icon ausblenden, Haekchen einblenden, Code
+           kurz hellgruen hinterlegen. JS setzt .is-copied auf den Button. */
+        .vergleich-coupon__copy.is-copied {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #15803d;
+        }
+        .vergleich-coupon__copy.is-copied .vergleich-coupon__copy-icon.is-default {
+            opacity: 0;
+            transform: scale(0.6);
+        }
+        .vergleich-coupon__copy.is-copied .vergleich-coupon__copy-icon.is-success {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .vergleich-coupon__row:has(.vergleich-coupon__copy.is-copied) .vergleich-coupon__code {
+            border-color: #16a34a;
+            background: #f0fdf4;
+            transition: border-color .2s ease, background-color .2s ease;
+        }
+        /* Shop-Button: Default-Layout, Bricks-Preset-Klassen uebernehmen den
+           Rest. User-Overrides per Inline-Style. */
+        .vergleich-coupon__shop {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background-color .15s ease, color .15s ease, border-color .15s ease, transform .05s ease;
+        }
+        .vergleich-coupon__shop:hover { filter: brightness(0.95); }
+        .vergleich-coupon__shop:active { transform: translateY(1px); }
+        .vergleich-coupon__shop:focus-visible {
+            outline: 2px solid currentColor;
+            outline-offset: 2px;
+        }
+
+        /* Toast: Seiten-weites Singleton (JS legt es einmalig im <body> an).
+           Fixed unten-rechts, eingeblendet per .is-visible Klasse. */
+        .vergleich-toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 100000;
+            max-width: calc(100vw - 48px);
+            padding: 12px 16px 12px 14px;
+            background: #0f172a;
+            color: #fff;
+            font-size: 0.925rem;
+            line-height: 1.4;
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity .2s ease, transform .2s ease;
+            pointer-events: none;
+        }
+        .vergleich-toast.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .vergleich-toast__icon {
+            flex: 0 0 auto;
+            width: 18px;
+            height: 18px;
+            color: #4ade80;
+        }
+        .vergleich-toast__icon svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        .vergleich-toast__text {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+        @media (max-width: 480px) {
+            .vergleich-toast {
+                left: 12px;
+                right: 12px;
+                bottom: 12px;
+                max-width: none;
+                justify-content: flex-start;
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .vergleich-toast,
+            .vergleich-coupon__copy-icon,
+            .vergleich-coupon__row:has(.vergleich-coupon__copy.is-copied) .vergleich-coupon__code {
+                transition: none;
             }
         }
 

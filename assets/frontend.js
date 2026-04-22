@@ -533,6 +533,96 @@
         }, true);
     }
 
+    // ========================================================================
+    // Gutscheincode: Kopieren + Toast
+    // ========================================================================
+    // Singleton-Toast: wird beim ersten Bedarf erzeugt und wiederverwendet,
+    // damit nicht bei jedem Click ein neues DOM-Element entsteht.
+    var toastEl = null;
+    var toastTimer = null;
+    var toastHideTimer = null;
+    function ensureToast(){
+        if (toastEl) return toastEl;
+        toastEl = document.createElement("div");
+        toastEl.className = "vergleich-toast";
+        toastEl.setAttribute("role", "status");
+        toastEl.setAttribute("aria-live", "polite");
+        toastEl.innerHTML =
+            '<span class="vergleich-toast__icon" aria-hidden="true">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' +
+            '</span>' +
+            '<span class="vergleich-toast__text"></span>';
+        document.body.appendChild(toastEl);
+        return toastEl;
+    }
+    function showToast(text){
+        var el = ensureToast();
+        var textEl = el.querySelector(".vergleich-toast__text");
+        if (textEl) textEl.textContent = text || "";
+        // Hart resetten, damit schnelle Folge-Clicks die Animation neu starten.
+        if (toastTimer) clearTimeout(toastTimer);
+        if (toastHideTimer) clearTimeout(toastHideTimer);
+        el.classList.remove("is-visible");
+        // Force reflow, damit das Einblenden triggert, auch wenn der Toast
+        // gerade noch visible war.
+        void el.offsetWidth;
+        el.classList.add("is-visible");
+        toastTimer = setTimeout(function(){
+            el.classList.remove("is-visible");
+        }, 2200);
+    }
+
+    function copyToClipboard(text){
+        // Modernen Weg bevorzugen (Promise-basiert). Fallback fuer ältere
+        // Browser oder nicht-HTTPS-Kontext via temporäres <textarea>.
+        if (navigator.clipboard && window.isSecureContext) {
+            return navigator.clipboard.writeText(text);
+        }
+        return new Promise(function(resolve, reject){
+            try {
+                var ta = document.createElement("textarea");
+                ta.value = text;
+                ta.setAttribute("readonly", "");
+                ta.style.position = "fixed";
+                ta.style.opacity = "0";
+                ta.style.pointerEvents = "none";
+                document.body.appendChild(ta);
+                ta.select();
+                ta.setSelectionRange(0, text.length);
+                var ok = document.execCommand("copy");
+                document.body.removeChild(ta);
+                ok ? resolve() : reject(new Error("execCommand copy failed"));
+            } catch (e) {
+                reject(e);
+            }
+        });
+    }
+
+    if (!document._vglCouponBound) {
+        document._vglCouponBound = true;
+        document.addEventListener("click", function(e){
+            var t = e.target;
+            if (!t || !t.closest) return;
+            var btn = t.closest("[data-vgl-copy-code]");
+            if (!btn) return;
+            var code = btn.getAttribute("data-vgl-copy-code") || "";
+            var toast = btn.getAttribute("data-vgl-copy-toast") || "";
+            copyToClipboard(code).then(function(){
+                // Button-Success-State fuer 1.5s.
+                btn.classList.add("is-copied");
+                if (btn._vglCopyTimer) clearTimeout(btn._vglCopyTimer);
+                btn._vglCopyTimer = setTimeout(function(){
+                    btn.classList.remove("is-copied");
+                }, 1600);
+                showToast(toast);
+            }).catch(function(){
+                // Fallback-Meldung, falls Clipboard-API geblockt wurde
+                // (Iframes ohne allow="clipboard-write" o.ae.).
+                showToast(toast);
+            });
+        });
+    }
+
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", boot);
     } else {
