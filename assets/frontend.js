@@ -207,18 +207,52 @@
             var scroll = wrapper.querySelector(".vergleich-scroll");
             if (!scroll) return;
             var dir = btn.getAttribute("data-vgl-nav");
-            var card = scroll.querySelector(".vergleich-card");
-            var cardW = card ? card.getBoundingClientRect().width : 200;
             var stepMode = wrapper.classList.contains("vgl-nav-step-view") ? "view" : "card";
-            var step = stepMode === "view" ? Math.max(scroll.clientWidth - 20, 100) : cardW;
-            scroll.scrollBy({ left: (dir === "prev" ? -step : step), behavior: "smooth" });
+            // Ziel-ScrollLeft immer anhand der tatsächlichen Card-offsetLeft-
+            // Werte berechnen, nicht via scrollBy(cardWidth). Grund: schnelle
+            // Klicks während einer laufenden smooth-Animation würden bei
+            // scrollBy(cardW) aus der aktuellen (Zwischen-)Position relativ
+            // verschieben, plus Subpixel-Rundung von getBoundingClientRect() —
+            // über mehrere Klicks driftet die Spur weg von der Label-Spalte.
+            // offsetLeft gibt gerundete Ganzzahlen relativ zum Scroll-Container
+            // und ist unabhängig von der aktuellen Animationsposition.
+            var cards = scroll.querySelectorAll(".vergleich-card");
+            if (!cards.length) return;
+            var pending = (typeof scroll._vglTargetLeft === "number") ? scroll._vglTargetLeft : scroll.scrollLeft;
+            var target;
+            if (stepMode === "view") {
+                var viewStep = Math.max(scroll.clientWidth - 20, 100);
+                var max = scroll.scrollWidth - scroll.clientWidth;
+                target = Math.max(0, Math.min(max, pending + (dir === "prev" ? -viewStep : viewStep)));
+            } else {
+                // Nächste/vorige Card-Kante relativ zum aktuellen (bzw. noch
+                // ausstehenden) Ziel finden. Toleranz von 1px fängt Subpixel.
+                var idx = 0;
+                for (var i = 0; i < cards.length; i++) {
+                    if (cards[i].offsetLeft <= pending + 1) idx = i;
+                    else break;
+                }
+                if (dir === "next") idx = Math.min(cards.length - 1, idx + 1);
+                else                idx = Math.max(0, idx - 1);
+                target = cards[idx].offsetLeft;
+            }
+            scroll._vglTargetLeft = target;
+            scroll.scrollTo({ left: target, behavior: "smooth" });
         });
 
         var handler = function(){ updateNav(wrapper); };
         var posHandler = function(){ updateNavPosition(wrapper); };
 
         var scroll = wrapper.querySelector(".vergleich-scroll");
-        if (scroll) scroll.addEventListener("scroll", handler, { passive: true });
+        if (scroll) scroll.addEventListener("scroll", function(){
+            // Pending-Target verwerfen, sobald scrollLeft das Ziel erreicht —
+            // damit späteres Scrollen (Drag, Wheel) nicht vom alten Target
+            // „zurückgezogen" wird, wenn der User wieder einen Pfeil drückt.
+            if (typeof scroll._vglTargetLeft === "number" && Math.abs(scroll.scrollLeft - scroll._vglTargetLeft) < 2) {
+                scroll._vglTargetLeft = null;
+            }
+            handler();
+        }, { passive: true });
         window.addEventListener("resize", handler);
         document.addEventListener("scroll", posHandler, { passive: true, capture: true });
         window.addEventListener("scroll", posHandler, { passive: true });
