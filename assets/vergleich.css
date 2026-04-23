@@ -536,31 +536,32 @@
 .vergleich-pin__icon--on { display: none; }
 
 /* Gepinnte Spalte: klebt am linken Rand beim horizontalen Scroll.
-   order:-1 rueckt die Card im grid-auto-flow:column an Position 1. Die
-   "Klebe-Wirkung" kommt NICHT ueber position:sticky (das friert in manchen
-   Browsern bei Grid-Items den Scroll-Container nach dem ersten scrollBy
-   ein), sondern ueber eine CSS-Variable --vgl-scroll-left, die JS im
-   Scroll-Handler auf scroll.scrollLeft setzt. Die Card wandert per Transform
-   mit dem Scroll mit und bleibt visuell auf Position 0 stehen. */
+   WICHTIG: wir nutzen DOM-Move (Card wandert in JS an DOM-Position 0 im
+   Track) + position:sticky — NICHT order:-1 + sticky. Die Kombination
+   order + sticky hat in Chrome einen Bug, bei dem der Scroll-Container
+   nach einem programmatischen scrollBy einfriert. Mit reinem DOM-Move
+   ist die Card natuerlich an Layout-Column 1 und sticky laeuft komplett
+   auf dem Compositor-Thread — kein Main-Thread-JS pro Frame, deshalb
+   auch kein 1-Frame-Lag und kein Flackern. */
 .vergleich-card.is-pinned {
-    order: -1;
-    transform: translate3d(var(--vgl-scroll-left, 0px), 0, 0);
+    position: sticky;
+    left: 0;
     z-index: 10 !important;
     background: #fff;
     box-shadow: 6px 0 8px -4px rgba(0, 0, 0, .12);
-    will-change: transform;
 }
 
-/* Passendes Produkt-Label (z.B. "Testsieger", "Platz 2") mitziehen:
-   - order:-1 bringt es im Flex-Track visuell nach links
-   - translateX(+scrollLeft) kontert das translateX(-scrollLeft) des Tracks
-     → Netto bleibt das Label beim Scrollen an seiner (neuen) Flex-Position
-       und damit direkt ueber der gepinnten Card. */
+/* Passendes Produkt-Label (z.B. "Testsieger", "Platz 2"). Wird in JS per
+   DOM-Move an die erste Position im Label-Track verschoben. Da der Label-
+   Track selbst per translateX(-scrollLeft) mit dem Card-Scroll
+   synchronisiert wird, kontert ein translate3d(+scrollLeft) auf dem
+   gepinnten Label — Netto bleibt es ueber der gepinnten Card stehen. Das
+   inline style.transform setzt JS im rAF-geschlossenen Scroll-Handler
+   (kein CSS-Var-Lag). */
 .vergleich-product-label-item.is-pinned-label {
-    order: -1;
-    transform: translate3d(var(--vgl-scroll-left, 0px), 0, 0);
     z-index: 2;
     position: relative;
+    will-change: transform;
 }
 
 .vergleich-card.is-pinned .vergleich-pin {

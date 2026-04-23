@@ -263,21 +263,17 @@
             if (target > max) target = max;
             scroll.scrollLeft = target;
 
-            // Transform der gepinnten Spalte UND ihres Labels explizit
-            // synchronisieren — wir warten NICHT auf das Scroll-Event, weil
-            // das je nach Browser verzoegert, abgebrochen oder gar nicht
-            // gefeuert wird, wenn der Zielwert identisch war. Das war die
-            // Ursache dafuer, dass ein Prev-Klick scheinbar nichts bewirkte:
-            // scrollLeft wurde gesetzt, aber der transform-Sticky blieb auf
-            // altem Wert und deckte die Nachbar-Spalte weiter ab.
-            var t = "translate3d(" + target + "px,0,0)";
+            // Label-Transform explizit setzen — scroll-Event kann verzoegert
+            // feuern oder bei identischem Zielwert ausbleiben. Die Card
+            // selbst braucht das nicht: die klebt ueber position:sticky
+            // direkt auf dem Compositor (siehe bindPin).
             wrapper.style.setProperty("--vgl-scroll-left", target + "px");
-            var pinnedCard = scroll.querySelector(".vergleich-card.is-pinned");
-            if (pinnedCard) pinnedCard.style.transform = t;
             var navRoot = wrapper.closest(".vergleich-root") || wrapper.parentNode;
             if (navRoot) {
                 var pinnedLabel = navRoot.querySelector(".vergleich-product-label-item.is-pinned-label");
-                if (pinnedLabel) pinnedLabel.style.transform = t;
+                if (pinnedLabel) {
+                    pinnedLabel.style.transform = "translate3d(" + target + "px,0,0)";
+                }
             }
             updateNav(wrapper);
         });
@@ -498,17 +494,26 @@
     // Cards gleichzeitig in den Viewport passen — sonst hat Pinning keinen
     // Nutzen (nichts zum Vergleichen daneben).
     //
-    // Technik: KEIN DOM-Move. Die gepinnte Card bekommt nur die Klasse
-    // .is-pinned, und CSS uebernimmt zwei Dinge gleichzeitig:
-    //   - order: -1  → die Card rutscht im Grid-auto-flow:column visuell
-    //                  an Position 1, ohne dass wir DOM anfassen.
-    //   - position: sticky; left: 0 → sie klebt beim horizontalen Scrollen
-    //                                 am linken Rand des Scroll-Containers.
-    // Ein frueherer Versuch mit insertBefore + smooth scrollTo hat im
-    // Zusammenspiel mit .vergleich-scroll/Grid dazu gefuehrt, dass der
-    // Scroll nach einem Klick „hing" — CSS-only ist hier die sauberere
-    // Loesung und braucht auch keine Restore-Logik mehr. Keine Persistenz:
-    // bei Reload ist die Auswahl bewusst weg.
+    // Technik: DOM-Move + position:sticky.
+    //   - Beim Pinnen wird die Card im DOM an Position 0 des Tracks
+    //     eingefuegt (track.insertBefore). Dadurch sitzt sie auf Layout-
+    //     Spalte 1 des Grid-auto-flow:column Tracks — ohne order:-1,
+    //     denn die Kombination order + sticky hat in Chrome einen Bug,
+    //     der den Scroll-Container nach programmatischem scrollBy
+    //     einfrieren laesst.
+    //   - CSS-Klasse .is-pinned setzt position:sticky + left:0. Der
+    //     Compositor haelt die Card beim Scroll am linken Rand — komplett
+    //     auf dem Compositor-Thread, kein Main-Thread-JS pro Frame, kein
+    //     1-Frame-Lag, kein Flackern.
+    //   - Beim Unpin sortieren wir die Cards anhand ihres beim Init
+    //     vergebenen data-vgl-original-index zurueck in die
+    //     Ursprungsreihenfolge.
+    //   - Das gepinnte Produkt-Label (.vergleich-product-label-item) wird
+    //     analog DOM-gemovt. Da der Label-Row-Track kein Scroll-Container
+    //     ist, kann Sticky dort nicht greifen — stattdessen laeuft ein
+    //     JS-getriebener Counter-Transform im rAF gegen die Track-
+    //     Translation, damit das Label optisch ueber der Card bleibt.
+    //   - Keine Persistenz: bei Reload ist die Pinnung bewusst weg.
     // ========================================================================
     function bindPin(wrapper){
         if (wrapper._vglPinBound) return;
@@ -556,44 +561,118 @@
 
         var rootEl = wrapper.closest(".vergleich-root") || wrapper.parentNode;
 
-        // Label-Item suchen, das zur Card gehoert. Die Produkt-Label-Zeile
-        // rendert 1:1 pro Card in gleicher Reihenfolge — also Index-basiert.
-        function labelItemForCard(card){
-            if (!rootEl) return null;
+        // Beim ersten Init jede Card und jedes Label mit ihrem urspruenglichen
+        // DOM-Index taggen. Beim Unpin sortieren wir darueber zurueck in die
+        // Original-Reihenfolge. Beim Pin reicht ein insertBefore(card, first)
+        // auf dem Track, um die Card nach vorne zu schieben — ohne dass wir
+        // die tatsaechlichen Indizes nachpflegen muessen.
+        function ensureOriginalIndexes(){
+            var cards = track.querySelectorAll(".vergleich-card");
+            for (var i = 0; i < cards.length; i++) {
+                if (!cards[i].hasAttribute("data-vgl-original-index")) {
+                    cards[i].setAttribute("data-vgl-original-index", String(i));
+                }
+            }
+            if (rootEl) {
+                var items = rootEl.querySelectorAll(".vergleich-product-label-item");
+                for (var j = 0; j < items.length; j++) {
+                    if (!items[j].hasAttribute("data-vgl-original-index")) {
+                        items[j].setAttribute("data-vgl-original-index", String(j));
+                    }
+                }
+            }
+        }
+        ensureOriginalIndexes();
+
+        function restoreCardOrder(){
             var cards = Array.prototype.slice.call(track.querySelectorAll(".vergleich-card"));
-            var idx = cards.indexOf(card);
-            if (idx < 0) return null;
-            var items = rootEl.querySelectorAll(".vergleich-product-label-item");
-            return items[idx] || null;
+            cards.sort(function(a, b){
+                return (+a.getAttribute("data-vgl-original-index")) -
+                       (+b.getAttribute("data-vgl-original-index"));
+            });
+            // DocumentFragment, damit appendChild pro Card nicht jedesmal das
+            // Grid neu layoutet — nur einmal beim Anhaengen des Fragments.
+            var frag = document.createDocumentFragment();
+            for (var i = 0; i < cards.length; i++) frag.appendChild(cards[i]);
+            track.appendChild(frag);
         }
 
-        function clearPinnedLabels(){
+        function labelTrackEl(){
+            return rootEl ? rootEl.querySelector(".vergleich-product-label-row__track") : null;
+        }
+
+        function restoreLabelOrder(){
+            var labelTrack = labelTrackEl();
+            if (!labelTrack) return;
+            var items = Array.prototype.slice.call(
+                labelTrack.querySelectorAll(".vergleich-product-label-item")
+            );
+            items.sort(function(a, b){
+                return (+a.getAttribute("data-vgl-original-index")) -
+                       (+b.getAttribute("data-vgl-original-index"));
+            });
+            var frag = document.createDocumentFragment();
+            for (var i = 0; i < items.length; i++) frag.appendChild(items[i]);
+            labelTrack.appendChild(frag);
+        }
+
+        // Label anhand des stabilen Original-Index finden (NICHT ueber die
+        // aktuelle DOM-Position der Card — die kann durch vorheriges Pinning
+        // verschoben sein).
+        function labelItemForCard(card){
+            if (!rootEl) return null;
+            var idx = card.getAttribute("data-vgl-original-index");
+            if (idx === null) return null;
+            return rootEl.querySelector(
+                '.vergleich-product-label-item[data-vgl-original-index="' + idx + '"]'
+            );
+        }
+
+        function clearAllPinnedLabels(){
             if (!rootEl) return;
             rootEl.querySelectorAll(".vergleich-product-label-item.is-pinned-label")
-                .forEach(function(el){ el.classList.remove("is-pinned-label"); });
+                .forEach(function(el){
+                    el.classList.remove("is-pinned-label");
+                    el.style.transform = "";
+                });
         }
 
         function pin(card){
-            // Erst evtl. vorherige Pinnung aufheben (nur eine Spalte pinnbar).
+            // Vorhandene Pinnung aufheben (nur eine Spalte pinnbar).
             var prev = track.querySelector(".vergleich-card.is-pinned");
             if (prev && prev !== card) {
                 prev.classList.remove("is-pinned");
-                prev.style.transform = "";
                 var prevBtn = prev.querySelector(".vergleich-pin");
                 if (prevBtn) prevBtn.setAttribute("aria-pressed", "false");
             }
-            clearPinnedLabels();
+            clearAllPinnedLabels();
+
+            // Original-Reihenfolge wiederherstellen, dann neue Pin-Card (und
+            // Label) an DOM-Position 0 verschieben. So bleibt der Rest in
+            // stabiler Reihenfolge und position:sticky greift compositor-
+            // nativ ohne Layout-Tricks.
+            restoreCardOrder();
+            restoreLabelOrder();
+            track.insertBefore(card, track.firstElementChild);
             card.classList.add("is-pinned");
             var btn = card.querySelector(".vergleich-pin");
             if (btn) btn.setAttribute("aria-pressed", "true");
+
             var label = labelItemForCard(card);
-            if (label) label.classList.add("is-pinned-label");
-            refreshPinRefs();
+            var labelTrack = labelTrackEl();
+            if (label && labelTrack) {
+                labelTrack.insertBefore(label, labelTrack.firstElementChild);
+                label.classList.add("is-pinned-label");
+            }
+
+            // Scroll auf 0 zuruecksetzen, damit der User die neue Pin-Spalte
+            // zusammen mit den ersten Vergleichsspalten sieht — nicht
+            // irgendwo in der Mitte. Direkte Zuweisung statt scrollTo smooth,
+            // weil smooth mit den Scroll-Handlern racen kann.
+            scroll.scrollLeft = 0;
+            pinnedLabelRef = label || null;
             applySyncNow();
-            // Scroll-Position NICHT anfassen: der Transform-basierte Sticky-
-            // Effekt haftet die Card am linken Rand, unabhaengig vom aktuellen
-            // scrollLeft. Ein scrollTo hier wuerde mit nachfolgenden Nav-Klicks
-            // kollidieren (Smooth-Animation friert dann ein).
+
             requestAnimationFrame(function(){
                 syncRows(wrapper);
                 updateNav(wrapper);
@@ -602,53 +681,38 @@
 
         function unpin(card){
             card.classList.remove("is-pinned");
-            card.style.transform = "";
-            clearPinnedLabels();
-            if (rootEl) {
-                rootEl.querySelectorAll(".vergleich-product-label-item")
-                    .forEach(function(el){ el.style.transform = ""; });
-            }
             var btn = card.querySelector(".vergleich-pin");
             if (btn) btn.setAttribute("aria-pressed", "false");
-            refreshPinRefs();
+            clearAllPinnedLabels();
+            restoreCardOrder();
+            restoreLabelOrder();
+            pinnedLabelRef = null;
+            applySyncNow();
             requestAnimationFrame(function(){
                 syncRows(wrapper);
                 updateNav(wrapper);
             });
         }
 
-        // Sticky-Ersatz: beim Scroll die gepinnte Card UND ihr Label per
-        // Transform um scrollLeft mitwandern lassen. Setzen sowohl CSS-Var
-        // (fuer CSS-Fallbacks) als auch direkt style.transform — letzteres
-        // ist die verlaessliche Quelle, CSS-Var in transform hat in manchen
-        // Browsern Rendering-Verzoegerung.
+        // Scroll-Sync NUR fuer das gepinnte Label: die Card erledigt ihren
+        // Sticky-Effekt selbst ueber position:sticky (Compositor-Thread, kein
+        // JS pro Frame). Fuer das Label ist das nicht moeglich, weil der
+        // Label-Row-Track kein eigener Scroll-Container ist — wir kontern
+        // manuell die translateX-Synchronisation des Tracks.
         //
-        // Anti-Flicker: statt synchron im Scroll-Handler den Transform zu
-        // setzen (das kann einen Frame mit altem Transform zwischen Scroll
-        // und Transform-Update erzeugen, sichtbar als Ruckler an der
-        // gepinnten Spalte), bundlen wir Reads+Writes in ein
-        // requestAnimationFrame: Browser liest scrollLeft, ruft unseren
-        // Callback unmittelbar vor dem Paint-Frame auf, wir schreiben
-        // Transform — alles in derselben Frame-Boundary, kein Zwischenzustand.
-        // Pinned/Label-Refs cachen wir beim Pinnen in _pinnedCard/_pinnedLabel,
-        // um pro Scroll-Event querySelector zu vermeiden.
-        var pinnedCardRef  = null;
+        // rAF-gebatcht: der Scroll-Handler schreibt keinen Transform direkt,
+        // er markiert nur „muss im naechsten Frame updaten". applySyncNow
+        // liest scrollLeft und schreibt den Transform unmittelbar vor dem
+        // Paint-Frame — reads + writes in derselben Frame-Boundary.
         var pinnedLabelRef = null;
         var pendingRAF     = false;
-
-        function refreshPinRefs(){
-            pinnedCardRef  = track.querySelector(".vergleich-card.is-pinned");
-            pinnedLabelRef = rootEl
-                ? rootEl.querySelector(".vergleich-product-label-item.is-pinned-label")
-                : null;
-        }
 
         function applySyncNow(){
             var x = scroll.scrollLeft;
             wrapper.style.setProperty("--vgl-scroll-left", x + "px");
-            var t = "translate3d(" + x + "px,0,0)";
-            if (pinnedCardRef)  pinnedCardRef.style.transform  = t;
-            if (pinnedLabelRef) pinnedLabelRef.style.transform = t;
+            if (pinnedLabelRef) {
+                pinnedLabelRef.style.transform = "translate3d(" + x + "px,0,0)";
+            }
         }
 
         function syncScrollVar(){
@@ -660,7 +724,6 @@
             });
         }
         scroll.addEventListener("scroll", syncScrollVar, { passive: true });
-        refreshPinRefs();
         applySyncNow();
 
         track.addEventListener("click", function(e){

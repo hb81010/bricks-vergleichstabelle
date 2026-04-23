@@ -6259,18 +6259,16 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-pin__icon { width: 16px; height: 16px; display: block; }
         .vergleich-pin__icon--on { display: none; }
         .vergleich-card.is-pinned {
-            order: -1;
-            transform: translate3d(var(--vgl-scroll-left, 0px), 0, 0);
+            position: sticky;
+            left: 0;
             z-index: 10 !important;
             background: #fff;
             box-shadow: 6px 0 8px -4px rgba(0, 0, 0, .12);
-            will-change: transform;
         }
         .vergleich-product-label-item.is-pinned-label {
-            order: -1;
-            transform: translate3d(var(--vgl-scroll-left, 0px), 0, 0);
             z-index: 2;
             position: relative;
+            will-change: transform;
         }
         /* Sicherheit: Pin-Button bleibt interaktiv, auch wenn die Card Sticky
            ist und in einem neuen Stacking-Context liegt. */
