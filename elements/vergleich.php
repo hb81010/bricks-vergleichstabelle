@@ -6259,7 +6259,7 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-pin__icon { width: 16px; height: 16px; display: block; }
         .vergleich-pin__icon--on { display: none; }
         .vergleich-card.is-pinned {
-            position: sticky;
+            position: sticky !important;
             left: 0;
             z-index: 10 !important;
             background: #fff;
