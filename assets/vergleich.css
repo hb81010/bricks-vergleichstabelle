@@ -153,6 +153,11 @@
     border-left: 1px solid #e5e7eb;
     background: #fff;
     position: relative !important;
+    /* Basis-z-index: sorgt dafuer, dass die gepinnte Spalte (z:10) IMMER
+       klar ueber ihren Nachbarn liegt. Ohne expliziten Wert wuerden
+       DOM-spaetere Cards beim horizontalen Scrollen visuell ueber die
+       gepinnte Card schieben. */
+    z-index: 1;
 }
 
 .vergleich-card:first-child {
@@ -479,6 +484,92 @@
 .vergleich-scroll::-webkit-scrollbar-thumb:hover {
     background: #6b7280;
 }
+
+/* === PIN-BUTTON (Spalte anpinnen) =========================================
+   Kleiner Button oben rechts an jeder Card. Sichtbar nur, wenn der Wrapper
+   .can-pin traegt (JS prueft, ob >=2 Cards gleichzeitig sichtbar sind —
+   sonst ergibt Pinning keinen Sinn). Die gepinnte Card wird per JS im DOM
+   an Position 1 im .vergleich-track verschoben und klebt dort per
+   position:sticky beim horizontalen Scrollen. */
+.vergleich-pin {
+    position: absolute;
+    top: var(--vgl-pin-offset-y, 8px);
+    right: var(--vgl-pin-offset-x, 8px);
+    z-index: 6;
+    pointer-events: auto;
+    width: var(--vgl-pin-size, 28px);
+    height: var(--vgl-pin-size, 28px);
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    color: var(--vgl-pin-color, #9ca3af);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    border-radius: 6px;
+    transition: color .15s ease, background-color .15s ease, transform .15s ease;
+}
+
+.vergleich-wrapper.has-pin.can-pin .vergleich-pin {
+    display: inline-flex;
+}
+
+.vergleich-pin:hover {
+    color: var(--vgl-pin-color-active, #111827);
+    background: rgba(0, 0, 0, .05);
+}
+
+.vergleich-pin:focus-visible {
+    outline: 2px solid var(--vgl-pin-color-active, #111827);
+    outline-offset: 2px;
+}
+
+.vergleich-pin__icon {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.vergleich-pin__icon--on { display: none; }
+
+/* Gepinnte Spalte: klebt am linken Rand beim horizontalen Scroll.
+   order:-1 rueckt die Card im grid-auto-flow:column an Position 1. Die
+   "Klebe-Wirkung" kommt NICHT ueber position:sticky (das friert in manchen
+   Browsern bei Grid-Items den Scroll-Container nach dem ersten scrollBy
+   ein), sondern ueber eine CSS-Variable --vgl-scroll-left, die JS im
+   Scroll-Handler auf scroll.scrollLeft setzt. Die Card wandert per Transform
+   mit dem Scroll mit und bleibt visuell auf Position 0 stehen. */
+.vergleich-card.is-pinned {
+    order: -1;
+    transform: translate3d(var(--vgl-scroll-left, 0px), 0, 0);
+    z-index: 10 !important;
+    background: #fff;
+    box-shadow: 6px 0 8px -4px rgba(0, 0, 0, .12);
+    will-change: transform;
+}
+
+/* Passendes Produkt-Label (z.B. "Testsieger", "Platz 2") mitziehen:
+   - order:-1 bringt es im Flex-Track visuell nach links
+   - translateX(+scrollLeft) kontert das translateX(-scrollLeft) des Tracks
+     → Netto bleibt das Label beim Scrollen an seiner (neuen) Flex-Position
+       und damit direkt ueber der gepinnten Card. */
+.vergleich-product-label-item.is-pinned-label {
+    order: -1;
+    transform: translate3d(var(--vgl-scroll-left, 0px), 0, 0);
+    z-index: 2;
+    position: relative;
+}
+
+.vergleich-card.is-pinned .vergleich-pin {
+    color: var(--vgl-pin-color-active, #111827);
+    z-index: 7;
+}
+
+.vergleich-card.is-pinned .vergleich-pin__icon--off { display: none; }
+.vergleich-card.is-pinned .vergleich-pin__icon--on  { display: block; }
 
 /* === BRICKS BUILDER SPEZIFISCH === */
 /* Im Builder sollen die Zellen sichtbar sein, auch wenn leer */

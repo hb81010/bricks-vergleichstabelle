@@ -136,6 +136,19 @@
             var viewportLeft  = sRect.left;
             var viewportRight = sRect.left + scroll.clientWidth;
 
+            // Wenn eine Spalte gepinnt ist, soll der Prev-Pfeil NICHT auf der
+            // gepinnten Card liegen — dort waere er sinnlos, weil er nur die
+            // nicht-gepinnten Spalten nach links zieht. Wir schieben ihn auf
+            // die rechte Kante der gepinnten Spalte, sodass er visuell ueber
+            // dem tatsaechlich scrollenden Bereich sitzt (wie bei Finanzfluss).
+            var pinnedCard = scroll.querySelector(".vergleich-card.is-pinned");
+            if (pinnedCard) {
+                var pRect = pinnedCard.getBoundingClientRect();
+                if (pRect.right > viewportLeft) {
+                    viewportLeft = pRect.right;
+                }
+            }
+
             if (prev) {
                 prev.style.left  = (viewportLeft - rootRect.left + navOffset + nudgeX) + "px";
                 prev.style.right = "auto";
@@ -156,9 +169,14 @@
         var prev    = rootEl ? rootEl.querySelector(".vergleich-nav--prev") : null;
         var next    = rootEl ? rootEl.querySelector(".vergleich-nav--next") : null;
 
+        // Toleranz 4px statt 1: Card-Breiten sind haeufig fraktional (z.B.
+        // durch CSS calc / flex), scrollBy landet damit nicht exakt auf
+        // scrollWidth-clientWidth. Mit 1px Toleranz blieb der Next-Pfeil
+        // am letzten Element sichtbar und brauchte noch einen Klick, der
+        // nur ein paar Pixel scrollte, bevor er verschwand.
         var overflows = scroll.scrollWidth - scroll.clientWidth > 1;
-        var atStart   = scroll.scrollLeft <= 1;
-        var atEnd     = scroll.scrollLeft >= scroll.scrollWidth - scroll.clientWidth - 1;
+        var atStart   = scroll.scrollLeft <= 4;
+        var atEnd     = scroll.scrollLeft >= scroll.scrollWidth - scroll.clientWidth - 4;
 
         // Zuerst positionieren, dann hidden toggeln — vermeidet einen Flash,
         // bei dem der Pfeil für einen Frame am (falschen) CSS-Default-Ort
@@ -232,7 +250,36 @@
             } else {
                 step = 200;
             }
-            scroll.scrollBy({ left: (dir === "prev" ? -step : step), behavior: "smooth" });
+            // Direkte scrollLeft-Zuweisung statt scrollBy({behavior:smooth}).
+            // Grund: smooth scroll kollidiert mit dem JS-Transform-Sticky-Trick
+            // der gepinnten Spalte — die Transform-Updates pro Scroll-Event
+            // koennen die Smooth-Animation in manchen Browsern abbrechen,
+            // sodass nur der erste Klick scrollt. Direkte Zuweisung ist
+            // instant und garantiert, dass scroll + Transform synchron landen.
+            var delta  = (dir === "prev" ? -step : step);
+            var target = scroll.scrollLeft + delta;
+            var max    = scroll.scrollWidth - scroll.clientWidth;
+            if (target < 0)   target = 0;
+            if (target > max) target = max;
+            scroll.scrollLeft = target;
+
+            // Transform der gepinnten Spalte UND ihres Labels explizit
+            // synchronisieren — wir warten NICHT auf das Scroll-Event, weil
+            // das je nach Browser verzoegert, abgebrochen oder gar nicht
+            // gefeuert wird, wenn der Zielwert identisch war. Das war die
+            // Ursache dafuer, dass ein Prev-Klick scheinbar nichts bewirkte:
+            // scrollLeft wurde gesetzt, aber der transform-Sticky blieb auf
+            // altem Wert und deckte die Nachbar-Spalte weiter ab.
+            var t = "translate3d(" + target + "px,0,0)";
+            wrapper.style.setProperty("--vgl-scroll-left", target + "px");
+            var pinnedCard = scroll.querySelector(".vergleich-card.is-pinned");
+            if (pinnedCard) pinnedCard.style.transform = t;
+            var navRoot = wrapper.closest(".vergleich-root") || wrapper.parentNode;
+            if (navRoot) {
+                var pinnedLabel = navRoot.querySelector(".vergleich-product-label-item.is-pinned-label");
+                if (pinnedLabel) pinnedLabel.style.transform = t;
+            }
+            updateNav(wrapper);
         });
 
         var handler = function(){ updateNav(wrapper); };
@@ -445,6 +492,175 @@
         setTimeout(remeasure, 500);
     }
 
+    // ========================================================================
+    // PIN: eine Spalte anpinnen, damit sie beim horizontalen Scroll links
+    // sichtbar bleibt. Pin-Button wird nur angezeigt, wenn mindestens zwei
+    // Cards gleichzeitig in den Viewport passen — sonst hat Pinning keinen
+    // Nutzen (nichts zum Vergleichen daneben).
+    //
+    // Technik: KEIN DOM-Move. Die gepinnte Card bekommt nur die Klasse
+    // .is-pinned, und CSS uebernimmt zwei Dinge gleichzeitig:
+    //   - order: -1  → die Card rutscht im Grid-auto-flow:column visuell
+    //                  an Position 1, ohne dass wir DOM anfassen.
+    //   - position: sticky; left: 0 → sie klebt beim horizontalen Scrollen
+    //                                 am linken Rand des Scroll-Containers.
+    // Ein frueherer Versuch mit insertBefore + smooth scrollTo hat im
+    // Zusammenspiel mit .vergleich-scroll/Grid dazu gefuehrt, dass der
+    // Scroll nach einem Klick „hing" — CSS-only ist hier die sauberere
+    // Loesung und braucht auch keine Restore-Logik mehr. Keine Persistenz:
+    // bei Reload ist die Auswahl bewusst weg.
+    // ========================================================================
+    function bindPin(wrapper){
+        if (wrapper._vglPinBound) return;
+        if (!wrapper.classList.contains("has-pin")) return;
+        wrapper._vglPinBound = true;
+
+        var scroll = wrapper.querySelector(".vergleich-scroll");
+        var track  = wrapper.querySelector(".vergleich-track");
+        if (!scroll || !track) return;
+
+        function updateAvailability(){
+            var cards = track.querySelectorAll(".vergleich-card");
+            if (cards.length < 2) {
+                wrapper.classList.remove("can-pin");
+                return;
+            }
+            // Card-Breite: offsetWidth der ERSTEN nicht gepinnten Card. Die
+            // gepinnte Card haette zwar dieselbe Breite, aber beim Messen
+            // auf jedem Stand konsistent an einer un-sticky Card zu messen
+            // vermeidet Randfaelle.
+            var ref = null;
+            for (var i = 0; i < cards.length; i++) {
+                if (!cards[i].classList.contains("is-pinned")) { ref = cards[i]; break; }
+            }
+            if (!ref) ref = cards[0];
+            var cardW = ref.offsetWidth;
+            if (!cardW || cardW < 1) {
+                wrapper.classList.remove("can-pin");
+                return;
+            }
+            var visible = Math.floor(scroll.clientWidth / cardW);
+            // >= 2 sichtbare Spalten: Pinnen macht Sinn (1 gepinnt + >=1
+            // Vergleichsspalte).
+            if (visible >= 2) {
+                wrapper.classList.add("can-pin");
+            } else {
+                wrapper.classList.remove("can-pin");
+                // Falls gerade gepinnt war und der Viewport zu schmal wird:
+                // automatisch entpinnen — sonst sieht der User nur die
+                // gepinnte Spalte und kommt nicht mehr an die anderen.
+                var pinned = track.querySelector(".vergleich-card.is-pinned");
+                if (pinned) unpin(pinned);
+            }
+        }
+
+        var rootEl = wrapper.closest(".vergleich-root") || wrapper.parentNode;
+
+        // Label-Item suchen, das zur Card gehoert. Die Produkt-Label-Zeile
+        // rendert 1:1 pro Card in gleicher Reihenfolge — also Index-basiert.
+        function labelItemForCard(card){
+            if (!rootEl) return null;
+            var cards = Array.prototype.slice.call(track.querySelectorAll(".vergleich-card"));
+            var idx = cards.indexOf(card);
+            if (idx < 0) return null;
+            var items = rootEl.querySelectorAll(".vergleich-product-label-item");
+            return items[idx] || null;
+        }
+
+        function clearPinnedLabels(){
+            if (!rootEl) return;
+            rootEl.querySelectorAll(".vergleich-product-label-item.is-pinned-label")
+                .forEach(function(el){ el.classList.remove("is-pinned-label"); });
+        }
+
+        function pin(card){
+            // Erst evtl. vorherige Pinnung aufheben (nur eine Spalte pinnbar).
+            var prev = track.querySelector(".vergleich-card.is-pinned");
+            if (prev && prev !== card) {
+                prev.classList.remove("is-pinned");
+                prev.style.transform = "";
+                var prevBtn = prev.querySelector(".vergleich-pin");
+                if (prevBtn) prevBtn.setAttribute("aria-pressed", "false");
+            }
+            clearPinnedLabels();
+            card.classList.add("is-pinned");
+            var btn = card.querySelector(".vergleich-pin");
+            if (btn) btn.setAttribute("aria-pressed", "true");
+            var label = labelItemForCard(card);
+            if (label) label.classList.add("is-pinned-label");
+            // Scroll-Position NICHT anfassen: der Transform-basierte Sticky-
+            // Effekt haftet die Card am linken Rand, unabhaengig vom aktuellen
+            // scrollLeft. Ein scrollTo hier wuerde mit nachfolgenden Nav-Klicks
+            // kollidieren (Smooth-Animation friert dann ein).
+            requestAnimationFrame(function(){
+                syncRows(wrapper);
+                updateNav(wrapper);
+            });
+        }
+
+        function unpin(card){
+            card.classList.remove("is-pinned");
+            card.style.transform = "";
+            clearPinnedLabels();
+            if (rootEl) {
+                rootEl.querySelectorAll(".vergleich-product-label-item")
+                    .forEach(function(el){ el.style.transform = ""; });
+            }
+            var btn = card.querySelector(".vergleich-pin");
+            if (btn) btn.setAttribute("aria-pressed", "false");
+            requestAnimationFrame(function(){
+                syncRows(wrapper);
+                updateNav(wrapper);
+            });
+        }
+
+        // Sticky-Ersatz: beim Scroll die gepinnte Card UND ihr Label per
+        // Transform um scrollLeft mitwandern lassen. Setzen sowohl CSS-Var
+        // (fuer CSS-Fallbacks) als auch direkt style.transform — letzteres
+        // ist die verlaessliche Quelle, CSS-Var in transform hat in manchen
+        // Browsern Rendering-Verzoegerung.
+        function syncScrollVar(){
+            var x = scroll.scrollLeft;
+            wrapper.style.setProperty("--vgl-scroll-left", x + "px");
+            var t = "translate3d(" + x + "px,0,0)";
+            var p = track.querySelector(".vergleich-card.is-pinned");
+            if (p) p.style.transform = t;
+            if (rootEl) {
+                var pl = rootEl.querySelector(".vergleich-product-label-item.is-pinned-label");
+                if (pl) pl.style.transform = t;
+            }
+        }
+        scroll.addEventListener("scroll", syncScrollVar, { passive: true });
+        syncScrollVar();
+
+        track.addEventListener("click", function(e){
+            var btn = e.target && e.target.closest ? e.target.closest("[data-vgl-pin]") : null;
+            if (!btn) return;
+            var card = btn.closest(".vergleich-card");
+            if (!card) return;
+            e.preventDefault();
+            // Unpin MUSS immer klappen — auch wenn can-pin zwischenzeitlich
+            // weg ist (z.B. wegen Viewport-Resize). Sonst koennte der User
+            // seine Pinnung nicht mehr loesen. Nur das NEU-Pinnen gaten wir.
+            if (card.classList.contains("is-pinned")) {
+                unpin(card);
+            } else {
+                if (!wrapper.classList.contains("can-pin")) return;
+                pin(card);
+            }
+        });
+
+        updateAvailability();
+        window.addEventListener("resize", updateAvailability);
+        if (typeof ResizeObserver !== "undefined") {
+            var ro = new ResizeObserver(updateAvailability);
+            ro.observe(scroll);
+        }
+        // Nachzuegler fuer Layout-Settling (Fonts, Bilder aendern Kartenbreite).
+        setTimeout(updateAvailability, 250);
+        setTimeout(updateAvailability, 800);
+    }
+
     function init(wrapper){
         syncRows(wrapper);
         bindExpand(wrapper);
@@ -452,6 +668,7 @@
         bindRowHover(wrapper);
         bindLabelRowSync(wrapper);
         bindStickyRows(wrapper);
+        bindPin(wrapper);
         var burst = 0;
         (function tick(){
             if (!wrapper.isConnected) return;

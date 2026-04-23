@@ -1143,6 +1143,53 @@ class Element_Vergleich extends \Bricks\Element {
             'css' => [ [ 'property' => 'padding', 'selector' => '.vergleich-counter' ] ],
         ];
 
+        // ─── SPALTE ANPINNEN ───────────────────────────────────────────────
+        $this->controls['_sepPin'] = [
+            'tab' => 'content', 'group' => 'scroll',
+            'type' => 'separator',
+            'label' => esc_html__( 'Spalte anpinnen', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['pinEnabled'] = [
+            'tab' => 'content', 'group' => 'scroll',
+            'label' => esc_html__( 'Anpin-Funktion aktivieren', 'bricks-vergleich' ),
+            'type' => 'checkbox',
+            'description' => esc_html__( 'Kleiner Pin-Button oben rechts an jeder Spalte. Klick fixiert die Spalte links beim horizontalen Scrollen, damit man andere Spalten bequem damit vergleichen kann. Pin erscheint erst, wenn mindestens zwei Spalten gleichzeitig sichtbar sind.', 'bricks-vergleich' ),
+        ];
+
+        $this->controls['pinColor'] = [
+            'tab' => 'content', 'group' => 'scroll',
+            'label' => esc_html__( 'Pin-Farbe', 'bricks-vergleich' ),
+            'type' => 'color',
+            'required' => [ 'pinEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-pin-color', 'selector' => '' ] ],
+        ];
+
+        $this->controls['pinColorActive'] = [
+            'tab' => 'content', 'group' => 'scroll',
+            'label' => esc_html__( 'Pin-Farbe aktiv', 'bricks-vergleich' ),
+            'type' => 'color',
+            'description' => esc_html__( 'Farbe des Pin-Icons, wenn die Spalte aktuell angepinnt ist.', 'bricks-vergleich' ),
+            'required' => [ 'pinEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-pin-color-active', 'selector' => '' ] ],
+        ];
+
+        $this->controls['pinOffsetX'] = [
+            'tab' => 'content', 'group' => 'scroll',
+            'label' => esc_html__( 'Abstand rechts', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'required' => [ 'pinEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-pin-offset-x', 'selector' => '' ] ],
+        ];
+
+        $this->controls['pinOffsetY'] = [
+            'tab' => 'content', 'group' => 'scroll',
+            'label' => esc_html__( 'Abstand oben', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'required' => [ 'pinEnabled', '=', true ],
+            'css' => [ [ 'property' => '--vgl-pin-offset-y', 'selector' => '' ] ],
+        ];
+
         // ======================================================================
         // STYLE
         // ======================================================================
@@ -2597,6 +2644,9 @@ class Element_Vergleich extends \Bricks\Element {
             $wrapper_classes[] = 'has-nav';
             $wrapper_classes[] = 'vgl-nav-step-' . $nav_scroll_step;
         }
+        if ( ! empty( $settings['pinEnabled'] ) ) {
+            $wrapper_classes[] = 'has-pin';
+        }
         if ( ! empty( $settings['rowHoverEnabled'] ) ) {
             $wrapper_classes[] = 'has-row-hover';
         }
@@ -3107,9 +3157,27 @@ class Element_Vergleich extends \Bricks\Element {
             }
         }
 
+        // Pin-Button: wird per JS ein-/ausgeblendet (braucht mindestens 2
+        // gleichzeitig sichtbare Spalten, sonst ergibt Pinning keinen Sinn).
+        $pin_html = '';
+        if ( ! empty( $settings['pinEnabled'] ) ) {
+            $pin_html = '<button type="button" class="vergleich-pin" data-vgl-pin'
+                . ' aria-label="' . esc_attr__( 'Spalte anpinnen', 'bricks-vergleich' ) . '"'
+                . ' aria-pressed="false" tabindex="0">'
+                . '<svg class="vergleich-pin__icon vergleich-pin__icon--off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+                . '<line x1="12" y1="17" x2="12" y2="22"/>'
+                . '<path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a1 1 0 0 0 0-2H8a1 1 0 0 0 0 2h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/>'
+                . '</svg>'
+                . '<svg class="vergleich-pin__icon vergleich-pin__icon--on" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">'
+                . '<path d="M16 9V4h1a1 1 0 0 0 0-2H7a1 1 0 0 0 0 2h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z"/>'
+                . '</svg>'
+                . '</button>';
+        }
+
         ob_start();
         echo '<div class="' . esc_attr( $card_class ) . '"' . $card_data . ' role="presentation">';
         echo $rank_html;
+        echo $pin_html;
 
         foreach ( $rows as $idx => $row ) {
             $inject = ( $idx === $score_anchor_idx ) ? $score_html : '';
@@ -5585,6 +5653,7 @@ class Element_Vergleich extends \Bricks\Element {
             overflow: clip;
             box-sizing: border-box;
             position: relative !important;
+            z-index: 1;
         }
         .vergleich-card:first-child { border-left: none; }
 
@@ -6156,6 +6225,60 @@ class Element_Vergleich extends \Bricks\Element {
 
         /* Breakpoint-Werte kommen ausschliesslich aus den User-Controls
            labelWidth und columnWidth via Bricks reaktiver CSS-Pipeline. */
+
+        /* === PIN-BUTTON (Spalte anpinnen) === */
+        .vergleich-pin {
+            position: absolute;
+            top: var(--vgl-pin-offset-y, 8px);
+            right: var(--vgl-pin-offset-x, 8px);
+            z-index: 6;
+            width: var(--vgl-pin-size, 28px);
+            height: var(--vgl-pin-size, 28px);
+            padding: 0;
+            margin: 0;
+            border: 0;
+            background: transparent;
+            color: var(--vgl-pin-color, #9ca3af);
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            border-radius: 6px;
+            transition: color .15s ease, background-color .15s ease;
+        }
+        .vergleich-wrapper.has-pin.can-pin .vergleich-pin { display: inline-flex; }
+        .vergleich-pin:hover {
+            color: var(--vgl-pin-color-active, #111827);
+            background: rgba(0, 0, 0, .05);
+        }
+        .vergleich-pin:focus-visible {
+            outline: 2px solid var(--vgl-pin-color-active, #111827);
+            outline-offset: 2px;
+        }
+        .vergleich-pin__icon { width: 16px; height: 16px; display: block; }
+        .vergleich-pin__icon--on { display: none; }
+        .vergleich-card.is-pinned {
+            order: -1;
+            transform: translate3d(var(--vgl-scroll-left, 0px), 0, 0);
+            z-index: 10 !important;
+            background: #fff;
+            box-shadow: 6px 0 8px -4px rgba(0, 0, 0, .12);
+            will-change: transform;
+        }
+        .vergleich-product-label-item.is-pinned-label {
+            order: -1;
+            transform: translate3d(var(--vgl-scroll-left, 0px), 0, 0);
+            z-index: 2;
+            position: relative;
+        }
+        /* Sicherheit: Pin-Button bleibt interaktiv, auch wenn die Card Sticky
+           ist und in einem neuen Stacking-Context liegt. */
+        .vergleich-pin { pointer-events: auto; }
+        .vergleich-card.is-pinned .vergleich-pin { z-index: 7; }
+        .vergleich-card.is-pinned .vergleich-pin { color: var(--vgl-pin-color-active, #111827); }
+        .vergleich-card.is-pinned .vergleich-pin__icon--off { display: none; }
+        .vergleich-card.is-pinned .vergleich-pin__icon--on  { display: block; }
         </style>';
     }
 
