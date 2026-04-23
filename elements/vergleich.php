@@ -57,6 +57,7 @@ class Element_Vergleich extends \Bricks\Element {
         $this->control_groups['scroll']  = [ 'title' => esc_html__( 'Scroll & Navigation', 'bricks-vergleich' ), 'tab' => 'content' ];
         $this->control_groups['effects'] = [ 'title' => esc_html__( 'Zeilen-Effekte', 'bricks-vergleich' ),    'tab' => 'content' ];
         $this->control_groups['style']   = [ 'title' => esc_html__( 'Farben & Rahmen', 'bricks-vergleich' ),   'tab' => 'content' ];
+        $this->control_groups['cellStyle'] = [ 'title' => esc_html__( 'Zellen-Styling (global)', 'bricks-vergleich' ), 'tab' => 'content' ];
         $this->control_groups['a11y']    = [ 'title' => esc_html__( 'Zugänglichkeit & SEO', 'bricks-vergleich' ), 'tab' => 'content' ];
     }
 
@@ -1307,6 +1308,399 @@ class Element_Vergleich extends \Bricks\Element {
                 [ 'property' => 'border-color', 'selector' => '.vergleich-label' ],
                 [ 'property' => 'border-color', 'selector' => '.vergleich-zelle' ],
             ],
+        ];
+
+        // ======================================================================
+        // ZELLEN-STYLING (global, klassen-fähig)
+        // ======================================================================
+        // Zweck: die Row-Level-Felder (Button-BG, Icon-Farbe, Typografie etc.)
+        // erzeugen Inline-Styles und lassen sich deshalb in Bricks nicht an
+        // einer Klasse speichern. Hier definieren wir für jeden Zelltyp die
+        // gleichen Properties als ELEMENT-Level-Controls mit echten
+        // CSS-Regeln — die kann Bricks an die Klasse hängen, und alle
+        // Vergleich-Elemente mit derselben Klasse sehen automatisch gleich
+        // aus. Row-Level-Inline-Styles gewinnen weiterhin per Specificity,
+        // können also gezielt als Overrides eingesetzt werden.
+        $this->controls['cellStyleInfo'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'type' => 'info',
+            'content' => esc_html__( 'Globale Default-Styles pro Zelltyp — werden auf eine Klasse gespeichert und gelten für alle Vergleich-Elemente mit dieser Klasse. Einzelne Zeilen können diese Werte weiterhin über die Row-Level-Felder überschreiben.', 'bricks-vergleich' ),
+        ];
+
+        // ── TEXT ─────────────────────────────────────────────────────────
+        $this->controls['_sepCellText'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'type' => 'separator',
+            'label' => esc_html__( 'Text', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellTextColor'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => 'color', 'selector' => '.vergleich-text' ] ],
+        ];
+        $this->controls['cellTextTypography'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Typografie', 'bricks-vergleich' ),
+            'type' => 'typography',
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-text' ] ],
+        ];
+
+        // ── ICON ─────────────────────────────────────────────────────────
+        $this->controls['_sepCellIcon'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'type' => 'separator',
+            'label' => esc_html__( 'Icon', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellIconColor'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Icon-Farbe', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => 'color', 'selector' => '.vergleich-zelle--icon .vergleich-icon' ] ],
+        ];
+        $this->controls['cellIconSize'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Icon-Größe', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'css' => [ [ 'property' => 'font-size', 'selector' => '.vergleich-zelle--icon .vergleich-icon' ] ],
+        ];
+
+        // ── BUTTON ───────────────────────────────────────────────────────
+        $this->controls['_sepCellBtn'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'type' => 'separator',
+            'label' => esc_html__( 'Button (Zelltyp: Button)', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellBtnBg'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Hintergrund', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => 'background', 'selector' => '.vergleich-zelle--button .vergleich-btn' ] ],
+        ];
+        $this->controls['cellBtnTypography'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Typografie', 'bricks-vergleich' ),
+            'type' => 'typography',
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-zelle--button .vergleich-btn' ] ],
+        ];
+        $this->controls['cellBtnBorder'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+            'type' => 'border',
+            'css' => [ [ 'property' => 'border', 'selector' => '.vergleich-zelle--button .vergleich-btn' ] ],
+        ];
+        $this->controls['cellBtnPadding'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+            'type' => 'spacing',
+            'css' => [ [ 'property' => 'padding', 'selector' => '.vergleich-zelle--button .vergleich-btn' ] ],
+        ];
+        $this->controls['cellBtnMinWidth'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Mindestbreite', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'css' => [ [ 'property' => 'min-width', 'selector' => '.vergleich-zelle--button .vergleich-btn' ] ],
+        ];
+        $this->controls['cellBtnShadow'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Schatten', 'bricks-vergleich' ),
+            'type' => 'box-shadow',
+            'css' => [ [ 'property' => 'box-shadow', 'selector' => '.vergleich-zelle--button .vergleich-btn' ] ],
+        ];
+
+        // ── RATING ───────────────────────────────────────────────────────
+        $this->controls['_sepCellRating'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'type' => 'separator',
+            'label' => esc_html__( 'Sterne-Rating', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellRatingFillColor'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Farbe (voll)', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [
+                [ 'property' => 'color', 'selector' => '.vergleich-rating__fill' ],
+                [ 'property' => 'color', 'selector' => '.vergleich-rating__icon.is-full' ],
+                [ 'property' => 'color', 'selector' => '.vergleich-rating__icon.is-half' ],
+            ],
+        ];
+        $this->controls['cellRatingEmptyColor'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Farbe (leer)', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [
+                [ 'property' => 'color', 'selector' => '.vergleich-rating__stars' ],
+                [ 'property' => 'color', 'selector' => '.vergleich-rating__icon.is-empty' ],
+            ],
+        ];
+        $this->controls['cellRatingSize'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Sterngröße', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'css' => [ [ 'property' => 'font-size', 'selector' => '.vergleich-rating' ] ],
+        ];
+        $this->controls['cellRatingNumberTypography'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Typografie (Zahl)', 'bricks-vergleich' ),
+            'type' => 'typography',
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-rating__number' ] ],
+        ];
+
+        // ── BOOL ─────────────────────────────────────────────────────────
+        $this->controls['_sepCellBool'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'type' => 'separator',
+            'label' => esc_html__( 'Ja/Nein', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellBoolTrueColor'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Farbe "Ja"', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => 'color', 'selector' => '.vergleich-bool.is-true' ] ],
+        ];
+        $this->controls['cellBoolFalseColor'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Farbe "Nein"', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => 'color', 'selector' => '.vergleich-bool.is-false' ] ],
+        ];
+        $this->controls['cellBoolSize'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Icon-Größe', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'css' => [
+                [ 'property' => 'width',     'selector' => '.vergleich-bool__icon' ],
+                [ 'property' => 'height',    'selector' => '.vergleich-bool__icon' ],
+                [ 'property' => 'font-size', 'selector' => '.vergleich-bool__icon' ],
+            ],
+        ];
+        $this->controls['cellBoolTypography'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Typografie (Text)', 'bricks-vergleich' ),
+            'type' => 'typography',
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-bool__text' ] ],
+        ];
+
+        // ── SCORE (plain / badge) ────────────────────────────────────────
+        $this->controls['_sepCellScore'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'type' => 'separator',
+            'label' => esc_html__( 'Bewertung (plain / badge)', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellScoreBg'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Hintergrund', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => 'background', 'selector' => '.vergleich-score-cell:not(.is-card)' ] ],
+        ];
+        $this->controls['cellScoreTypography'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Typografie', 'bricks-vergleich' ),
+            'type' => 'typography',
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-score-cell:not(.is-card)' ] ],
+        ];
+        $this->controls['cellScorePadding'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+            'type' => 'spacing',
+            'css' => [ [ 'property' => 'padding', 'selector' => '.vergleich-score-cell:not(.is-card)' ] ],
+        ];
+        $this->controls['cellScoreBorder'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+            'type' => 'border',
+            'css' => [ [ 'property' => 'border', 'selector' => '.vergleich-score-cell:not(.is-card)' ] ],
+        ];
+        $this->controls['cellScoreShadow'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Schatten', 'bricks-vergleich' ),
+            'type' => 'box-shadow',
+            'css' => [ [ 'property' => 'box-shadow', 'selector' => '.vergleich-score-cell:not(.is-card)' ] ],
+        ];
+
+        // ── SCORE CARD (Karten-Modus: Zahl groß + Verdikt) ───────────────
+        $this->controls['_sepCellScoreCard'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'type' => 'separator',
+            'label' => esc_html__( 'Bewertung (Karten-Modus)', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellScoreCardBg'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Kartenhintergrund', 'bricks-vergleich' ),
+            'description' => esc_html__( 'Outer-Box der Score-Karte. Zahl- und Verdikt-Region haben eigene Hintergründe (Verdikt darunter).', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => 'background', 'selector' => '.vergleich-score-cell.is-card' ] ],
+        ];
+        $this->controls['cellScoreCardBorder'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Rahmen (Karte)', 'bricks-vergleich' ),
+            'type' => 'border',
+            'css' => [ [ 'property' => 'border', 'selector' => '.vergleich-score-cell.is-card' ] ],
+        ];
+        $this->controls['cellScoreCardShadow'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Schatten (Karte)', 'bricks-vergleich' ),
+            'type' => 'box-shadow',
+            'css' => [ [ 'property' => 'box-shadow', 'selector' => '.vergleich-score-cell.is-card' ] ],
+        ];
+        $this->controls['cellScoreCardValuePadding'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Innenabstand (Zahl-Region)', 'bricks-vergleich' ),
+            'type' => 'spacing',
+            'css' => [ [ 'property' => 'padding', 'selector' => '.vergleich-score-cell.is-card .vergleich-score-cell__value-region' ] ],
+        ];
+        $this->controls['cellScoreCardVerdictPadding'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Innenabstand Verdikt', 'bricks-vergleich' ),
+            'type' => 'spacing',
+            'css' => [ [ 'property' => 'padding', 'selector' => '.vergleich-score-cell__verdict' ] ],
+        ];
+        $this->controls['cellScoreCardValueTypography'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Typografie (Zahl)', 'bricks-vergleich' ),
+            'type' => 'typography',
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-score-cell.is-card .vergleich-score-cell__value' ] ],
+        ];
+        $this->controls['cellScoreCardSuffixTypography'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Typografie (Suffix)', 'bricks-vergleich' ),
+            'type' => 'typography',
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-score-cell.is-card .vergleich-score-cell__suffix' ] ],
+        ];
+        $this->controls['cellScoreCardVerdictBg'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Hintergrund Verdikt-Streifen', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => 'background', 'selector' => '.vergleich-score-cell__verdict' ] ],
+        ];
+        $this->controls['cellScoreCardVerdictTypography'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Typografie Verdikt', 'bricks-vergleich' ),
+            'type' => 'typography',
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-score-cell__verdict' ] ],
+        ];
+
+        // ── LIST ─────────────────────────────────────────────────────────
+        $this->controls['_sepCellList'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'type' => 'separator',
+            'label' => esc_html__( 'Liste mit Icon', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellListIconColor'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Icon-Farbe', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => 'color', 'selector' => '.vergleich-list__icon' ] ],
+        ];
+        $this->controls['cellListIconSize'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Icon-Größe', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'css' => [ [ 'property' => 'font-size', 'selector' => '.vergleich-list__icon' ] ],
+        ];
+        $this->controls['cellListTypography'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Typografie (Text)', 'bricks-vergleich' ),
+            'type' => 'typography',
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-list__text' ] ],
+        ];
+
+        // ── LIGHTBOX-TRIGGER (wie Button) ────────────────────────────────
+        $this->controls['_sepCellLightbox'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'type' => 'separator',
+            'label' => esc_html__( 'Lightbox-Trigger', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellLightboxBg'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Hintergrund', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => 'background', 'selector' => '.vergleich-lightbox-trigger' ] ],
+        ];
+        $this->controls['cellLightboxTypography'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Typografie', 'bricks-vergleich' ),
+            'type' => 'typography',
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-lightbox-trigger' ] ],
+        ];
+        $this->controls['cellLightboxBorder'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+            'type' => 'border',
+            'css' => [ [ 'property' => 'border', 'selector' => '.vergleich-lightbox-trigger' ] ],
+        ];
+        $this->controls['cellLightboxPadding'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+            'type' => 'spacing',
+            'css' => [ [ 'property' => 'padding', 'selector' => '.vergleich-lightbox-trigger' ] ],
+        ];
+        $this->controls['cellLightboxShadow'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Schatten', 'bricks-vergleich' ),
+            'type' => 'box-shadow',
+            'css' => [ [ 'property' => 'box-shadow', 'selector' => '.vergleich-lightbox-trigger' ] ],
+        ];
+
+        // ── COUPON ───────────────────────────────────────────────────────
+        $this->controls['_sepCellCouponCode'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'type' => 'separator',
+            'label' => esc_html__( 'Gutscheincode', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellCouponCodeBg'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Hintergrund', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => 'background', 'selector' => '.vergleich-coupon__code' ] ],
+        ];
+        $this->controls['cellCouponCodeTypography'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Typografie', 'bricks-vergleich' ),
+            'type' => 'typography',
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-coupon__code' ] ],
+        ];
+        $this->controls['cellCouponCodeBorder'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+            'type' => 'border',
+            'css' => [ [ 'property' => 'border', 'selector' => '.vergleich-coupon__code' ] ],
+        ];
+        $this->controls['cellCouponCodePadding'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+            'type' => 'spacing',
+            'css' => [ [ 'property' => 'padding', 'selector' => '.vergleich-coupon__code' ] ],
+        ];
+
+        $this->controls['_sepCellCouponShop'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'type' => 'separator',
+            'label' => esc_html__( 'Gutschein-Shop-Button', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellCouponShopBg'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Hintergrund', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => 'background', 'selector' => '.vergleich-coupon__shop' ] ],
+        ];
+        $this->controls['cellCouponShopTypography'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Typografie', 'bricks-vergleich' ),
+            'type' => 'typography',
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-coupon__shop' ] ],
+        ];
+        $this->controls['cellCouponShopBorder'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Rahmen', 'bricks-vergleich' ),
+            'type' => 'border',
+            'css' => [ [ 'property' => 'border', 'selector' => '.vergleich-coupon__shop' ] ],
+        ];
+        $this->controls['cellCouponShopPadding'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
+            'type' => 'spacing',
+            'css' => [ [ 'property' => 'padding', 'selector' => '.vergleich-coupon__shop' ] ],
         ];
     }
 
@@ -3433,15 +3827,19 @@ class Element_Vergleich extends \Bricks\Element {
     }
 
     private function render_cell_icon( $row ) {
-        $icon       = $row['icon'] ?? null;
-        $color      = $this->resolve_color( $row['iconColor'] ?? null );
-        $size       = $this->get_css_value( $row['iconSize'] ?? null, '24px' );
+        $icon  = $row['icon'] ?? null;
+        $color = $this->resolve_color( $row['iconColor'] ?? null );
+        // Leer lassen, wenn User nichts gesetzt hat — CSS-Default bzw.
+        // globales cellIconSize greift dann.
+        $size  = $this->get_css_value( $row['iconSize'] ?? null, '' );
         if ( ! is_array( $icon ) || ( empty( $icon['icon'] ) && empty( $icon['svg'] ) ) ) {
             return '';
         }
-        $style = 'font-size:' . esc_attr( $size ) . ';';
-        if ( $color ) $style .= 'color:' . esc_attr( $color ) . ';';
-        $attrs = [ 'class' => [ 'vergleich-icon' ], 'style' => $style ];
+        $style = '';
+        if ( $size !== '' ) $style .= 'font-size:' . esc_attr( $size ) . ';';
+        if ( $color !== '' ) $style .= 'color:' . esc_attr( $color ) . ';';
+        $attrs = [ 'class' => [ 'vergleich-icon' ] ];
+        if ( $style !== '' ) $attrs['style'] = $style;
         return \Bricks\Element::render_icon( $icon, $attrs );
     }
 
@@ -3563,10 +3961,12 @@ class Element_Vergleich extends \Bricks\Element {
         $value = (float) str_replace( ',', '.', trim( strip_tags( $raw ) ) );
         $max   = isset( $row['ratingMax'] ) && $row['ratingMax'] !== '' ? (int) $row['ratingMax'] : 5;
         if ( $max < 1 ) $max = 5;
-        $fill_color  = $this->resolve_color( $row['ratingColor']      ?? null ) ?: '#f59e0b';
-        $empty_color = $this->resolve_color( $row['ratingEmptyColor'] ?? null ) ?: '#d1d5db';
-        $size  = $this->get_css_value( $row['ratingSize']    ?? null, '18px' );
-        $gap   = $this->get_css_value( $row['ratingIconGap'] ?? null, '2px' );
+        // Row-Level: leer lassen wenn nicht gesetzt. CSS-Default bzw.
+        // globale cellRating*-Controls greifen.
+        $fill_color  = $this->resolve_color( $row['ratingColor']      ?? null );
+        $empty_color = $this->resolve_color( $row['ratingEmptyColor'] ?? null );
+        $size  = $this->get_css_value( $row['ratingSize']    ?? null, '' );
+        $gap   = $this->get_css_value( $row['ratingIconGap'] ?? null, '' );
         $show_number = ! empty( $row['ratingShowNumber'] );
 
         $icon_full  = $row['ratingIconFull']  ?? null;
@@ -3579,8 +3979,11 @@ class Element_Vergleich extends \Bricks\Element {
         $number_html = '';
         if ( $show_number ) {
             $decimals = ( $value_clamped == (int) $value_clamped ) ? 0 : 1;
-            $num_style = $this->format_typography( $row['ratingNumberTypography'] ?? null, [ 'font-weight' => '600' ] );
-            $number_html = '<span class="vergleich-rating__number" style="' . esc_attr( $num_style ) . '">'
+            // Keine harten Default-Werte hier — CSS-Default bzw. globales
+            // cellRatingNumberTypography greift, wenn User nichts setzt.
+            $num_style = $this->format_typography( $row['ratingNumberTypography'] ?? null );
+            $num_attr  = $num_style !== '' ? ' style="' . esc_attr( $num_style ) . '"' : '';
+            $number_html = '<span class="vergleich-rating__number"' . $num_attr . '>'
                 . esc_html( number_format_i18n( $value_clamped, $decimals ) )
                 . '</span>';
         }
@@ -3599,10 +4002,11 @@ class Element_Vergleich extends \Bricks\Element {
             // Wrap-Span zwingt Icon auf fixe Größe (SVG-Icons bringen oft eigene
             // width/height HTML-Attribute von 512px mit, die font-size ignorieren).
             // Die CSS-Regel .vergleich-rating__icon > * setzt SVG/Icon auf 100%.
-            $wrap_style = sprintf(
-                'display:inline-flex;align-items:center;justify-content:center;width:%s;height:%s;line-height:1;font-size:%s;flex:0 0 auto;',
-                esc_attr( $size ), esc_attr( $size ), esc_attr( $size )
-            );
+            // Größe nur wenn Row-Level gesetzt; sonst via CSS / globales Control.
+            $wrap_style = 'display:inline-flex;align-items:center;justify-content:center;line-height:1;flex:0 0 auto;';
+            if ( $size !== '' ) {
+                $wrap_style .= 'width:' . esc_attr( $size ) . ';height:' . esc_attr( $size ) . ';font-size:' . esc_attr( $size ) . ';';
+            }
 
             $parts = '';
             for ( $i = 1; $i <= $max; $i++ ) {
@@ -3621,8 +4025,10 @@ class Element_Vergleich extends \Bricks\Element {
                         ? $icon_empty : $icon_full;
                 }
                 $inner_icon = \Bricks\Element::render_icon( $icon );
+                $span_style = $wrap_style;
+                if ( $color !== '' ) $span_style .= 'color:' . esc_attr( $color ) . ';';
                 $parts .= '<span class="vergleich-rating__icon ' . esc_attr( $state_class ) . '"'
-                    . ' style="' . esc_attr( $wrap_style . 'color:' . $color . ';' ) . '">'
+                    . ' style="' . esc_attr( $span_style ) . '">'
                     . $inner_icon
                     . '</span>';
             }
@@ -3639,8 +4045,11 @@ class Element_Vergleich extends \Bricks\Element {
                 (string) $max
             );
 
+            // Gap nur setzen, wenn Row-Level einen Wert hat — sonst CSS-Default.
+            $icons_style = 'display:inline-flex;align-items:center;';
+            if ( $gap !== '' ) $icons_style .= 'gap:' . esc_attr( $gap ) . ';';
             return '<div class="vergleich-rating has-custom-icons" role="img" aria-label="' . esc_attr( $rating_aria ) . '" style="display:inline-flex;align-items:center;gap:6px;">'
-                . '<span class="vergleich-rating__icons" aria-hidden="true" style="display:inline-flex;align-items:center;gap:' . esc_attr( $gap ) . ';">'
+                . '<span class="vergleich-rating__icons" aria-hidden="true" style="' . esc_attr( $icons_style ) . '">'
                 . $parts
                 . '</span>'
                 . ( $number_html !== '' ? '<span aria-hidden="true">' . $number_html . '</span>' : '' )
@@ -3656,10 +4065,19 @@ class Element_Vergleich extends \Bricks\Element {
             number_format_i18n( $value_clamped, $rating_decimals ),
             (string) $max
         );
-        $html  = '<div class="vergleich-rating" role="img" aria-label="' . esc_attr( $rating_aria ) . '" style="display:inline-flex;align-items:center;gap:6px;font-size:' . esc_attr( $size ) . ';">';
-        $html .= '<span class="vergleich-rating__stars" aria-hidden="true" style="position:relative;color:' . esc_attr( $empty_color ) . ';letter-spacing:' . esc_attr( $gap ) . ';font-family:Arial,sans-serif;">';
+        // Layout-Properties unconditional (müssen da sein), Größe/Farben/Gap
+        // nur wenn Row-Level gesetzt — sonst CSS-Default / globales Control.
+        $wrap_style  = 'display:inline-flex;align-items:center;gap:6px;';
+        if ( $size !== '' ) $wrap_style .= 'font-size:' . esc_attr( $size ) . ';';
+        $stars_style = 'position:relative;font-family:Arial,sans-serif;';
+        if ( $empty_color !== '' ) $stars_style .= 'color:' . esc_attr( $empty_color ) . ';';
+        if ( $gap !== '' )         $stars_style .= 'letter-spacing:' . esc_attr( $gap ) . ';';
+        $fill_style = 'position:absolute;inset:0;width:' . esc_attr( $pct ) . '%;overflow:hidden;white-space:nowrap;';
+        if ( $fill_color !== '' ) $fill_style .= 'color:' . esc_attr( $fill_color ) . ';';
+        $html  = '<div class="vergleich-rating" role="img" aria-label="' . esc_attr( $rating_aria ) . '" style="' . esc_attr( $wrap_style ) . '">';
+        $html .= '<span class="vergleich-rating__stars" aria-hidden="true" style="' . esc_attr( $stars_style ) . '">';
         $html .= str_repeat( '★', $max );
-        $html .= '<span class="vergleich-rating__fill" style="position:absolute;inset:0;width:' . esc_attr( $pct ) . '%;overflow:hidden;color:' . esc_attr( $fill_color ) . ';white-space:nowrap;">';
+        $html .= '<span class="vergleich-rating__fill" style="' . esc_attr( $fill_style ) . '">';
         $html .= str_repeat( '★', $max );
         $html .= '</span></span>';
         if ( $number_html !== '' ) $html .= '<span aria-hidden="true">' . $number_html . '</span>';
@@ -3691,9 +4109,12 @@ class Element_Vergleich extends \Bricks\Element {
         $resolved  = $raw_input === '' ? '' : $this->dd_string( $raw_input );
         $is_true   = $this->to_bool( $resolved );
 
-        $true_color  = $this->resolve_color( $row['boolTrueColor']  ?? null ) ?: '#16a34a';
-        $false_color = $this->resolve_color( $row['boolFalseColor'] ?? null ) ?: '#dc2626';
-        $size        = $this->get_css_value( $row['boolSize'] ?? null, '20px' );
+        // Row-Level: leer lassen, wenn nicht gesetzt — der CSS-Default (siehe
+        // assets/vergleich.css) oder das globale Element-Level-Control
+        // (cellBoolTrueColor / cellBoolFalseColor) kann dann greifen.
+        $true_color  = $this->resolve_color( $row['boolTrueColor']  ?? null );
+        $false_color = $this->resolve_color( $row['boolFalseColor'] ?? null );
+        $size        = $this->get_css_value( $row['boolSize'] ?? null, '' );
         $true_text   = isset( $row['boolTrueText'] )  ? (string) $row['boolTrueText']  : '';
         $false_text  = isset( $row['boolFalseText'] ) ? (string) $row['boolFalseText'] : '';
 
@@ -3713,16 +4134,19 @@ class Element_Vergleich extends \Bricks\Element {
             $svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>';
         }
 
-        $wrap_style = sprintf(
-            'display:inline-flex;align-items:center;justify-content:center;gap:6px;color:%s;font-weight:600;',
-            esc_attr( $color )
-        );
-        // font-size mitgeben, damit Bricks-gerenderte Font-Icons (<i class="...">)
-        // auf die gleiche Größe skalieren wie inline-SVG (width/height).
-        $icon_style = sprintf(
-            'display:inline-flex;align-items:center;justify-content:center;width:%s;height:%s;font-size:%s;flex:0 0 auto;line-height:1;',
-            esc_attr( $size ), esc_attr( $size ), esc_attr( $size )
-        );
+        // Nur Flex-Grundlayout unconditional — color/size kommen via CSS
+        // (Default-Stylesheet + optionale globale Element-Level-Controls
+        // unter "Zellen-Styling"). Inline NUR wenn Row-Level explizit
+        // befüllt ist; sonst gewinnen die globalen Regeln.
+        $wrap_style = 'display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:600;';
+        if ( $color !== '' ) $wrap_style .= 'color:' . esc_attr( $color ) . ';';
+
+        $icon_style = 'display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;line-height:1;';
+        if ( $size !== '' ) {
+            // font-size mitgeben, damit Bricks-gerenderte Font-Icons (<i class>)
+            // auf die gleiche Größe skalieren wie inline-SVG (width/height).
+            $icon_style .= 'width:' . esc_attr( $size ) . ';height:' . esc_attr( $size ) . ';font-size:' . esc_attr( $size ) . ';';
+        }
 
         $out  = '<span class="vergleich-bool is-' . ( $is_true ? 'true' : 'false' ) . '"'
               . ' style="' . esc_attr( $wrap_style ) . '"'
@@ -3807,30 +4231,25 @@ class Element_Vergleich extends \Bricks\Element {
         // ═══════════════════════════════════════════════════════════════════
         // Plain / Badge — bisheriges Rendering
         // ═══════════════════════════════════════════════════════════════════
-        $typo_defaults = [
-            'font-size'   => $as_badge ? '14px' : '16px',
-            'font-weight' => '700',
-            'line-height' => '1.2',
-        ];
-        if ( $as_badge ) $typo_defaults['color'] = '#ffffff';
+        // Typografie/BG/Padding/Border/Shadow werden OHNE Hardcoded-Defaults
+        // aufgebaut — die Defaults stehen im Stylesheet (.vergleich-score-cell
+        // + .is-badge). So können die globalen cellScore*-Controls überschreiben,
+        // und Row-Level-Inline gewinnt trotzdem.
+        $typo_css   = $this->format_typography( $row['scoreTypography'] ?? null );
+        $border_css = $this->format_border( $row['scoreBorder'] ?? null );
+        $shadow_css = $this->format_box_shadow( $row['scoreShadow'] ?? null );
+        $bg         = $this->resolve_color( $row['scoreBgColor'] ?? null );
+        $padding    = $this->format_spacing( $row['scorePadding'] ?? null, '' );
 
-        $typo_css = $this->format_typography( $row['scoreTypography'] ?? null, $typo_defaults );
-        $style = $typo_css . 'display:inline-flex;align-items:center;gap:4px;';
+        $style = $typo_css . $border_css . $shadow_css;
+        if ( $bg !== '' )      $style .= 'background:' . esc_attr( $bg ) . ';';
+        if ( $padding !== '' ) $style .= 'padding:' . esc_attr( $padding ) . ';';
 
-        if ( $as_badge ) {
-            $bg      = $this->resolve_color( $row['scoreBgColor'] ?? null ) ?: '#111827';
-            $padding = $this->format_spacing( $row['scorePadding'] ?? null, '6px 12px' );
-            $border_css = $this->format_border( $row['scoreBorder'] ?? null, [ 'radius' => '9999px' ] );
-            $shadow_css = $this->format_box_shadow( $row['scoreShadow'] ?? null, '0 1px 2px rgba(0,0,0,.12)' );
-            $style .= 'background:' . esc_attr( $bg ) . ';'
-                   .  'padding:' . esc_attr( $padding ) . ';' . $border_css . $shadow_css
-                   .  'white-space:nowrap;';
-        }
-
-        $html  = '<span class="vergleich-score-cell' . ( $as_badge ? ' is-badge' : '' ) . '" style="' . esc_attr( $style ) . '">';
-        if ( $prefix !== '' ) $html .= '<span class="vergleich-score-cell__prefix" style="opacity:.85;">' . esc_html( $prefix ) . '</span>';
+        $style_attr = $style !== '' ? ' style="' . esc_attr( $style ) . '"' : '';
+        $html  = '<span class="vergleich-score-cell' . ( $as_badge ? ' is-badge' : '' ) . '"' . $style_attr . '>';
+        if ( $prefix !== '' ) $html .= '<span class="vergleich-score-cell__prefix">' . esc_html( $prefix ) . '</span>';
         $html .= '<span class="vergleich-score-cell__value">' . esc_html( $display ) . '</span>';
-        if ( $suffix !== '' ) $html .= '<span class="vergleich-score-cell__suffix" style="opacity:.85;">' . esc_html( $suffix ) . '</span>';
+        if ( $suffix !== '' ) $html .= '<span class="vergleich-score-cell__suffix">' . esc_html( $suffix ) . '</span>';
         $html .= '</span>';
         return $html;
     }
@@ -3876,72 +4295,65 @@ class Element_Vergleich extends \Bricks\Element {
             }
         }
 
-        // Outer-Box-Styling: nutzt die vorhandenen Controls (bg / border /
-        // padding / shadow) — die wirken im Card-Modus auf den Wrapper.
-        $card_bg     = $this->resolve_color( $row['scoreBgColor'] ?? null ) ?: '#e5e7eb';
-        $card_border = $this->format_border( $row['scoreBorder'] ?? null, [ 'radius' => '14px' ] );
+        // Outer-Box-Styling. Ohne Hardcoded-Defaults — die stehen im CSS
+        // (.vergleich-score-cell.is-card), greifbar fuer globale cellScoreCard*-
+        // Controls. Row-Level-Inline ueberschreibt immer.
+        $card_bg     = $this->resolve_color( $row['scoreBgColor'] ?? null );
+        $card_border = $this->format_border( $row['scoreBorder'] ?? null );
         $card_shadow = $this->format_box_shadow( $row['scoreShadow'] ?? null );
         $card_width  = $this->get_css_value( $row['scoreCardWidth'] ?? null, '' );
 
+        // Layout-Properties unconditional (sonst zerfaellt die Struktur).
+        // Farben/Border/Shadow nur wenn Row-Level gesetzt.
         $card_style = 'display:inline-flex;flex-direction:column;overflow:hidden;'
-                    . 'background:' . esc_attr( $card_bg ) . ';'
                     . $card_border . $card_shadow;
+        if ( $card_bg !== '' )   $card_style .= 'background:' . esc_attr( $card_bg ) . ';';
         if ( $card_width !== '' ) $card_style .= 'width:' . esc_attr( $card_width ) . ';';
 
-        // Zahl-Region: Typografie mit sinnvollem Default (groß + fett).
-        $value_typo = $this->format_typography( $row['scoreValueTypography'] ?? null, [
-            'font-size'   => '2.25rem',
-            'font-weight' => '800',
-            'line-height' => '1',
-        ] );
-        $suffix_typo = $this->format_typography( $row['scoreSuffixTypography'] ?? null, [
-            'font-size'   => '0.9rem',
-            'font-weight' => '600',
-            'line-height' => '1',
-        ] );
-        $value_pad = '';
+        // Zahl-Region: alle Defaults via CSS. Inline nur bei Row-Level-Wert.
+        $value_typo  = $this->format_typography( $row['scoreValueTypography'] ?? null );
+        $suffix_typo = $this->format_typography( $row['scoreSuffixTypography'] ?? null );
+        $value_pad   = '';
         if ( ! empty( $row['scoreValuePadding'] ) && is_array( $row['scoreValuePadding'] ) ) {
             $vp_any = array_filter( $row['scoreValuePadding'], function ( $v ) { return $v !== '' && $v !== null; } );
             if ( ! empty( $vp_any ) ) {
                 $value_pad = 'padding:' . esc_attr( $this->format_spacing( $row['scoreValuePadding'], '' ) ) . ';';
             }
         }
-        if ( $value_pad === '' ) $value_pad = 'padding:18px 16px;';
 
-        $value_region_style = 'display:flex;align-items:baseline;justify-content:center;gap:4px;'
-                            . $value_pad;
+        $value_region_style = 'display:flex;align-items:baseline;justify-content:center;gap:4px;' . $value_pad;
 
+        $value_region_attr = ' style="' . esc_attr( $value_region_style ) . '"';
         $html  = '<div class="vergleich-score-cell is-card" style="' . esc_attr( $card_style ) . '">';
-        $html .= '<div class="vergleich-score-cell__value-region" style="' . esc_attr( $value_region_style ) . '">';
+        $html .= '<div class="vergleich-score-cell__value-region"' . $value_region_attr . '>';
         if ( $prefix !== '' ) {
-            $html .= '<span class="vergleich-score-cell__prefix" style="' . esc_attr( $suffix_typo . 'opacity:.8;' ) . '">' . esc_html( $prefix ) . '</span>';
+            $prefix_attr = $suffix_typo !== '' ? ' style="' . esc_attr( $suffix_typo ) . '"' : '';
+            $html .= '<span class="vergleich-score-cell__prefix"' . $prefix_attr . '>' . esc_html( $prefix ) . '</span>';
         }
-        $html .= '<span class="vergleich-score-cell__value" style="' . esc_attr( $value_typo ) . '">' . esc_html( $display ) . '</span>';
+        $value_attr = $value_typo !== '' ? ' style="' . esc_attr( $value_typo ) . '"' : '';
+        $html .= '<span class="vergleich-score-cell__value"' . $value_attr . '>' . esc_html( $display ) . '</span>';
         if ( $suffix !== '' ) {
-            // Kein align-self:flex-start — Suffix soll auf der Baseline sitzen,
-            // nicht als Superscript (Container hat align-items:baseline).
-            $html .= '<span class="vergleich-score-cell__suffix" style="' . esc_attr( $suffix_typo ) . '">' . esc_html( $suffix ) . '</span>';
+            // Kein align-self:flex-start — Suffix soll auf der Baseline sitzen
+            // (Container hat align-items:baseline).
+            $suffix_attr = $suffix_typo !== '' ? ' style="' . esc_attr( $suffix_typo ) . '"' : '';
+            $html .= '<span class="vergleich-score-cell__suffix"' . $suffix_attr . '>' . esc_html( $suffix ) . '</span>';
         }
         $html .= '</div>';
 
         if ( $verdict_source !== 'none' && $verdict !== '' ) {
-            $verdict_bg   = $this->resolve_color( $row['scoreVerdictBg'] ?? null ) ?: 'rgba(0,0,0,0.08)';
-            $verdict_typo = $this->format_typography( $row['scoreVerdictTypography'] ?? null, [
-                'font-size'   => '0.875rem',
-                'font-weight' => '600',
-                'line-height' => '1.3',
-            ] );
-            $verdict_pad = '10px 12px';
+            $verdict_bg   = $this->resolve_color( $row['scoreVerdictBg'] ?? null );
+            $verdict_typo = $this->format_typography( $row['scoreVerdictTypography'] ?? null );
+            $verdict_pad  = '';
             if ( ! empty( $row['scoreVerdictPadding'] ) && is_array( $row['scoreVerdictPadding'] ) ) {
                 $vrp_any = array_filter( $row['scoreVerdictPadding'], function ( $v ) { return $v !== '' && $v !== null; } );
                 if ( ! empty( $vrp_any ) ) {
-                    $verdict_pad = $this->format_spacing( $row['scoreVerdictPadding'], $verdict_pad );
+                    $verdict_pad = $this->format_spacing( $row['scoreVerdictPadding'], '' );
                 }
             }
-            $verdict_style = 'background:' . esc_attr( $verdict_bg ) . ';'
-                           . 'padding:' . esc_attr( $verdict_pad ) . ';'
-                           . 'text-align:center;'
-                           . $verdict_typo;
+            // Text-Alignment als Layout-Property unconditional.
+            $verdict_style = 'text-align:center;' . $verdict_typo;
+            if ( $verdict_bg !== '' )  $verdict_style .= 'background:' . esc_attr( $verdict_bg ) . ';';
+            if ( $verdict_pad !== '' ) $verdict_style .= 'padding:' . esc_attr( $verdict_pad ) . ';';
             $html .= '<div class="vergleich-score-cell__verdict" style="' . esc_attr( $verdict_style ) . '">'
                    . esc_html( $verdict )
                    . '</div>';
@@ -3955,9 +4367,11 @@ class Element_Vergleich extends \Bricks\Element {
         $source       = isset( $row['listSource'] ) ? (string) $row['listSource'] : 'dynamic';
         $icon         = $row['listIcon'] ?? null;
         $icon_color   = $this->resolve_color( $row['listIconColor'] ?? null );
-        $icon_size    = $this->get_css_value( $row['listIconSize'] ?? null, '16px' );
-        $icon_gap     = $this->get_css_value( $row['listIconGap'] ?? null, '8px' );
-        $item_gap     = $this->get_css_value( $row['listItemGap'] ?? null, '6px' );
+        // Leer lassen wenn Row-Level nicht gesetzt — CSS-Default (siehe
+        // assets/vergleich.css) bzw. globale cellList*-Controls greifen.
+        $icon_size    = $this->get_css_value( $row['listIconSize'] ?? null, '' );
+        $icon_gap     = $this->get_css_value( $row['listIconGap'] ?? null, '' );
+        $item_gap     = $this->get_css_value( $row['listItemGap'] ?? null, '' );
         $align        = $row['listAlign'] ?? 'left';
         $fallback_raw = isset( $row['listFallback'] ) ? (string) $row['listFallback'] : '';
         $typography_css = $this->format_typography( $row['listTypography'] ?? null );
@@ -4064,14 +4478,19 @@ class Element_Vergleich extends \Bricks\Element {
         // Wichtig: SVG-Icons ignorieren font-size und bringen ihre native
         // Größe mit (z.B. 512px). Deshalb die Box mit festen width/height
         // zwingen; das innere <svg> wird per CSS auf 100% gezogen (s. Inline-CSS).
+        // Defaults für Größe stehen im CSS (.vergleich-list__icon), dort
+        // greifen auch die globalen cellListIconSize-Controls. Inline nur
+        // wenn Row-Level-Wert explizit gesetzt.
         $icon_html = '';
         if ( is_array( $icon ) && ( ! empty( $icon['icon'] ) || ! empty( $icon['svg'] ) ) ) {
-            $sz    = esc_attr( $icon_size );
-            $style = 'width:' . $sz . ';height:' . $sz . ';min-width:' . $sz . ';'
-                   . 'flex:0 0 ' . $sz . ';'
-                   . 'font-size:' . $sz . ';line-height:1;'
-                   . 'display:inline-flex;align-items:center;justify-content:center;'
-                   . 'overflow:hidden;box-sizing:content-box;';
+            $style = 'display:inline-flex;align-items:center;justify-content:center;overflow:hidden;box-sizing:content-box;line-height:1;';
+            if ( $icon_size !== '' ) {
+                $sz = esc_attr( $icon_size );
+                $style .= 'width:' . $sz . ';height:' . $sz . ';min-width:' . $sz . ';flex:0 0 ' . $sz . ';font-size:' . $sz . ';';
+            } else {
+                // flex-Basis ergänzend, damit Icon nicht kollabiert
+                $style .= 'flex:0 0 auto;';
+            }
             if ( $icon_color ) $style .= 'color:' . esc_attr( $icon_color ) . ';';
             try {
                 $icon_html = \Bricks\Element::render_icon( $icon, [
@@ -4086,8 +4505,10 @@ class Element_Vergleich extends \Bricks\Element {
         $justify_map = [ 'left' => 'flex-start', 'center' => 'center', 'right' => 'flex-end' ];
         $justify     = $justify_map[ $align ] ?? 'flex-start';
 
-        $ul_style = 'display:flex;flex-direction:column;gap:' . esc_attr( $item_gap ) . ';list-style:none;padding:0;margin:0;align-items:stretch;width:100%;';
-        $li_style = 'display:flex;align-items:flex-start;gap:' . esc_attr( $icon_gap ) . ';justify-content:' . esc_attr( $justify ) . ';text-align:left;';
+        $ul_style = 'display:flex;flex-direction:column;list-style:none;padding:0;margin:0;align-items:stretch;width:100%;';
+        if ( $item_gap !== '' ) $ul_style .= 'gap:' . esc_attr( $item_gap ) . ';';
+        $li_style = 'display:flex;align-items:flex-start;justify-content:' . esc_attr( $justify ) . ';text-align:left;';
+        if ( $icon_gap !== '' ) $li_style .= 'gap:' . esc_attr( $icon_gap ) . ';';
 
         $html = '<ul class="vergleich-list" style="' . esc_attr( $ul_style ) . '">';
         foreach ( $items as $item ) {
