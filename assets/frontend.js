@@ -636,10 +636,17 @@
         }
 
         function pin(card){
-            // Vorhandene Pinnung aufheben (nur eine Spalte pinnbar).
+            // Vorhandene Pinnung aufheben (nur eine Spalte pinnbar). Wichtig:
+            // den inline style.transform der alten Pin-Card zuruecksetzen —
+            // unser Scroll-Handler hat dort translate3d(scrollLeft,0,0)
+            // reingeschrieben, und wenn wir nur die Klasse wegnehmen, bleibt
+            // die alte Card mit diesem Offset an ihrer neuen Grid-Position
+            // haengen (erscheint als leerer Platz, wo sie eigentlich sein
+            // sollte).
             var prev = track.querySelector(".vergleich-card.is-pinned");
             if (prev && prev !== card) {
                 prev.classList.remove("is-pinned");
+                prev.style.transform = "";
                 var prevBtn = prev.querySelector(".vergleich-pin");
                 if (prevBtn) prevBtn.setAttribute("aria-pressed", "false");
             }
