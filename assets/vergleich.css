@@ -337,7 +337,10 @@
     position: absolute;
     top: 80px;
     transform: translateY(-50%);
-    z-index: 8;
+    /* 15 > 10 (gepinnte Card) — sonst wuerde bei aktivem Pin der Shadow
+       der gepinnten Spalte den rechts daneben positionierten Prev-Pfeil
+       verdunkeln/verdecken. */
+    z-index: 15;
     width: var(--vgl-nav-size, 44px);
     height: var(--vgl-nav-size, 44px);
     padding: 0;

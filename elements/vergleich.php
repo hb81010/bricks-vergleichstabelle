@@ -5902,7 +5902,7 @@ class Element_Vergleich extends \Bricks\Element {
             position: absolute;
             top: 80px;
             transform: translateY(-50%);
-            z-index: 8;
+            z-index: 15;
             width: var(--vgl-nav-size, 44px);
             height: var(--vgl-nav-size, 44px);
             padding: 0;
