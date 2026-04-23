@@ -1431,6 +1431,38 @@ class Element_Vergleich extends \Bricks\Element {
             'type' => 'box-shadow',
             'css' => [ [ 'property' => 'box-shadow', 'selector' => '.vergleich-zelle--button .vergleich-btn' ] ],
         ];
+        // Daten-Voreinstellung: per Row setzbar gewinnt immer. Nicht
+        // klassen-fähig (Bricks-Preset ist Klassen-Attachment, nicht eine
+        // einzelne CSS-Property), aber konsistent ueber alle Button-Zellen
+        // dieses Vergleich-Elements.
+        $this->controls['cellBtnDefaultStyle'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Default-Stil', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [
+                'primary'   => esc_html__( 'Primär', 'bricks-vergleich' ),
+                'secondary' => esc_html__( 'Sekundär', 'bricks-vergleich' ),
+                'light'     => esc_html__( 'Hell', 'bricks-vergleich' ),
+                'dark'      => esc_html__( 'Dunkel', 'bricks-vergleich' ),
+                'muted'     => esc_html__( 'Gedämpft', 'bricks-vergleich' ),
+                'info'      => esc_html__( 'Info', 'bricks-vergleich' ),
+                'success'   => esc_html__( 'Erfolg', 'bricks-vergleich' ),
+                'warning'   => esc_html__( 'Warnung', 'bricks-vergleich' ),
+                'danger'    => esc_html__( 'Gefahr', 'bricks-vergleich' ),
+            ],
+            'placeholder' => esc_html__( 'Primär', 'bricks-vergleich' ),
+            'description' => esc_html__( 'Voreinstellung für alle Button-Zellen. Per-Row-Stil gewinnt weiterhin.', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellBtnDefaultOutline'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Default Umriss', 'bricks-vergleich' ),
+            'type' => 'checkbox',
+        ];
+        $this->controls['cellBtnDefaultCircle'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Default Kreis (Pill-Form)', 'bricks-vergleich' ),
+            'type' => 'checkbox',
+        ];
 
         // ── RATING ───────────────────────────────────────────────────────
         $this->controls['_sepCellRating'] = [
@@ -1741,6 +1773,35 @@ class Element_Vergleich extends \Bricks\Element {
             'label' => esc_html__( 'Abstand Icon ↔ Text', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true,
             'css' => [ [ 'property' => 'gap', 'selector' => '.vergleich-lightbox-trigger' ] ],
+        ];
+        // Daten-Voreinstellung (analog zu cellBtnDefaultStyle).
+        $this->controls['cellLightboxDefaultStyle'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Default-Stil', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [
+                'primary'   => esc_html__( 'Primär', 'bricks-vergleich' ),
+                'secondary' => esc_html__( 'Sekundär', 'bricks-vergleich' ),
+                'light'     => esc_html__( 'Hell', 'bricks-vergleich' ),
+                'dark'      => esc_html__( 'Dunkel', 'bricks-vergleich' ),
+                'muted'     => esc_html__( 'Gedämpft', 'bricks-vergleich' ),
+                'info'      => esc_html__( 'Info', 'bricks-vergleich' ),
+                'success'   => esc_html__( 'Erfolg', 'bricks-vergleich' ),
+                'warning'   => esc_html__( 'Warnung', 'bricks-vergleich' ),
+                'danger'    => esc_html__( 'Gefahr', 'bricks-vergleich' ),
+            ],
+            'placeholder' => esc_html__( 'Primär', 'bricks-vergleich' ),
+            'description' => esc_html__( 'Voreinstellung für alle Lightbox-Trigger. Per-Row-Stil gewinnt.', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellLightboxDefaultOutline'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Default Umriss', 'bricks-vergleich' ),
+            'type' => 'checkbox',
+        ];
+        $this->controls['cellLightboxDefaultCircle'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Default Kreis (Pill-Form)', 'bricks-vergleich' ),
+            'type' => 'checkbox',
         ];
         $this->controls['cellLightboxIconPosition'] = [
             'tab' => 'content', 'group' => 'cellStyle',
@@ -4043,11 +4104,19 @@ class Element_Vergleich extends \Bricks\Element {
     private function render_cell_button( $row, $idx = 0 ) {
         $text    = $this->dd_string( isset( $row['btnText'] ) ? (string) $row['btnText'] : '' );
         $link    = $row['btnLink']   ?? [];
-        $style   = isset( $row['btnStyle'] ) ? preg_replace( '/[^a-z]/i', '', strtolower( (string) $row['btnStyle'] ) ) : 'primary';
+        // Row-Wert hat Vorrang, sonst Element-Default (cellBtnDefaultStyle).
+        $row_style = isset( $row['btnStyle'] ) && $row['btnStyle'] !== '' ? (string) $row['btnStyle'] : '';
+        $el_style  = isset( $this->settings['cellBtnDefaultStyle'] ) ? (string) $this->settings['cellBtnDefaultStyle'] : '';
+        $style_raw = $row_style !== '' ? $row_style : $el_style;
+        $style     = $style_raw !== '' ? preg_replace( '/[^a-z]/i', '', strtolower( $style_raw ) ) : 'primary';
         if ( $style === '' ) $style = 'primary';
         $size    = isset( $row['btnSize'] ) ? preg_replace( '/[^a-z]/i', '', strtolower( (string) $row['btnSize'] ) ) : '';
-        $circle  = ! empty( $row['btnCircle'] );
-        $outline = ! empty( $row['btnOutline'] );
+        // Circle / Outline: Row-Toggle ODER Element-Default. Bricks-Checkboxen
+        // lassen sich nicht eindeutig als "row explizit aus" abbilden, daher
+        // die Merge-Semantik (truthy an einer Stelle reicht). Wer gezielt an
+        // einer Row abweichen will, setzt stattdessen die CSS-Overrides.
+        $circle  = ! empty( $row['btnCircle'] )  || ! empty( $this->settings['cellBtnDefaultCircle']  );
+        $outline = ! empty( $row['btnOutline'] ) || ! empty( $this->settings['cellBtnDefaultOutline'] );
 
         $url        = '';
         $target     = '';
@@ -4809,10 +4878,14 @@ class Element_Vergleich extends \Bricks\Element {
         // Trigger-Styling — gleiches Muster wie render_cell_button:
         // Bricks-Preset-Klassen (bricks-background-*/bricks-color-*) als Basis,
         // plus optionale Inline-Overrides aus Typography/Border/Padding/Shadow.
-        $style   = isset( $row['lightboxTriggerStyle'] ) ? preg_replace( '/[^a-z]/i', '', strtolower( (string) $row['lightboxTriggerStyle'] ) ) : 'primary';
+        // Row-Wert hat Vorrang, sonst Element-Default (cellLightboxDefaultStyle).
+        $row_style = isset( $row['lightboxTriggerStyle'] ) && $row['lightboxTriggerStyle'] !== '' ? (string) $row['lightboxTriggerStyle'] : '';
+        $el_style  = isset( $this->settings['cellLightboxDefaultStyle'] ) ? (string) $this->settings['cellLightboxDefaultStyle'] : '';
+        $style_raw = $row_style !== '' ? $row_style : $el_style;
+        $style     = $style_raw !== '' ? preg_replace( '/[^a-z]/i', '', strtolower( $style_raw ) ) : 'primary';
         if ( $style === '' ) $style = 'primary';
-        $circle  = ! empty( $row['lightboxTriggerCircle'] );
-        $outline = ! empty( $row['lightboxTriggerOutline'] );
+        $circle  = ! empty( $row['lightboxTriggerCircle'] )  || ! empty( $this->settings['cellLightboxDefaultCircle']  );
+        $outline = ! empty( $row['lightboxTriggerOutline'] ) || ! empty( $this->settings['cellLightboxDefaultOutline'] );
 
         $btn_classes = [ 'vergleich-lightbox-trigger', 'bricks-button' ];
         if ( $outline ) {
