@@ -592,7 +592,31 @@
    erhöhter Specificity (Bricks scoped sie mit `.brxe-ID .…` / Klasse). */
 
 .vergleich-zelle--icon .vergleich-icon {
+    width: 24px;
+    height: 24px;
     font-size: 24px;
+}
+
+/* Lightbox-Trigger: Icon-Position per flex-direction (klassen-fähig).
+   Render schreibt Icon IMMER zuerst ins DOM. Der globale
+   cellLightboxIconPosition-Control setzt flex-direction auf
+   .vergleich-lightbox-trigger — Per-Row-Einstellung (falls explizit
+   gewählt) ueberschreibt das via hoeherer Specificity ueber eine der
+   beiden Varianten-Klassen. */
+.vergleich-lightbox-trigger.is-icon-left  { flex-direction: row; }
+.vergleich-lightbox-trigger.is-icon-right { flex-direction: row-reverse; }
+
+/* Heading-Zelle: eigener Default-Look als Produkt-/Spalten-Überschrift,
+   damit sie ohne zusätzliches Styling schon wie ein Heading wirkt — und
+   nicht wie normaler Text aussieht (dafür gibt's den Zelltyp Text).
+   Browser-Default-Margin auf h2-h6 wird entfernt, damit Bricks' Flex-
+   Cell-Layout nicht auseinanderbröselt. Globale cellHeading*-Controls
+   überschreiben diese Defaults auf Klassen-Ebene. */
+.vergleich-heading {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.3;
 }
 
 .vergleich-bool.is-true  { color: #16a34a; }

@@ -1346,6 +1346,25 @@ class Element_Vergleich extends \Bricks\Element {
             'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-text' ] ],
         ];
 
+        // ── HEADING (Produktname) ────────────────────────────────────────
+        $this->controls['_sepCellHeading'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'type' => 'separator',
+            'label' => esc_html__( 'Überschrift / Produktname', 'bricks-vergleich' ),
+        ];
+        $this->controls['cellHeadingColor'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Textfarbe', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [ [ 'property' => 'color', 'selector' => '.vergleich-heading' ] ],
+        ];
+        $this->controls['cellHeadingTypography'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Typografie', 'bricks-vergleich' ),
+            'type' => 'typography',
+            'css' => [ [ 'property' => 'typography', 'selector' => '.vergleich-heading' ] ],
+        ];
+
         // ── ICON ─────────────────────────────────────────────────────────
         $this->controls['_sepCellIcon'] = [
             'tab' => 'content', 'group' => 'cellStyle',
@@ -1362,7 +1381,12 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'cellStyle',
             'label' => esc_html__( 'Icon-Größe', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true,
-            'css' => [ [ 'property' => 'font-size', 'selector' => '.vergleich-zelle--icon .vergleich-icon' ] ],
+            'description' => esc_html__( 'Wirkt auf Font-Icons und SVG-Uploads gleichermaßen — width/height für SVG, font-size für Font-Icons.', 'bricks-vergleich' ),
+            'css' => [
+                [ 'property' => 'width',     'selector' => '.vergleich-zelle--icon .vergleich-icon' ],
+                [ 'property' => 'height',    'selector' => '.vergleich-zelle--icon .vergleich-icon' ],
+                [ 'property' => 'font-size', 'selector' => '.vergleich-zelle--icon .vergleich-icon' ],
+            ],
         ];
 
         // ── BUTTON ───────────────────────────────────────────────────────
@@ -1437,7 +1461,26 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'cellStyle',
             'label' => esc_html__( 'Sterngröße', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true,
-            'css' => [ [ 'property' => 'font-size', 'selector' => '.vergleich-rating' ] ],
+            'description' => esc_html__( 'Wirkt auf Unicode-Sterne (font-size) UND auf Custom-SVG-Icons (width/height des Icon-Wrappers, SVG füllt via CSS 100%).', 'bricks-vergleich' ),
+            'css' => [
+                // Fallback-Sterne (★-Zeichen): font-size auf dem Rating-Wrapper
+                [ 'property' => 'font-size', 'selector' => '.vergleich-rating' ],
+                // Custom-Icons: Wrapper-Box bestimmt die Größe, SVG/Icon füllt
+                // via inline CSS-Regel `.vergleich-rating__icon > svg { ... }`.
+                [ 'property' => 'width',     'selector' => '.vergleich-rating__icon' ],
+                [ 'property' => 'height',    'selector' => '.vergleich-rating__icon' ],
+                [ 'property' => 'font-size', 'selector' => '.vergleich-rating__icon' ],
+            ],
+        ];
+        $this->controls['cellRatingIconGap'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Abstand zwischen Icons', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'description' => esc_html__( 'Wirkt auf Unicode-Sterne (letter-spacing) und Custom-Icons (gap im Flex-Container).', 'bricks-vergleich' ),
+            'css' => [
+                [ 'property' => 'letter-spacing', 'selector' => '.vergleich-rating__stars' ],
+                [ 'property' => 'gap',            'selector' => '.vergleich-rating__icons' ],
+            ],
         ];
         $this->controls['cellRatingNumberTypography'] = [
             'tab' => 'content', 'group' => 'cellStyle',
@@ -1543,6 +1586,13 @@ class Element_Vergleich extends \Bricks\Element {
             'type' => 'box-shadow',
             'css' => [ [ 'property' => 'box-shadow', 'selector' => '.vergleich-score-cell.is-card' ] ],
         ];
+        $this->controls['cellScoreCardWidth'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Karten-Breite', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'description' => esc_html__( 'Feste Breite für alle Score-Karten — gut für einheitliche Optik über alle Spalten.', 'bricks-vergleich' ),
+            'css' => [ [ 'property' => 'width', 'selector' => '.vergleich-score-cell.is-card' ] ],
+        ];
         $this->controls['cellScoreCardValuePadding'] = [
             'tab' => 'content', 'group' => 'cellStyle',
             'label' => esc_html__( 'Innenabstand (Zahl-Region)', 'bricks-vergleich' ),
@@ -1596,7 +1646,25 @@ class Element_Vergleich extends \Bricks\Element {
             'tab' => 'content', 'group' => 'cellStyle',
             'label' => esc_html__( 'Icon-Größe', 'bricks-vergleich' ),
             'type' => 'number', 'units' => true,
-            'css' => [ [ 'property' => 'font-size', 'selector' => '.vergleich-list__icon' ] ],
+            'description' => esc_html__( 'Wirkt auf Font-Icons und SVG-Uploads gleichermaßen.', 'bricks-vergleich' ),
+            'css' => [
+                [ 'property' => 'width',     'selector' => '.vergleich-list__icon' ],
+                [ 'property' => 'height',    'selector' => '.vergleich-list__icon' ],
+                [ 'property' => 'min-width', 'selector' => '.vergleich-list__icon' ],
+                [ 'property' => 'font-size', 'selector' => '.vergleich-list__icon' ],
+            ],
+        ];
+        $this->controls['cellListIconGap'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Abstand Icon ↔ Text', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'css' => [ [ 'property' => 'gap', 'selector' => '.vergleich-list__item' ] ],
+        ];
+        $this->controls['cellListItemGap'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Abstand zwischen Einträgen', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'css' => [ [ 'property' => 'gap', 'selector' => '.vergleich-list' ] ],
         ];
         $this->controls['cellListTypography'] = [
             'tab' => 'content', 'group' => 'cellStyle',
@@ -1635,11 +1703,72 @@ class Element_Vergleich extends \Bricks\Element {
             'type' => 'spacing',
             'css' => [ [ 'property' => 'padding', 'selector' => '.vergleich-lightbox-trigger' ] ],
         ];
+        $this->controls['cellLightboxMinWidth'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Mindestbreite', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'css' => [ [ 'property' => 'min-width', 'selector' => '.vergleich-lightbox-trigger' ] ],
+        ];
         $this->controls['cellLightboxShadow'] = [
             'tab' => 'content', 'group' => 'cellStyle',
             'label' => esc_html__( 'Schatten', 'bricks-vergleich' ),
             'type' => 'box-shadow',
             'css' => [ [ 'property' => 'box-shadow', 'selector' => '.vergleich-lightbox-trigger' ] ],
+        ];
+        $this->controls['cellLightboxIconColor'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Icon-Farbe', 'bricks-vergleich' ),
+            'type' => 'color',
+            'css' => [
+                [ 'property' => 'color', 'selector' => '.vergleich-lightbox-trigger__icon' ],
+                [ 'property' => 'fill',  'selector' => 'svg.vergleich-lightbox-trigger__icon *' ],
+                [ 'property' => 'fill',  'selector' => '.vergleich-lightbox-trigger__icon > svg *' ],
+            ],
+        ];
+        $this->controls['cellLightboxIconSize'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Icon-Größe', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'description' => esc_html__( 'Wirkt auf Font-Icons und SVG-Uploads gleichermaßen.', 'bricks-vergleich' ),
+            'css' => [
+                [ 'property' => 'width',     'selector' => '.vergleich-lightbox-trigger__icon' ],
+                [ 'property' => 'height',    'selector' => '.vergleich-lightbox-trigger__icon' ],
+                [ 'property' => 'font-size', 'selector' => '.vergleich-lightbox-trigger__icon' ],
+            ],
+        ];
+        $this->controls['cellLightboxIconGap'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Abstand Icon ↔ Text', 'bricks-vergleich' ),
+            'type' => 'number', 'units' => true,
+            'css' => [ [ 'property' => 'gap', 'selector' => '.vergleich-lightbox-trigger' ] ],
+        ];
+        $this->controls['cellLightboxIconPosition'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Icon-Position', 'bricks-vergleich' ),
+            'type' => 'select',
+            'options' => [
+                'row'         => esc_html__( 'Icon links vom Text', 'bricks-vergleich' ),
+                'row-reverse' => esc_html__( 'Icon rechts vom Text', 'bricks-vergleich' ),
+            ],
+            'placeholder' => esc_html__( 'Icon links vom Text', 'bricks-vergleich' ),
+            'description' => esc_html__( 'Per-Row-Einstellung am einzelnen Repeater-Eintrag überschreibt das (höhere Specificity via .is-icon-right).', 'bricks-vergleich' ),
+            'css' => [ [ 'property' => 'flex-direction', 'selector' => '.vergleich-lightbox-trigger' ] ],
+        ];
+        $this->controls['cellLightboxDialogMaxWidth'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Dialog: Max-Breite', 'bricks-vergleich' ),
+            'type' => 'text',
+            'placeholder' => '640px',
+            'description' => esc_html__( 'CSS-Wert mit Einheit (px, %, vw, rem). Greift für alle Lightboxen der Tabelle, sofern nicht per Row überschrieben.', 'bricks-vergleich' ),
+            'css' => [ [ 'property' => '--vgl-lb-max-w', 'selector' => '' ] ],
+        ];
+        $this->controls['cellLightboxDialogMaxHeight'] = [
+            'tab' => 'content', 'group' => 'cellStyle',
+            'label' => esc_html__( 'Dialog: Max-Höhe', 'bricks-vergleich' ),
+            'type' => 'text',
+            'placeholder' => 'calc(100vh - 32px)',
+            'description' => esc_html__( 'CSS-Wert mit Einheit. Per-Row-Wert gewinnt.', 'bricks-vergleich' ),
+            'css' => [ [ 'property' => '--vgl-lb-max-h', 'selector' => '' ] ],
         ];
 
         // ── COUPON ───────────────────────────────────────────────────────
@@ -1721,6 +1850,7 @@ class Element_Vergleich extends \Bricks\Element {
                 'type'    => 'select',
                 'options' => [
                     'text'    => esc_html__( 'Text', 'bricks-vergleich' ),
+                    'heading' => esc_html__( 'Überschrift / Produktname', 'bricks-vergleich' ),
                     'image'   => esc_html__( 'Bild', 'bricks-vergleich' ),
                     'icon'    => esc_html__( 'Icon', 'bricks-vergleich' ),
                     'button'  => esc_html__( 'Button', 'bricks-vergleich' ),
@@ -1771,6 +1901,46 @@ class Element_Vergleich extends \Bricks\Element {
                 'label'    => esc_html__( 'Typografie', 'bricks-vergleich' ),
                 'type'     => 'typography',
                 'required' => [ 'type', '=', 'text' ],
+            ],
+
+            // ───── HEADING (Produktname / Überschrift) ─────
+            // Inhaltlich identisch zu "Text", aber mit eigener CSS-Klasse
+            // .vergleich-heading, damit der Produktname zentral ueber
+            // "Zellen-Styling (global) → Überschrift" klassen-fähig gestylt
+            // werden kann — unabhaengig von Fliesstext-Zellen.
+            'heading' => [
+                'label'          => esc_html__( 'Überschrift-Text', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'required'       => [ 'type', '=', 'heading' ],
+                'placeholder'    => '{post_title}',
+            ],
+            'headingTag' => [
+                'label'    => esc_html__( 'HTML-Tag', 'bricks-vergleich' ),
+                'type'     => 'select',
+                'options'  => [ 'h2' => 'h2', 'h3' => 'h3', 'h4' => 'h4', 'h5' => 'h5', 'h6' => 'h6', 'p' => 'p', 'span' => 'span', 'strong' => 'strong' ],
+                'default'  => 'h3',
+                'required' => [ 'type', '=', 'heading' ],
+            ],
+            'headingLink' => [
+                'label'       => esc_html__( 'Verlinken (optional)', 'bricks-vergleich' ),
+                'type'        => 'link',
+                'description' => esc_html__( 'Leer = kein Link. Z.B. Dynamic Data "{post_url}" um zum Produkt zu verlinken.', 'bricks-vergleich' ),
+                'required'    => [ 'type', '=', 'heading' ],
+            ],
+            'headingFallback' => [
+                'label'          => esc_html__( 'Fallback wenn leer', 'bricks-vergleich' ),
+                'type'           => 'text',
+                'hasDynamicData' => 'text',
+                'default'        => '-',
+                'placeholder'    => '-',
+                'description'    => esc_html__( 'Wird angezeigt, wenn Dynamic Data leer ist.', 'bricks-vergleich' ),
+                'required'       => [ 'type', '=', 'heading' ],
+            ],
+            'headingTypography' => [
+                'label'    => esc_html__( 'Typografie (Row-Override)', 'bricks-vergleich' ),
+                'type'     => 'typography',
+                'required' => [ 'type', '=', 'heading' ],
             ],
 
             // ───── IMAGE ─────
@@ -3669,6 +3839,7 @@ class Element_Vergleich extends \Bricks\Element {
                 case 'dynamic': $content = $this->render_cell_dynamic( $row ); break;
                 case 'lightbox':$content = $this->render_cell_lightbox( $row );break;
                 case 'coupon':  $content = $this->render_cell_coupon( $row );  break;
+                case 'heading': $content = $this->render_cell_heading( $row ); break;
                 case 'text':
                 default:        $content = $this->render_cell_text( $row );    break;
             }
@@ -3731,6 +3902,32 @@ class Element_Vergleich extends \Bricks\Element {
         $typo_css = $this->format_typography( $row['textTypography'] ?? null );
         $style_attr = $typo_css !== '' ? ' style="' . esc_attr( $typo_css ) . '"' : '';
         return '<' . $tag . ' class="vergleich-text"' . $style_attr . '>' . $content . '</' . $tag . '>';
+    }
+
+    /**
+     * Ueberschrift-Zelle — strukturell identisch zur Text-Zelle, aber mit
+     * eigener CSS-Klasse `.vergleich-heading`. Wird ueber den globalen
+     * Control-Block "Zellen-Styling (global) → Überschrift" gestylt, damit
+     * der Produktname zentral und klassen-fähig anders aussehen kann als
+     * Fliesstext-Zellen.
+     */
+    private function render_cell_heading( $row ) {
+        $raw = isset( $row['heading'] ) ? (string) $row['heading'] : '';
+        if ( $raw === '' ) return '';
+        $tag = preg_replace( '/[^a-z0-9]/i', '', (string) ( $row['headingTag'] ?? 'h3' ) ) ?: 'h3';
+        $resolved = $this->dd_string( $raw );
+        if ( trim( strip_tags( $resolved ) ) === '' ) {
+            $fb_raw = isset( $row['headingFallback'] ) ? (string) $row['headingFallback'] : '';
+            if ( $fb_raw === '' ) return '';
+            $resolved = $this->dd_string( $fb_raw );
+            if ( trim( strip_tags( $resolved ) ) === '' ) return '';
+        }
+        $link  = $this->resolve_link( $row['headingLink'] ?? null );
+        $inner = wp_kses_post( $resolved );
+        $content = $this->maybe_wrap_link( $inner, $link, 'vergleich-heading-link' );
+        $typo_css   = $this->format_typography( $row['headingTypography'] ?? null );
+        $style_attr = $typo_css !== '' ? ' style="' . esc_attr( $typo_css ) . '"' : '';
+        return '<' . $tag . ' class="vergleich-heading"' . $style_attr . '>' . $content . '</' . $tag . '>';
     }
 
     private function render_cell_image( $row ) {
@@ -4704,12 +4901,21 @@ class Element_Vergleich extends \Bricks\Element {
             $btn_inline .= 'gap:' . esc_attr( $icon_gap ) . ';';
         }
 
+        // Icon-Position: IMMER Icon zuerst im DOM, Reihenfolge ueber CSS
+        // flex-direction steuern. Der globale cellLightboxIconPosition
+        // setzt flex-direction auf .vergleich-lightbox-trigger (klassen-
+        // faehig). Per-Row gewinnt via hoeherer Specificity (2 Klassen
+        // statt 1): wenn der User an der Zeile explizit eine Wahl
+        // getroffen hat, wird .is-icon-left oder .is-icon-right gesetzt.
+        // Ohne explizite Wahl (Key nicht im Array) bleibt die Card klassen-
+        // neutral und der globale Wert greift.
+        if ( isset( $row['lightboxTriggerIconPosition'] ) && $row['lightboxTriggerIconPosition'] !== '' ) {
+            $btn_classes[] = $icon_pos === 'right' ? 'is-icon-right' : 'is-icon-left';
+        }
         $btn_attrs = 'class="' . esc_attr( implode( ' ', $btn_classes ) ) . '"';
         if ( $btn_inline !== '' ) $btn_attrs .= ' style="' . esc_attr( $btn_inline ) . '"';
         $text_html = '<span class="vergleich-lightbox-trigger__text">' . esc_html( $trigger_text ) . '</span>';
-        $inner = ( $icon_pos === 'right' )
-            ? $text_html . $icon_html
-            : $icon_html . $text_html;
+        $inner = $icon_html . $text_html;
 
         $html = '<button type="button" ' . $btn_attrs
               . ' data-vgl-lightbox-open="' . esc_attr( $dlg_id ) . '"'
