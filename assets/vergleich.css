@@ -544,14 +544,41 @@
    auf dem Compositor-Thread — kein Main-Thread-JS pro Frame, deshalb
    auch kein 1-Frame-Lag und kein Flackern. */
 .vergleich-card.is-pinned {
-    /* !important noetig, weil die Basis-Card position:relative !important
-       traegt (aus dem Inline-CSS). Ohne das hier gewinnt relative und die
-       Card scrollt einfach mit, statt am linken Rand zu kleben. */
-    position: sticky !important;
-    left: 0;
+    /* position bleibt relative (aus Basis-CSS). Sticky haben wir bewusst
+       NICHT — die Kombination aus position:sticky und horizontalem Scroll
+       in einem display:grid Container friert in Chrome den Scroll-Container
+       nach dem ersten scrollBy ein. Die Sticky-Wirkung erzeugen wir
+       stattdessen ueber zwei Wege:
+         1. Browser mit scroll-driven animations (Chrome 115+): CSS-
+            @keyframes + animation-timeline haengen die Card compositor-
+            seitig am scrollLeft — kein JS pro Frame, kein Flackern.
+         2. Aeltere Browser (Fallback): JS setzt inline transform im
+            Scroll-Handler (rAF-gebatcht). Funktioniert, flackert leicht. */
     z-index: 10 !important;
     background: #fff;
     box-shadow: 6px 0 8px -4px rgba(0, 0, 0, .12);
+}
+
+/* Scroll-driven animation: die gepinnte Card translatiert exakt mit dem
+   scrollLeft des Scroll-Containers mit — die Browser-Engine interpoliert
+   den Transform im Compositor-Thread, synchron zum nativen Scroll.
+   Ergebnis: die Card bleibt visuell auf Position 0 stehen, ohne JS, ohne
+   Lag, ohne Flackern. */
+@supports (animation-timeline: scroll()) {
+    .vergleich-scroll {
+        scroll-timeline-name: --vgl-cards;
+        scroll-timeline-axis: inline;
+    }
+    .vergleich-card.is-pinned {
+        animation-name: vgl-pin-sticky;
+        animation-duration: 1ms;
+        animation-timing-function: linear;
+        animation-fill-mode: both;
+        animation-timeline: --vgl-cards;
+    }
+    @keyframes vgl-pin-sticky {
+        to { transform: translateX(var(--vgl-scroll-max, 0px)); }
+    }
 }
 
 /* Passendes Produkt-Label (z.B. "Testsieger", "Platz 2"). Wird in JS per

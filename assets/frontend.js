@@ -670,6 +670,7 @@
             // irgendwo in der Mitte. Direkte Zuweisung statt scrollTo smooth,
             // weil smooth mit den Scroll-Handlern racen kann.
             scroll.scrollLeft = 0;
+            pinnedCardRef  = card;
             pinnedLabelRef = label || null;
             applySyncNow();
 
@@ -681,11 +682,16 @@
 
         function unpin(card){
             card.classList.remove("is-pinned");
+            // Inline transform, den der Fallback-Pfad (ohne scroll-timeline)
+            // gesetzt hat, zuruecksetzen — sonst bleibt die Card nach dem
+            // Unpin beim letzten Wert haengen.
+            card.style.transform = "";
             var btn = card.querySelector(".vergleich-pin");
             if (btn) btn.setAttribute("aria-pressed", "false");
             clearAllPinnedLabels();
             restoreCardOrder();
             restoreLabelOrder();
+            pinnedCardRef  = null;
             pinnedLabelRef = null;
             applySyncNow();
             requestAnimationFrame(function(){
@@ -694,24 +700,52 @@
             });
         }
 
-        // Scroll-Sync NUR fuer das gepinnte Label: die Card erledigt ihren
-        // Sticky-Effekt selbst ueber position:sticky (Compositor-Thread, kein
-        // JS pro Frame). Fuer das Label ist das nicht moeglich, weil der
-        // Label-Row-Track kein eigener Scroll-Container ist — wir kontern
-        // manuell die translateX-Synchronisation des Tracks.
+        // Scroll-Sync. Drei Werte werden pro Scroll aktuell gehalten:
+        //   - --vgl-scroll-left : die aktuelle scrollLeft, fuer alle
+        //     CSS-Stellen die das brauchen (z.B. Label-Counter-Transform
+        //     im Fallback-Pfad).
+        //   - Card-Transform (nur Fallback): Browser ohne scroll-driven
+        //     animations muessen die "Sticky"-Wirkung ueber JS-Transform
+        //     erzeugen. Moderne Browser (Chrome 115+) machen das komplett
+        //     via @keyframes + animation-timeline auf dem Compositor —
+        //     ohne JS-Frame-Lag, deshalb ohne Flackern.
+        //   - Label-Transform: immer per JS (Label-Row ist kein
+        //     Scroll-Container, scroll-timeline kann sie nicht ankern).
         //
-        // rAF-gebatcht: der Scroll-Handler schreibt keinen Transform direkt,
-        // er markiert nur „muss im naechsten Frame updaten". applySyncNow
-        // liest scrollLeft und schreibt den Transform unmittelbar vor dem
-        // Paint-Frame — reads + writes in derselben Frame-Boundary.
+        // rAF-gebatcht: Scroll-Handler schedult nur, applySyncNow schreibt
+        // im Paint-Frame. Vermeidet Zwischenzustand zwischen Scroll-Update
+        // und Transform-Update.
+        var hasScrollTimeline =
+            typeof CSS !== "undefined" && CSS.supports &&
+            CSS.supports("animation-timeline", "scroll()");
+
+        var pinnedCardRef  = null;
         var pinnedLabelRef = null;
         var pendingRAF     = false;
+
+        function refreshPinRefs(){
+            pinnedCardRef  = track.querySelector(".vergleich-card.is-pinned");
+            pinnedLabelRef = rootEl
+                ? rootEl.querySelector(".vergleich-product-label-item.is-pinned-label")
+                : null;
+        }
+
+        function updateScrollMax(){
+            var max = scroll.scrollWidth - scroll.clientWidth;
+            if (max < 0) max = 0;
+            wrapper.style.setProperty("--vgl-scroll-max", max + "px");
+        }
 
         function applySyncNow(){
             var x = scroll.scrollLeft;
             wrapper.style.setProperty("--vgl-scroll-left", x + "px");
+            var t = "translate3d(" + x + "px,0,0)";
+            // Card nur per JS versetzen, wenn kein scroll-driven CSS greift.
+            if (!hasScrollTimeline && pinnedCardRef) {
+                pinnedCardRef.style.transform = t;
+            }
             if (pinnedLabelRef) {
-                pinnedLabelRef.style.transform = "translate3d(" + x + "px,0,0)";
+                pinnedLabelRef.style.transform = t;
             }
         }
 
@@ -724,7 +758,18 @@
             });
         }
         scroll.addEventListener("scroll", syncScrollVar, { passive: true });
+        updateScrollMax();
         applySyncNow();
+
+        // --vgl-scroll-max neu setzen, wenn sich Scroll-Dimensionen aendern
+        // (z.B. nach Ladevorgang, Viewport-Resize, Collapse-Toggle). Sonst
+        // stimmen bei scroll-driven animations die Keyframe-Endpunkte nicht.
+        window.addEventListener("resize", updateScrollMax);
+        if (typeof ResizeObserver !== "undefined") {
+            var maxRO = new ResizeObserver(updateScrollMax);
+            maxRO.observe(scroll);
+            maxRO.observe(track);
+        }
 
         track.addEventListener("click", function(e){
             var btn = e.target && e.target.closest ? e.target.closest("[data-vgl-pin]") : null;

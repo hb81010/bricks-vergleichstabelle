@@ -6259,11 +6259,25 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-pin__icon { width: 16px; height: 16px; display: block; }
         .vergleich-pin__icon--on { display: none; }
         .vergleich-card.is-pinned {
-            position: sticky !important;
-            left: 0;
             z-index: 10 !important;
             background: #fff;
             box-shadow: 6px 0 8px -4px rgba(0, 0, 0, .12);
+        }
+        @supports (animation-timeline: scroll()) {
+            .vergleich-scroll {
+                scroll-timeline-name: --vgl-cards;
+                scroll-timeline-axis: inline;
+            }
+            .vergleich-card.is-pinned {
+                animation-name: vgl-pin-sticky;
+                animation-duration: 1ms;
+                animation-timing-function: linear;
+                animation-fill-mode: both;
+                animation-timeline: --vgl-cards;
+            }
+            @keyframes vgl-pin-sticky {
+                to { transform: translateX(var(--vgl-scroll-max, 0px)); }
+            }
         }
         .vergleich-product-label-item.is-pinned-label {
             z-index: 2;
