@@ -250,12 +250,10 @@
             } else {
                 step = 200;
             }
-            // Direkte scrollLeft-Zuweisung statt scrollBy({behavior:smooth}).
-            // Grund: smooth scroll kollidiert mit dem JS-Transform-Sticky-Trick
-            // der gepinnten Spalte — die Transform-Updates pro Scroll-Event
-            // koennen die Smooth-Animation in manchen Browsern abbrechen,
-            // sodass nur der erste Klick scrollt. Direkte Zuweisung ist
-            // instant und garantiert, dass scroll + Transform synchron landen.
+            // Direkte scrollLeft-Zuweisung (nicht scrollBy smooth): smooth-
+            // Animation kollidiert mit dem JS-Transform-Sticky-Trick
+            // (Transform-Updates pro Scroll-Event koennen die Animation
+            // abbrechen). Direkt ist instant und robust.
             var delta  = (dir === "prev" ? -step : step);
             var target = scroll.scrollLeft + delta;
             var max    = scroll.scrollWidth - scroll.clientWidth;
@@ -263,17 +261,17 @@
             if (target > max) target = max;
             scroll.scrollLeft = target;
 
-            // Label-Transform explizit setzen — scroll-Event kann verzoegert
-            // feuern oder bei identischem Zielwert ausbleiben. Die Card
-            // selbst braucht das nicht: die klebt ueber position:sticky
-            // direkt auf dem Compositor (siehe bindPin).
+            // Transform der gepinnten Card + ihres Labels synchron mitziehen
+            // — auf das Scroll-Event zu warten ist unsicher (verzoegerte
+            // Events, rAF-Frame-Lag), besser direkt hier setzen.
+            var t = "translate3d(" + target + "px,0,0)";
             wrapper.style.setProperty("--vgl-scroll-left", target + "px");
+            var pinnedCard = scroll.querySelector(".vergleich-card.is-pinned");
+            if (pinnedCard) pinnedCard.style.transform = t;
             var navRoot = wrapper.closest(".vergleich-root") || wrapper.parentNode;
             if (navRoot) {
                 var pinnedLabel = navRoot.querySelector(".vergleich-product-label-item.is-pinned-label");
-                if (pinnedLabel) {
-                    pinnedLabel.style.transform = "translate3d(" + target + "px,0,0)";
-                }
+                if (pinnedLabel) pinnedLabel.style.transform = t;
             }
             updateNav(wrapper);
         });
@@ -700,25 +698,17 @@
             });
         }
 
-        // Scroll-Sync. Drei Werte werden pro Scroll aktuell gehalten:
-        //   - --vgl-scroll-left : die aktuelle scrollLeft, fuer alle
-        //     CSS-Stellen die das brauchen (z.B. Label-Counter-Transform
-        //     im Fallback-Pfad).
-        //   - Card-Transform (nur Fallback): Browser ohne scroll-driven
-        //     animations muessen die "Sticky"-Wirkung ueber JS-Transform
-        //     erzeugen. Moderne Browser (Chrome 115+) machen das komplett
-        //     via @keyframes + animation-timeline auf dem Compositor —
-        //     ohne JS-Frame-Lag, deshalb ohne Flackern.
-        //   - Label-Transform: immer per JS (Label-Row ist kein
-        //     Scroll-Container, scroll-timeline kann sie nicht ankern).
+        // Scroll-Sync: pro Scroll-Event schreiben wir drei Dinge:
+        //   - --vgl-scroll-left (CSS-Var, fuer evtl. CSS-Fallbacks)
+        //   - inline transform auf der gepinnten Card (= Sticky-Ersatz)
+        //   - inline transform auf dem gepinnten Label (Counter gegen
+        //     bindLabelRowSync's Track-Translate)
         //
         // rAF-gebatcht: Scroll-Handler schedult nur, applySyncNow schreibt
-        // im Paint-Frame. Vermeidet Zwischenzustand zwischen Scroll-Update
-        // und Transform-Update.
-        var hasScrollTimeline =
-            typeof CSS !== "undefined" && CSS.supports &&
-            CSS.supports("animation-timeline", "scroll()");
-
+        // im Paint-Frame. Minimiert den 1-Frame-Lag zwischen Scroll und
+        // Transform. Ganz weg bekommen wir den nur mit position:sticky
+        // oder scroll-driven animations — beides bricht in dieser Chrome-
+        // Version aber den Scroll-Container nach dem ersten scrollBy.
         var pinnedCardRef  = null;
         var pinnedLabelRef = null;
         var pendingRAF     = false;
@@ -730,23 +720,12 @@
                 : null;
         }
 
-        function updateScrollMax(){
-            var max = scroll.scrollWidth - scroll.clientWidth;
-            if (max < 0) max = 0;
-            wrapper.style.setProperty("--vgl-scroll-max", max + "px");
-        }
-
         function applySyncNow(){
             var x = scroll.scrollLeft;
             wrapper.style.setProperty("--vgl-scroll-left", x + "px");
             var t = "translate3d(" + x + "px,0,0)";
-            // Card nur per JS versetzen, wenn kein scroll-driven CSS greift.
-            if (!hasScrollTimeline && pinnedCardRef) {
-                pinnedCardRef.style.transform = t;
-            }
-            if (pinnedLabelRef) {
-                pinnedLabelRef.style.transform = t;
-            }
+            if (pinnedCardRef)  pinnedCardRef.style.transform  = t;
+            if (pinnedLabelRef) pinnedLabelRef.style.transform = t;
         }
 
         function syncScrollVar(){
@@ -758,18 +737,7 @@
             });
         }
         scroll.addEventListener("scroll", syncScrollVar, { passive: true });
-        updateScrollMax();
         applySyncNow();
-
-        // --vgl-scroll-max neu setzen, wenn sich Scroll-Dimensionen aendern
-        // (z.B. nach Ladevorgang, Viewport-Resize, Collapse-Toggle). Sonst
-        // stimmen bei scroll-driven animations die Keyframe-Endpunkte nicht.
-        window.addEventListener("resize", updateScrollMax);
-        if (typeof ResizeObserver !== "undefined") {
-            var maxRO = new ResizeObserver(updateScrollMax);
-            maxRO.observe(scroll);
-            maxRO.observe(track);
-        }
 
         track.addEventListener("click", function(e){
             var btn = e.target && e.target.closest ? e.target.closest("[data-vgl-pin]") : null;
