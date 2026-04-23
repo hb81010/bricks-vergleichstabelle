@@ -588,6 +588,8 @@
             if (btn) btn.setAttribute("aria-pressed", "true");
             var label = labelItemForCard(card);
             if (label) label.classList.add("is-pinned-label");
+            refreshPinRefs();
+            applySyncNow();
             // Scroll-Position NICHT anfassen: der Transform-basierte Sticky-
             // Effekt haftet die Card am linken Rand, unabhaengig vom aktuellen
             // scrollLeft. Ein scrollTo hier wuerde mit nachfolgenden Nav-Klicks
@@ -608,6 +610,7 @@
             }
             var btn = card.querySelector(".vergleich-pin");
             if (btn) btn.setAttribute("aria-pressed", "false");
+            refreshPinRefs();
             requestAnimationFrame(function(){
                 syncRows(wrapper);
                 updateNav(wrapper);
@@ -619,19 +622,46 @@
         // (fuer CSS-Fallbacks) als auch direkt style.transform — letzteres
         // ist die verlaessliche Quelle, CSS-Var in transform hat in manchen
         // Browsern Rendering-Verzoegerung.
-        function syncScrollVar(){
+        //
+        // Anti-Flicker: statt synchron im Scroll-Handler den Transform zu
+        // setzen (das kann einen Frame mit altem Transform zwischen Scroll
+        // und Transform-Update erzeugen, sichtbar als Ruckler an der
+        // gepinnten Spalte), bundlen wir Reads+Writes in ein
+        // requestAnimationFrame: Browser liest scrollLeft, ruft unseren
+        // Callback unmittelbar vor dem Paint-Frame auf, wir schreiben
+        // Transform — alles in derselben Frame-Boundary, kein Zwischenzustand.
+        // Pinned/Label-Refs cachen wir beim Pinnen in _pinnedCard/_pinnedLabel,
+        // um pro Scroll-Event querySelector zu vermeiden.
+        var pinnedCardRef  = null;
+        var pinnedLabelRef = null;
+        var pendingRAF     = false;
+
+        function refreshPinRefs(){
+            pinnedCardRef  = track.querySelector(".vergleich-card.is-pinned");
+            pinnedLabelRef = rootEl
+                ? rootEl.querySelector(".vergleich-product-label-item.is-pinned-label")
+                : null;
+        }
+
+        function applySyncNow(){
             var x = scroll.scrollLeft;
             wrapper.style.setProperty("--vgl-scroll-left", x + "px");
             var t = "translate3d(" + x + "px,0,0)";
-            var p = track.querySelector(".vergleich-card.is-pinned");
-            if (p) p.style.transform = t;
-            if (rootEl) {
-                var pl = rootEl.querySelector(".vergleich-product-label-item.is-pinned-label");
-                if (pl) pl.style.transform = t;
-            }
+            if (pinnedCardRef)  pinnedCardRef.style.transform  = t;
+            if (pinnedLabelRef) pinnedLabelRef.style.transform = t;
+        }
+
+        function syncScrollVar(){
+            if (pendingRAF) return;
+            pendingRAF = true;
+            requestAnimationFrame(function(){
+                pendingRAF = false;
+                applySyncNow();
+            });
         }
         scroll.addEventListener("scroll", syncScrollVar, { passive: true });
-        syncScrollVar();
+        refreshPinRefs();
+        applySyncNow();
 
         track.addEventListener("click", function(e){
             var btn = e.target && e.target.closest ? e.target.closest("[data-vgl-pin]") : null;
