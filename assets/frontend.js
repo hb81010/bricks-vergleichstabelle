@@ -250,11 +250,12 @@
             } else {
                 step = 200;
             }
-            // Direkte scrollLeft-Zuweisung statt scrollBy({behavior:smooth}):
-            // smooth-scroll kann mit dem Scroll-Event-Handler, der die
-            // --vgl-scroll-left-Variable updated, racen. Bei Direkt-Setzung
-            // landet alles in einem Frame und das Produkt-Label der
-            // gepinnten Card folgt ohne Versatz.
+            // Direkte scrollLeft-Zuweisung statt scrollBy({behavior:smooth}).
+            // Grund: smooth scroll kollidiert mit dem JS-Transform-Sticky-Trick
+            // der gepinnten Spalte — die Transform-Updates pro Scroll-Event
+            // koennen die Smooth-Animation in manchen Browsern abbrechen,
+            // sodass nur der erste Klick scrollt. Direkte Zuweisung ist
+            // instant und garantiert, dass scroll + Transform synchron landen.
             var delta  = (dir === "prev" ? -step : step);
             var target = scroll.scrollLeft + delta;
             var max    = scroll.scrollWidth - scroll.clientWidth;
@@ -262,11 +263,17 @@
             if (target > max) target = max;
             scroll.scrollLeft = target;
 
-            // CSS-Variable UND Label-Transform explizit setzen — falls der
-            // Scroll-Event verzoegert / nicht feuert, wuerde das Label sonst
-            // beim alten Wert haengen und optisch von der scrollenden Spalte
-            // ueberholt werden.
+            // Transform der gepinnten Spalte UND ihres Labels explizit
+            // synchronisieren — wir warten NICHT auf das Scroll-Event, weil
+            // das je nach Browser verzoegert, abgebrochen oder gar nicht
+            // gefeuert wird, wenn der Zielwert identisch war. Das war die
+            // Ursache dafuer, dass ein Prev-Klick scheinbar nichts bewirkte:
+            // scrollLeft wurde gesetzt, aber der transform-Sticky blieb auf
+            // altem Wert und deckte die Nachbar-Spalte weiter ab.
+            var t = "translate3d(" + target + "px,0,0)";
             wrapper.style.setProperty("--vgl-scroll-left", target + "px");
+            var pinnedCard = scroll.querySelector(".vergleich-card.is-pinned");
+            if (pinnedCard) pinnedCard.style.transform = t;
             var navRoot = wrapper.closest(".vergleich-root") || wrapper.parentNode;
             if (navRoot) {
                 var pinnedLabel = navRoot.querySelector(".vergleich-product-label-item.is-pinned-label");
@@ -610,22 +617,40 @@
             });
         }
 
-        // Die gepinnte Card selbst regelt ihren horizontalen Sticky-Effekt
-        // ueber CSS (position:sticky, siehe assets/vergleich.css) — der
-        // Compositor haelt sie beim Scroll ohne Main-Thread-Umweg, deshalb
-        // kein Flackern.
+        // Sticky-Ersatz: beim Scroll die gepinnte Card UND ihr Label per
+        // Transform um scrollLeft mitwandern lassen. Setzen sowohl CSS-Var
+        // (fuer CSS-Fallbacks) als auch direkt style.transform — letzteres
+        // ist die verlaessliche Quelle, CSS-Var in transform hat in manchen
+        // Browsern Rendering-Verzoegerung.
         //
-        // Die CSS-Variable --vgl-scroll-left setzen wir weiterhin pro Scroll,
-        // weil das PRODUKT-LABEL der gepinnten Card sie braucht: die
-        // Label-Row-Track bekommt in bindLabelRowSync ein translateX(-sl);
-        // das gepinnte Label kontert mit translateX(+sl) (aus der CSS-Var),
-        // damit es optisch ueber der gepinnten Card stehen bleibt statt
-        // mitzuscrollen. rAF-gebatcht, damit der Scroll-Handler nichts
-        // synchron schreibt.
-        var pendingRAF = false;
-        function applySyncNow(){
-            wrapper.style.setProperty("--vgl-scroll-left", scroll.scrollLeft + "px");
+        // Anti-Flicker: statt synchron im Scroll-Handler den Transform zu
+        // setzen (das kann einen Frame mit altem Transform zwischen Scroll
+        // und Transform-Update erzeugen, sichtbar als Ruckler an der
+        // gepinnten Spalte), bundlen wir Reads+Writes in ein
+        // requestAnimationFrame: Browser liest scrollLeft, ruft unseren
+        // Callback unmittelbar vor dem Paint-Frame auf, wir schreiben
+        // Transform — alles in derselben Frame-Boundary, kein Zwischenzustand.
+        // Pinned/Label-Refs cachen wir beim Pinnen in _pinnedCard/_pinnedLabel,
+        // um pro Scroll-Event querySelector zu vermeiden.
+        var pinnedCardRef  = null;
+        var pinnedLabelRef = null;
+        var pendingRAF     = false;
+
+        function refreshPinRefs(){
+            pinnedCardRef  = track.querySelector(".vergleich-card.is-pinned");
+            pinnedLabelRef = rootEl
+                ? rootEl.querySelector(".vergleich-product-label-item.is-pinned-label")
+                : null;
         }
+
+        function applySyncNow(){
+            var x = scroll.scrollLeft;
+            wrapper.style.setProperty("--vgl-scroll-left", x + "px");
+            var t = "translate3d(" + x + "px,0,0)";
+            if (pinnedCardRef)  pinnedCardRef.style.transform  = t;
+            if (pinnedLabelRef) pinnedLabelRef.style.transform = t;
+        }
+
         function syncScrollVar(){
             if (pendingRAF) return;
             pendingRAF = true;
@@ -634,8 +659,8 @@
                 applySyncNow();
             });
         }
-        function refreshPinRefs(){ /* no-op: Card ist CSS-sticky, Label ist CSS-var-getrieben */ }
         scroll.addEventListener("scroll", syncScrollVar, { passive: true });
+        refreshPinRefs();
         applySyncNow();
 
         track.addEventListener("click", function(e){
