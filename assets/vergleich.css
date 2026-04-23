@@ -536,26 +536,27 @@
 .vergleich-pin__icon--on { display: none; }
 
 /* Gepinnte Spalte: klebt am linken Rand beim horizontalen Scroll.
-   order:-1 rueckt die Card im grid-auto-flow:column an Position 1. Die
-   "Klebe-Wirkung" kommt NICHT ueber position:sticky (das friert in manchen
-   Browsern bei Grid-Items den Scroll-Container nach dem ersten scrollBy
-   ein), sondern ueber eine CSS-Variable --vgl-scroll-left, die JS im
-   Scroll-Handler auf scroll.scrollLeft setzt. Die Card wandert per Transform
-   mit dem Scroll mit und bleibt visuell auf Position 0 stehen. */
+   order:-1 rueckt die Card im grid-auto-flow:column an Position 1,
+   position:sticky + left:0 laesst den Compositor die Card beim Scrollen
+   natuerlich links halten — kein JS-Main-Thread-Transform mehr, deshalb
+   auch kein 1-Frame-Lag und kein Flackern. Der frueher gesehene
+   Scroll-Hang mit sticky kam von scrollBy({behavior:"smooth"}), das
+   mittlerweile durch direkte scrollLeft-Zuweisung ersetzt ist. */
 .vergleich-card.is-pinned {
     order: -1;
-    transform: translate3d(var(--vgl-scroll-left, 0px), 0, 0);
+    position: sticky !important;
+    left: 0;
     z-index: 10 !important;
     background: #fff;
     box-shadow: 6px 0 8px -4px rgba(0, 0, 0, .12);
-    will-change: transform;
 }
 
-/* Passendes Produkt-Label (z.B. "Testsieger", "Platz 2") mitziehen:
-   - order:-1 bringt es im Flex-Track visuell nach links
-   - translateX(+scrollLeft) kontert das translateX(-scrollLeft) des Tracks
-     → Netto bleibt das Label beim Scrollen an seiner (neuen) Flex-Position
-       und damit direkt ueber der gepinnten Card. */
+/* Passendes Produkt-Label (z.B. "Testsieger", "Platz 2") mitziehen.
+   Der Label-Row-Track bekommt in JS ein translateX(-scrollLeft) (um mit
+   dem horizontalen Card-Scroll mitzulaufen). Hier kontert ein
+   translate3d(var(--vgl-scroll-left,0),0,0) auf dem gepinnten Item:
+   Netto-Transform = 0 → Item bleibt an seiner (order:-1) linken
+   Flex-Position stehen, optisch direkt ueber der gepinnten Card. */
 .vergleich-product-label-item.is-pinned-label {
     order: -1;
     transform: translate3d(var(--vgl-scroll-left, 0px), 0, 0);
