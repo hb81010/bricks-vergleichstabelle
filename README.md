@@ -1,4 +1,4 @@
-# Bricks Vergleich
+# BricksTable
 
 Custom Bricks Element für Produktvergleichstabellen, bei denen **Produkte als Spalten** statt als Zeilen dargestellt werden – wie z.B. bei Finanzfluss.
 

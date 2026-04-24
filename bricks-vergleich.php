@@ -1,10 +1,10 @@
 <?php
 /**
- * Plugin Name: Bricks Vergleich
+ * Plugin Name: BricksTable
  * Plugin URI: https://example.com
- * Description: Custom Bricks Element für Produktvergleich mit Produkten als Spalten (Finanzfluss-Style).
- * Version: 1.7.2
- * Author: Du
+ * Description: Custom Bricks Element für Produktvergleichstabellen mit Produkten als Spalten.
+ * Version: 1.7.3
+ * Author: BricksTable
  * Text Domain: bricks-vergleich
  * Requires at least: 6.0
  * Requires PHP: 7.4
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'BRICKS_VERGLEICH_VERSION', '1.7.2' );
+define( 'BRICKS_VERGLEICH_VERSION', '1.7.3' );
 define( 'BRICKS_VERGLEICH_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BRICKS_VERGLEICH_URL', plugin_dir_url( __FILE__ ) );
 

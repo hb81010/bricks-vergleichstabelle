@@ -5277,16 +5277,21 @@ class Element_Vergleich extends \Bricks\Element {
                 'image' => [ 'useDynamicData' => '{featured_image}', 'size' => 'medium' ],
             ],
             [
-                'label'   => esc_html__( 'Name', 'bricks-vergleich' ),
-                'type'    => 'text',
-                'text'    => '{post_title}',
-                'textTag' => 'p',
+                'label'      => esc_html__( 'Titel', 'bricks-vergleich' ),
+                'type'       => 'heading',
+                'heading'    => '{post_title}',
+                'headingTag' => 'h3',
             ],
             [
                 'label'   => esc_html__( 'Preis', 'bricks-vergleich' ),
                 'type'    => 'text',
                 'text'    => '{woo_product_price}',
                 'textTag' => 'p',
+            ],
+            [
+                'label'   => esc_html__( 'Angebot', 'bricks-vergleich' ),
+                'type'    => 'button',
+                'btnText' => esc_html__( 'Zum Angebot', 'bricks-vergleich' ),
             ],
         ];
     }
