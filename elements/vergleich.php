@@ -4946,16 +4946,23 @@ class Element_Vergleich extends \Bricks\Element {
         $icon_pos  = isset( $row['lightboxTriggerIconPosition'] ) ? (string) $row['lightboxTriggerIconPosition'] : 'left';
         if ( $icon_pos !== 'right' ) $icon_pos = 'left';
         if ( is_array( $icon ) && ( ! empty( $icon['icon'] ) || ! empty( $icon['svg'] ) ) ) {
-            $icon_size = $this->get_css_value( $row['lightboxTriggerIconSize'] ?? null, '1em' );
+            // WICHTIG: Per-Row Icon-Größe nur dann inline ausgeben, wenn der
+            // User an der Zeile explizit einen Wert gesetzt hat. Sonst würde
+            // ein Default ('1em') als Inline-Style die globale Einstellung
+            // (cellLightboxIconSize) überschreiben — Inline > CSS.
+            $icon_size = $this->get_css_value( $row['lightboxTriggerIconSize'] ?? null, '' );
             $icon_color = $this->resolve_color( $row['lightboxTriggerIconColor'] ?? null );
             // Bricks rendert je nach Icon-Typ anders: bei SVG-Uploads wird
             // die class+style direkt auf das <svg>-Element gesetzt (KEIN
             // Wrapper), bei Font-Icons auf ein <span> mit einem <i>-Child.
             // Deshalb immer BEIDES setzen: color (Font-Icons) + fill (SVG).
-            $icon_style = sprintf(
-                'width:%s;height:%s;font-size:%s;line-height:1;flex:0 0 auto;',
-                esc_attr( $icon_size ), esc_attr( $icon_size ), esc_attr( $icon_size )
-            );
+            $icon_style = 'line-height:1;flex:0 0 auto;';
+            if ( $icon_size !== '' ) {
+                $icon_style .= sprintf(
+                    'width:%s;height:%s;font-size:%s;',
+                    esc_attr( $icon_size ), esc_attr( $icon_size ), esc_attr( $icon_size )
+                );
+            }
             if ( $icon_color !== '' ) {
                 $icon_style .= 'color:' . esc_attr( $icon_color ) . ';';
                 $icon_style .= 'fill:' . esc_attr( $icon_color ) . ';';
