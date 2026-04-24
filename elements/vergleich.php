@@ -241,9 +241,10 @@ class Element_Vergleich extends \Bricks\Element {
 
         $this->controls['schemaRatingCount'] = [
             'tab'         => 'content', 'group' => 'a11y',
-            'label'       => esc_html__( 'Anzahl Bewertungen (optional)', 'bricks-vergleich' ),
+            'label'       => esc_html__( 'Anzahl Bewertungen', 'bricks-vergleich' ),
             'type'        => 'number',
-            'description' => esc_html__( 'Google Rich-Snippets zeigen AggregateRating nur mit ratingCount. Eigene Redaktions-Note = 1. Leer lassen, wenn du keine Rating-Snippets erzwingen willst.', 'bricks-vergleich' ),
+            'default'     => 1,
+            'description' => esc_html__( 'Wird als ratingCount auf AggregateRating gesetzt. Google verlangt diesen Wert. Bei eigener Redaktions-Note = 1.', 'bricks-vergleich' ),
             'required'    => [ 'schemaEnabled', '=', true ],
         ];
 
@@ -1986,7 +1987,7 @@ class Element_Vergleich extends \Bricks\Element {
             'headingLink' => [
                 'label'       => esc_html__( 'Verlinken (optional)', 'bricks-vergleich' ),
                 'type'        => 'link',
-                'description' => esc_html__( 'Leer = kein Link. Z.B. Dynamic Data "{post_url}" um zum Produkt zu verlinken.', 'bricks-vergleich' ),
+                'description' => esc_html__( 'Leer = kein Link. Z.B. Dynamic Data "{post_url}" um zum Produkt/Testbericht zu verlinken. Wird zusätzlich als Schema.org Product.url ausgegeben, wenn diese Zeile die Rolle "Produkt-Name" trägt.', 'bricks-vergleich' ),
                 'required'    => [ 'type', '=', 'heading' ],
             ],
             'headingFallback' => [
@@ -3025,7 +3026,7 @@ class Element_Vergleich extends \Bricks\Element {
                     ''             => esc_html__( '— Keine —', 'bricks-vergleich' ),
                     'name'         => esc_html__( 'Produkt-Name', 'bricks-vergleich' ),
                     'image'        => esc_html__( 'Produkt-Bild', 'bricks-vergleich' ),
-                    'url'          => esc_html__( 'Produkt-URL (Offer)', 'bricks-vergleich' ),
+                    'url'          => esc_html__( 'Angebots-URL (Offer)', 'bricks-vergleich' ),
                     'price'        => esc_html__( 'Preis', 'bricks-vergleich' ),
                     'ratingValue'  => esc_html__( 'Bewertung (0–max)', 'bricks-vergleich' ),
                     'brand'        => esc_html__( 'Marke', 'bricks-vergleich' ),
@@ -5367,13 +5368,28 @@ class Element_Vergleich extends \Bricks\Element {
             switch ( $role ) {
                 case 'name':
                     $item['name'] = $value;
+                    // Auto-Bonus: wenn die Heading-Zeile (Produkt-Name) einen
+                    // Verlinken-Link hat (z.B. {post_url} auf den Testbericht),
+                    // diese URL als Product.url mitnehmen — ohne dass der User
+                    // eine zweite Schema-Rolle setzen muss. Leerer Link wird
+                    // ignoriert (siehe resolve_link).
+                    if ( ( $row['type'] ?? '' ) === 'heading' && ! isset( $item['url'] ) ) {
+                        $heading_url = $this->resolve_link( $row['headingLink'] ?? null )['url'] ?? '';
+                        if ( $heading_url !== '' ) {
+                            $item['url'] = $heading_url;
+                        }
+                    }
                     break;
                 case 'image':
                     $item['image'] = $value;
                     break;
                 case 'url':
-                    // URL bleibt auch als Top-Level Product.url für Reichweite.
-                    $item['url'] = $value;
+                    // 'Angebots-URL' → Offer.url (Affiliate-/Kauf-Link).
+                    // NICHT mehr automatisch in Product.url kopieren — dafür
+                    // gibt es jetzt den Auto-Pickup aus dem Heading-Link
+                    // (siehe oben).
+                    if ( ! isset( $item['offers'] ) ) $item['offers'] = [ '@type' => 'Offer' ];
+                    $item['offers']['url'] = $value;
                     break;
                 case 'price':
                     if ( ! isset( $item['offers'] ) ) $item['offers'] = [ '@type' => 'Offer' ];
@@ -5386,9 +5402,9 @@ class Element_Vergleich extends \Bricks\Element {
                         'ratingValue' => (string) $value,
                         'bestRating'  => (string) $this->_schema_runtime['rating_best'],
                     ];
-                    if ( (int) $this->_schema_runtime['rating_count'] > 0 ) {
-                        $item['aggregateRating']['ratingCount'] = (string) $this->_schema_runtime['rating_count'];
-                    }
+                    $count = (int) ( $this->_schema_runtime['rating_count'] ?? 0 );
+                    if ( $count < 1 ) $count = 1;
+                    $item['aggregateRating']['ratingCount'] = (string) $count;
                     break;
                 case 'brand':
                     $item['brand'] = [ '@type' => 'Brand', 'name' => $value ];
@@ -5397,11 +5413,6 @@ class Element_Vergleich extends \Bricks\Element {
                     $item['description'] = $value;
                     break;
             }
-        }
-
-        // Offer.url = Product.url (falls beides vorhanden), hilft Google die Verknüpfung sauber zu erkennen.
-        if ( isset( $item['offers'] ) && isset( $item['url'] ) && ! isset( $item['offers']['url'] ) ) {
-            $item['offers']['url'] = $item['url'];
         }
 
         if ( ! empty( $item ) ) {
