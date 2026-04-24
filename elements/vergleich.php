@@ -3030,6 +3030,8 @@ class Element_Vergleich extends \Bricks\Element {
                     'ratingValue'  => esc_html__( 'Bewertung (0–max)', 'bricks-vergleich' ),
                     'brand'        => esc_html__( 'Marke', 'bricks-vergleich' ),
                     'description'  => esc_html__( 'Kurzbeschreibung', 'bricks-vergleich' ),
+                    'positiveNotes' => esc_html__( 'Vorteile (Pros)', 'bricks-vergleich' ),
+                    'negativeNotes' => esc_html__( 'Nachteile (Cons)', 'bricks-vergleich' ),
                 ],
                 'description' => esc_html__( 'Verknüpft diese Zeile mit einem Schema.org-Feld. Nur aktiv, wenn "JSON-LD Schema.org ausgeben" auf Element-Ebene aktiviert ist.', 'bricks-vergleich' ),
             ],
@@ -5326,6 +5328,39 @@ class Element_Vergleich extends \Bricks\Element {
         foreach ( $rows as $row ) {
             $role = isset( $row['schemaRole'] ) ? (string) $row['schemaRole'] : '';
             if ( $role === '' ) continue;
+
+            // Pros/Cons sind keine Skalarwerte, sondern ItemList-Strukturen.
+            // Eigener Pfad, damit der Standard-Extractor sie nicht als String
+            // verwirft.
+            if ( $role === 'positiveNotes' || $role === 'negativeNotes' ) {
+                $items = $this->extract_list_items_for_schema( $row, $loop_post_id );
+                if ( empty( $items ) ) continue;
+                if ( ! isset( $item['review'] ) ) {
+                    // Google verlangt für Pros/Cons-Rich-Result einen Author am
+                    // Review. Default = Site-Organization (Bloginfo-Name).
+                    $item['review'] = [
+                        '@type'  => 'Review',
+                        'author' => [
+                            '@type' => 'Organization',
+                            'name'  => (string) get_bloginfo( 'name' ),
+                        ],
+                    ];
+                }
+                $list_items = [];
+                foreach ( $items as $i => $txt ) {
+                    $list_items[] = [
+                        '@type'    => 'ListItem',
+                        'position' => $i + 1,
+                        'name'     => $txt,
+                    ];
+                }
+                $item['review'][ $role ] = [
+                    '@type'           => 'ItemList',
+                    'itemListElement' => $list_items,
+                ];
+                continue;
+            }
+
             $value = $this->extract_row_value_for_schema( $row, $role, $loop_post_id );
             if ( $value === '' || $value === null ) continue;
 
@@ -5426,6 +5461,29 @@ class Element_Vergleich extends \Bricks\Element {
             return $this->clean_schema_string( $raw );
         }
 
+        // Manuell-pro-Spalte: Wert für die aktuelle Loop-Spalte holen,
+        // sonst Fallback. Damit funktionieren z.B. Kurzbeschreibung,
+        // Marke etc., wenn der User pro Produkt einen anderen Text
+        // hinterlegt.
+        if ( $type === 'manual' ) {
+            $col_idx = 0;
+            if ( class_exists( '\Bricks\Query' ) && method_exists( '\Bricks\Query', 'get_loop_index' ) ) {
+                $li = \Bricks\Query::get_loop_index();
+                if ( is_numeric( $li ) ) $col_idx = (int) $li;
+            }
+            $cols = isset( $row['manualColumns'] ) && is_array( $row['manualColumns'] )
+                ? array_values( array_filter( $row['manualColumns'], 'is_array' ) )
+                : [];
+            $raw = '';
+            if ( isset( $cols[ $col_idx ]['text'] ) ) {
+                $raw = (string) $cols[ $col_idx ]['text'];
+            } elseif ( isset( $row['manualFallback'] ) ) {
+                $raw = (string) $row['manualFallback'];
+            }
+            $raw = $this->dd_string( $raw );
+            return $this->clean_schema_string( $raw );
+        }
+
         // Dynamic-Zelle: DD auflösen
         if ( $type === 'dynamic' ) {
             $dd = (string) ( $row['dynamic'] ?? '' );
@@ -5490,6 +5548,60 @@ class Element_Vergleich extends \Bricks\Element {
             if ( $thumb ) return $thumb;
         }
         return '';
+    }
+
+    /**
+     * Pros/Cons-Items aus einer List-Zelle extrahieren — nutzt dieselbe
+     * Quelle wie render_cell_list (manuell pro Spalte oder dynamisch).
+     * Liefert ein flaches Array von plain-text-Stichpunkten.
+     */
+    private function extract_list_items_for_schema( $row, $loop_post_id ) {
+        if ( ( $row['type'] ?? '' ) !== 'list' ) return [];
+        $source = isset( $row['listSource'] ) ? (string) $row['listSource'] : 'dynamic';
+        $raw    = '';
+        $array_items = null;
+
+        if ( $source === 'manualColumns' ) {
+            $cols = isset( $row['listManualColumns'] ) && is_array( $row['listManualColumns'] )
+                ? array_values( array_filter( $row['listManualColumns'], 'is_array' ) )
+                : [];
+            $col_idx = 0;
+            if ( class_exists( '\Bricks\Query' ) && method_exists( '\Bricks\Query', 'get_loop_index' ) ) {
+                $li = \Bricks\Query::get_loop_index();
+                if ( is_numeric( $li ) ) $col_idx = (int) $li;
+            }
+            $entry = $cols[ $col_idx ] ?? null;
+            $raw   = is_array( $entry ) ? (string) ( $entry['content'] ?? '' ) : '';
+            if ( $raw !== '' ) $raw = $this->dd_string( $raw );
+        } else {
+            $key = isset( $row['listDynamic'] ) ? trim( (string) $row['listDynamic'] ) : '';
+            if ( $key !== '' ) {
+                if ( strpos( $key, '{' ) !== false ) {
+                    $raw = (string) $this->dd_string( $key );
+                } elseif ( $loop_post_id > 0 ) {
+                    $meta = get_post_meta( $loop_post_id, $key, true );
+                    if ( is_array( $meta ) ) {
+                        // ACF Multi-Select / Checkbox: direkt als Items.
+                        $array_items = array_values( array_filter(
+                            array_map( 'strval', $meta ),
+                            function( $v ) { return trim( $v ) !== ''; }
+                        ) );
+                    } else {
+                        $raw = is_scalar( $meta ) ? (string) $meta : '';
+                    }
+                }
+            }
+        }
+
+        $items = $array_items !== null ? $array_items : $this->parse_list_items( $raw );
+
+        // Plain text + leere wegfiltern.
+        $clean = [];
+        foreach ( $items as $i ) {
+            $t = $this->clean_schema_string( (string) $i );
+            if ( $t !== '' ) $clean[] = $t;
+        }
+        return $clean;
     }
 
     private function resolve_score_value( $row, $loop_post_id ) {
