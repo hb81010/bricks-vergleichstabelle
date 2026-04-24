@@ -2128,6 +2128,11 @@ class Element_Vergleich extends \Bricks\Element {
             'btnPadding' => [
                 'label'    => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
                 'type'     => 'spacing',
+                // 'css' nur damit Bricks den Variablen-Picker rendert. Selector
+                // bewusst auf eine nie existierende Klasse, weil das tatsächliche
+                // Padding per-Row inline in render_cell_button() ausgegeben wird —
+                // sonst würden alle Rows kollidieren.
+                'css'      => [ [ 'property' => 'padding', 'selector' => '.__vgl-noop-picker' ] ],
                 'required' => [ 'type', '=', 'button' ],
             ],
             'btnMinWidth' => [
@@ -2727,6 +2732,10 @@ class Element_Vergleich extends \Bricks\Element {
             'lightboxTriggerPadding' => [
                 'label'       => esc_html__( 'Innenabstand', 'bricks-vergleich' ),
                 'type'        => 'spacing',
+                // 'css' nur damit Bricks den Variablen-Picker rendert. Selector
+                // bewusst auf eine nie existierende Klasse — Padding wird per-Row
+                // inline gerendert (siehe render_cell_lightbox()).
+                'css'         => [ [ 'property' => 'padding', 'selector' => '.__vgl-noop-picker' ] ],
                 'description' => esc_html__( 'Top / Right / Bottom / Left. CSS-Variablen erlaubt (z.B. var(--space-sm), 10px, 0.75rem).', 'bricks-vergleich' ),
                 'required'    => [ 'type', '=', 'lightbox' ],
             ],
@@ -5411,6 +5420,12 @@ class Element_Vergleich extends \Bricks\Element {
             return $this->clean_schema_string( $raw );
         }
 
+        // Heading-Zelle (z.B. Produktname als <h3>): Wert liegt in 'heading'.
+        if ( $type === 'heading' ) {
+            $raw = $this->dd_string( (string) ( $row['heading'] ?? '' ) );
+            return $this->clean_schema_string( $raw );
+        }
+
         // Dynamic-Zelle: DD auflösen
         if ( $type === 'dynamic' ) {
             $dd = (string) ( $row['dynamic'] ?? '' );
@@ -5498,11 +5513,29 @@ class Element_Vergleich extends \Bricks\Element {
     private function parse_number( $str ) {
         $str = (string) $str;
         if ( $str === '' ) return '';
-        // Nur Zahlen, Komma, Punkt, Minus behalten.
-        $clean = preg_replace( '/[^0-9.,\-]/', '', $str );
-        if ( $clean === '' ) return '';
-        // Wenn sowohl , als auch . vorhanden: Tausender-Trenner entfernen (der
-        // Trenner, der weiter links steht, ist Tausender).
+
+        // Vorab Tags strippen, damit z.B. WooCommerce-Sale-Preise (<del>alt</del>
+        // <ins>neu</ins>) nicht Strich-Müll hinterlassen.
+        $str = wp_strip_all_tags( $str );
+
+        // Hyphen-Runs (kommen aus stripped HTML-Strukturen wie <del>...</del>
+        // oder Range-Anzeigen "1199 – 1299") zu einem einfachen Trennzeichen
+        // machen, damit der Parser sie als Token-Grenze erkennt.
+        $str = preg_replace( '/-+/', ' ', $str );
+
+        // Alle Zahlen (mit deutschem oder US-Format) im String finden.
+        // Beispiele: "1.299,00", "1,299.00", "849.15", "999".
+        if ( ! preg_match_all( '/\d[\d.,]*/', $str, $matches ) ) {
+            return '';
+        }
+
+        $candidates = $matches[0];
+
+        // Bei Sale-Preisen erscheinen alter + neuer Preis; der LETZTE im
+        // DOM ist üblicherweise der aktuelle (sale) Preis — den nehmen wir.
+        $clean = end( $candidates );
+
+        // Tausender/Dezimal nach DE/US auflösen.
         if ( strpos( $clean, ',' ) !== false && strpos( $clean, '.' ) !== false ) {
             if ( strrpos( $clean, ',' ) > strrpos( $clean, '.' ) ) {
                 // Deutsches Format: "1.299,00" → "1299.00"
@@ -5516,6 +5549,7 @@ class Element_Vergleich extends \Bricks\Element {
             // Nur Komma: Dezimaltrenner.
             $clean = str_replace( ',', '.', $clean );
         }
+
         return $clean;
     }
 
