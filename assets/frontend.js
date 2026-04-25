@@ -654,33 +654,42 @@
             ro.observe(wrapper);
         }
 
-        // ─── Visibility-Logik via IntersectionObserver ────────────────
-        function updateVisibility(o){
-            // Aktiv = Tabelle ist im Viewport, aber die Original-Zeile gerade nicht.
-            var shouldShow = o.tableInView && !o.rowInView;
-            o.el.classList.toggle("is-active", shouldShow);
+        // ─── Visibility-Logik (geometriebasiert) ──────────────────────
+        // Overlay erscheint NUR, wenn die Original-Zeile noch unterhalb
+        // des Viewport-Bereichs liegt, der vom Overlay verdeckt wird
+        // (= User hat sie noch nicht erreicht). Sobald sie im Viewport
+        // ist ODER schon nach oben rausgescrollt — bleibt der Overlay
+        // aus. Verhindert das nervige Wieder-Aufploppen, wenn man unter
+        // die Tabelle weiterscrollt.
+        // Zusatz: Wenn die ganze Tabelle aus dem Viewport ist (oben oder
+        // unten raus) → ebenfalls aus.
+        function updateVisibility(){
+            var wrapperRect = wrapper.getBoundingClientRect();
+            var vh = window.innerHeight || document.documentElement.clientHeight;
+            var tableVisible = wrapperRect.bottom > 0 && wrapperRect.top < vh;
+
+            overlays.forEach(function(o){
+                var rowRect  = o.originalLabel.getBoundingClientRect();
+                var overlayH = o.el.offsetHeight || 0;
+                // 8px Puffer, damit der Overlay schon ausblendet, kurz bevor
+                // sich Original und Klon visuell überlappen.
+                var rowStillBelow = rowRect.top > ( vh - overlayH - 8 );
+                var shouldShow    = tableVisible && rowStillBelow;
+                o.el.classList.toggle("is-active", shouldShow);
+            });
         }
 
-        var rowObs = new IntersectionObserver(function(entries){
-            entries.forEach(function(entry){
-                var o = overlays.find(function(x){ return x.originalLabel === entry.target; });
-                if (!o) return;
-                o.rowInView = entry.isIntersecting;
-                updateVisibility(o);
+        var visTick = 0;
+        function scheduleUpdate(){
+            if (visTick) return;
+            visTick = requestAnimationFrame(function(){
+                visTick = 0;
+                updateVisibility();
             });
-        }, { threshold: 0, rootMargin: "0px 0px -1px 0px" });
-
-        var tableObs = new IntersectionObserver(function(entries){
-            entries.forEach(function(entry){
-                overlays.forEach(function(o){
-                    o.tableInView = entry.isIntersecting;
-                    updateVisibility(o);
-                });
-            });
-        }, { threshold: 0 });
-
-        overlays.forEach(function(o){ rowObs.observe(o.originalLabel); });
-        tableObs.observe(wrapper);
+        }
+        window.addEventListener("scroll", scheduleUpdate, { passive: true });
+        window.addEventListener("resize", scheduleUpdate);
+        scheduleUpdate();
 
         // ─── Horizontalen Scroll synchron halten ──────────────────────
         function syncScroll(){
@@ -696,9 +705,9 @@
         var cleanupObs = new MutationObserver(function(){
             if (!wrapper.isConnected) {
                 overlays.forEach(function(o){ if (o.el && o.el.parentNode) o.el.parentNode.removeChild(o.el); });
-                rowObs.disconnect();
-                tableObs.disconnect();
                 cleanupObs.disconnect();
+                window.removeEventListener("scroll", scheduleUpdate);
+                window.removeEventListener("resize", scheduleUpdate);
                 scroll.removeEventListener("scroll", syncScroll);
             }
         });
