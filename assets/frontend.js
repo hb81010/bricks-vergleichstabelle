@@ -689,13 +689,16 @@
 
             // Padding-Bottom auf Labels-Spalte UND alle Card-Container.
             // Der Wrapper selbst kriegt KEIN padding — der Trick ist, dass
-            // jede einzelne Card und die Labels-Spalte am Bottom etwas
-            // Spielraum hat, damit die per translate verschobene Cell
-            // dort sichtbar liegt (nicht durch overflow:hidden der Card
-            // abgeschnitten wird).
-            // Nur wenn Tabelle laenger als Viewport — sonst nutzloser
-            // sichtbarer Leerraum, weil Pin bei kurzen Tabellen nie
-            // aktiv wird (Zeile immer voll sichtbar).
+            // jede einzelne Card und die Labels-Spalte am Bottom Spielraum
+            // hat, damit die per translate verschobene Cell dort sichtbar
+            // liegt (nicht durch overflow:hidden der Card abgeschnitten
+            // wird).
+            //
+            // Nur aktivieren, wenn die Tabelle laenger als der Viewport
+            // ist — sonst ist das Padding nutzloser sichtbarer Leerraum
+            // (z.B. im kollabierten Aufklapp-Zustand: Pin ist voll
+            // sichtbar an Reihe 5, kein Pinning aktiv, der leere Bereich
+            // am Tabellen-Ende waere reines visuelles Rauschen).
             var vh = window.innerHeight || document.documentElement.clientHeight;
             if (totalPadding > 0 && wrapRect.height > vh) {
                 setBottomPadding(totalPadding);

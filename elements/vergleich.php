@@ -5445,7 +5445,20 @@ class Element_Vergleich extends \Bricks\Element {
     }
 
     private function default_rows() {
+        // WICHTIG: Reihenfolge bewusst — Bricks dupliziert beim
+        // "+ Zeile hinzufuegen" das ERSTE Item dieses Arrays als Template.
+        // Damit neue Zeilen standardmaessig als Text-Typ landen (haeufigster
+        // Use-Case), MUSS der erste Eintrag eine text-Zeile sein. Bild,
+        // Titel, etc. kommen danach — das initiale Setup zeigt sie also
+        // ab Position 2, der User kann die erste Eigenschaft-Zeile bei
+        // Bedarf umbenennen oder loeschen.
         return [
+            [
+                'label'   => esc_html__( 'Eigenschaft', 'bricks-vergleich' ),
+                'type'    => 'text',
+                'text'    => '',
+                'textTag' => 'p',
+            ],
             [
                 'label' => esc_html__( 'Bild', 'bricks-vergleich' ),
                 'type'  => 'image',

@@ -65,6 +65,32 @@
         log( 'Neue Zeile auf Text gepatcht', row );
     }
 
+    /**
+     * DOM-basierter Patch fuer eine neu hinzugefuegte Zeile.
+     *
+     * Bricks setzt nach dem "+ Zeile hinzufuegen" oft seinen eigenen
+     * default[0] (= image) auf den Vue-State, NACHDEM unser
+     * patchNewRow gelaufen ist. Reine Vue-State-Mutation reicht dann
+     * nicht — wir muessen das `<select>`-Field im DOM direkt aendern
+     * und ein change-Event dispatchen, damit Bricks seinen eigenen
+     * Update-Cycle anstoesst und Vue + DOM wieder synchron sind.
+     */
+    function patchNewRowDom( rowIdx ){
+        var scope = document.querySelector( '[data-controlkey="rows"]' );
+        if ( ! scope ) return false;
+        var items = scope.querySelectorAll( 'li.repeater-item' );
+        var item  = items[ rowIdx ];
+        if ( ! item ) return false;
+        var typeSelect = item.querySelector( '[data-control-key="type"] select' );
+        if ( ! typeSelect ) return false;
+        if ( typeSelect.value === 'text' ) return true;
+        typeSelect.value = 'text';
+        typeSelect.dispatchEvent( new Event( 'change', { bubbles: true } ) );
+        typeSelect.dispatchEvent( new Event( 'input',  { bubbles: true } ) );
+        log( 'Neue Zeile via DOM-Select auf Text gepatcht', rowIdx );
+        return true;
+    }
+
     function checkRepeaterGrowth() {
         var active = getActiveElement();
         if ( ! active || active.name !== 'vergleich' ) {
@@ -88,7 +114,31 @@
         if ( lastRowsJson !== '' ) {
             var prevLen = parseInt( lastRowsJson.split( ':' )[ 0 ], 10 );
             if ( currentLen === prevLen + 1 ) {
-                patchNewRow( rows[ currentLen - 1 ] );
+                // Sofort patchen + Retry-Ticks: Bricks setzt nach dem
+                // Hinzufuegen ggf. seine eigenen Default-Werte (basierend
+                // auf default[0] = image-row) NACH unserem ersten Patch.
+                // Mit setTimeout-Retries ueberschreiben wir das, sobald
+                // Bricks "settled" ist. Wir checken pro Retry, ob unser
+                // Patch noch greift — wenn schon text, kein Re-Patch noetig.
+                var newRowIdx = currentLen - 1;
+                function tryPatch(){
+                    // 1) Vue-State patchen (greift wenn Bricks reaktiv ist).
+                    var freshActive = getActiveElement();
+                    if ( freshActive && freshActive.name === 'vergleich' ) {
+                        var freshRows = ( freshActive.settings && freshActive.settings.rows ) || [];
+                        var freshRow  = freshRows[ newRowIdx ];
+                        if ( freshRow && freshRow.type !== 'text' ) {
+                            patchNewRow( freshRow );
+                        }
+                    }
+                    // 2) DOM-Select patchen (Fallback fuer Bricks, das den
+                    //    Vue-State nach unserem Patch wieder ueberschreibt).
+                    patchNewRowDom( newRowIdx );
+                }
+                tryPatch();
+                setTimeout( tryPatch, 0 );
+                setTimeout( tryPatch, 50 );
+                setTimeout( tryPatch, 200 );
             }
         }
         lastRowsJson = snapshotKey;
