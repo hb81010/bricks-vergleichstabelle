@@ -7336,11 +7336,16 @@ class Element_Vergleich extends \Bricks\Element {
             transform: translateY(0);
             pointer-events: auto;
         }
+        /* __inner = horizontaler Flex (Label + Scroll-Bereich). Die echten
+           Breiten werden vom JS per measure() inline auf Label und Cells
+           gesetzt — basierend auf den Original-Cell-Widths der Tabelle.
+           Damit sitzen die Klone pixelgenau unter den jeweiligen Spalten,
+           auch wenn der Tabellen-Container nicht viewport-breit ist. */
         .vergleich-bottom-overlay__inner {
-            display: grid;
-            grid-template-columns: var(--vgl-overlay-label-width, var(--vgl-label-width, 200px)) minmax(0, 1fr);
+            display: flex;
             align-items: stretch;
-            max-width: 100%;
+            width: 100%;
+            min-width: 0;
         }
         .vergleich-bottom-overlay__label {
             display: flex;
@@ -7350,27 +7355,29 @@ class Element_Vergleich extends \Bricks\Element {
             color: #111827;
             background: var(--vgl-label-bg, #f9fafb);
             border-right: 1px solid rgba(0, 0, 0, 0.06);
-            min-width: 0;
+            box-sizing: border-box;
+            flex: 0 0 auto; /* JS setzt explizite Breite */
         }
         .vergleich-bottom-overlay__scroll {
             overflow: hidden; /* horizontal-Sync wird per JS via scrollLeft gemacht */
+            flex: 1 1 0;
             min-width: 0;
         }
         .vergleich-bottom-overlay__track {
             display: flex;
             align-items: stretch;
             gap: 0;
-            min-width: 100%;
         }
         /* Cell-Klone behalten alle Original-Klassen (.vergleich-zelle, type-
-           Variante etc.) — wir geben ihnen nur die richtige Spalten-Breite,
-           damit sie horizontal sauber in eine Reihe passen. */
+           Variante etc.). Width/flex wird per JS auf den exakten Wert der
+           Original-Cell gesetzt — kein CSS-Fallback noetig, weil ohne
+           measure() das ganze Konzept eh nicht funktioniert. */
         .vergleich-bottom-overlay__track > .vergleich-zelle {
-            flex: 0 0 var(--vgl-overlay-column-width, var(--vgl-column-width, 200px));
-            width: var(--vgl-overlay-column-width, var(--vgl-column-width, 200px));
             min-height: auto;
             padding: 10px var(--vgl-cell-padding, 16px);
             border-left: 1px solid rgba(0, 0, 0, 0.06);
+            box-sizing: border-box;
+            flex: 0 0 auto;
         }
         .vergleich-bottom-overlay__track > .vergleich-zelle:first-child {
             border-left: none;

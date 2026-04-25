@@ -584,16 +584,11 @@
             inner.appendChild(scrollWrap);
             overlay.appendChild(inner);
 
-            // CSS-Vars von Wrapper auf Overlay übertragen, damit Spalten-
-            // breite + Label-Breite des spezifischen Tabellen-Elements
-            // identisch im Overlay ankommen.
+            // Cell-Padding-Variable durchreichen (kosmetisch — die echten
+            // Widths werden gleich per measure() vom Original abgegriffen).
             var styles = getComputedStyle(wrapper);
-            var labelW  = styles.getPropertyValue("--vgl-label-width").trim();
-            var colW    = styles.getPropertyValue("--vgl-column-width").trim();
-            var pad     = styles.getPropertyValue("--vgl-cell-padding").trim();
-            if (labelW) overlay.style.setProperty("--vgl-overlay-label-width", labelW);
-            if (colW)   overlay.style.setProperty("--vgl-overlay-column-width", colW);
-            if (pad)    overlay.style.setProperty("--vgl-cell-padding", pad);
+            var pad = styles.getPropertyValue("--vgl-cell-padding").trim();
+            if (pad) overlay.style.setProperty("--vgl-cell-padding", pad);
 
             document.body.appendChild(overlay);
 
@@ -602,6 +597,7 @@
                 rowIdx: rowIdx,
                 trackEl: track,
                 scrollWrap: scrollWrap,
+                labelEl: labelClone,
                 originalLabel: labelCell,
                 tableInView: false,
                 rowInView: true
@@ -609,6 +605,54 @@
         });
 
         if (!overlays.length) return;
+
+        // ─── Position + Spaltenbreiten am Original messen ─────────────
+        // position:fixed allein reicht nicht — die Tabelle steht in einem
+        // Bricks-Container, der je nach Layout horizontal versetzt sein
+        // kann. Wir messen den Wrapper-Rect + jede Original-Cell und
+        // tragen die Werte 1:1 auf den Overlay/Klon. Damit sitzen die
+        // Buttons pixelgenau unter ihren jeweiligen Spalten.
+        function measure(){
+            var rect = wrapper.getBoundingClientRect();
+            overlays.forEach(function(o){
+                // Overlay an Tabellen-Position kleben, NICHT viewport-breit.
+                o.el.style.left  = rect.left + "px";
+                o.el.style.right = "auto";
+                o.el.style.width = rect.width + "px";
+
+                // Label-Spalte: Breite vom Original.
+                var lw = o.originalLabel.offsetWidth;
+                if (lw) {
+                    o.labelEl.style.flex     = "0 0 " + lw + "px";
+                    o.labelEl.style.width    = lw + "px";
+                    o.labelEl.style.minWidth = lw + "px";
+                }
+
+                // Karten-Zellen: Breite + (falls Card breiter ist) Padding-
+                // Override, damit Buttons unter den richtigen Spalten landen.
+                var origCells  = wrapper.querySelectorAll(
+                    ".vergleich-track .vergleich-zelle.is-sticky-bottom-overlay[data-row-index=\"" + o.rowIdx + "\"]"
+                );
+                var cloneCells = o.trackEl.querySelectorAll(".vergleich-zelle");
+                var n = Math.min(origCells.length, cloneCells.length);
+                for (var i = 0; i < n; i++) {
+                    var w = origCells[i].offsetWidth;
+                    if (!w) continue;
+                    cloneCells[i].style.flex     = "0 0 " + w + "px";
+                    cloneCells[i].style.width    = w + "px";
+                    cloneCells[i].style.minWidth = w + "px";
+                }
+            });
+        }
+        measure();
+        window.addEventListener("resize", measure);
+        // Bei horizontalem Page-Scroll (selten, aber moeglich) re-measure'n,
+        // damit Overlay an der Tabellen-X-Position bleibt.
+        window.addEventListener("scroll", measure, { passive: true });
+        if (typeof ResizeObserver !== "undefined") {
+            var ro = new ResizeObserver(measure);
+            ro.observe(wrapper);
+        }
 
         // ─── Visibility-Logik via IntersectionObserver ────────────────
         function updateVisibility(o){
