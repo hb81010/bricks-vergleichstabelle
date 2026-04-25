@@ -3024,6 +3024,11 @@ class Element_Vergleich extends \Bricks\Element {
                 'type'        => 'checkbox',
                 'description' => esc_html__( 'Diese Zeile (Label + alle Produktspalten) bleibt beim vertikalen Scrollen am oberen Viewport-Rand hängen. Bei mehreren sticky Zeilen stapeln sie sich — bei Bedarf Sticky-Abstand auf Element-Ebene anpassen.', 'bricks-vergleich' ),
             ],
+            'stickyBottomOverlay' => [
+                'label'       => esc_html__( 'Sticky am unteren Rand (Overlay)', 'bricks-vergleich' ),
+                'type'        => 'checkbox',
+                'description' => esc_html__( 'Klont diese Zeile in einen Overlay am unteren Viewport-Rand (Finanzfluss-Style). Wenn die Original-Zeile beim Scrollen aus dem Viewport rutscht, slidet der Overlay von unten ein — sobald die Original-Zeile wieder sichtbar wird (oder die Tabelle komplett oberhalb/unterhalb), slidet er aus. Ideal für die Angebot-/CTA-Zeile bei langen Tabellen.', 'bricks-vergleich' ),
+            ],
             'cellAlign' => [
                 'label'   => esc_html__( 'Inhalt ausrichten', 'bricks-vergleich' ),
                 'type'    => 'select',
@@ -3539,6 +3544,15 @@ class Element_Vergleich extends \Bricks\Element {
             if ( ! empty( $row['stickyRow'] ) ) {
                 $cls .= ' is-sticky-row';
             }
+            // Marker für Sticky-Bottom-Overlay: JS klont diese Zeile (Label
+            // + alle Karten-Zellen) in einen am Body fixierten Overlay
+            // und blendet ihn ein, sobald die Original-Zeile beim Scrollen
+            // aus dem Viewport rutscht. Klasse muss synchron auf Label und
+            // allen Karten-Zellen sitzen, damit JS sie via dem gemeinsamen
+            // data-row-index findet.
+            if ( ! empty( $row['stickyBottomOverlay'] ) ) {
+                $cls .= ' is-sticky-bottom-overlay';
+            }
 
             $extra = ' data-row-index="' . (int) $idx . '"';
             if ( $collapsible ) {
@@ -4016,6 +4030,7 @@ class Element_Vergleich extends \Bricks\Element {
             if ( $idx === (int) $this->_first_collapsible_idx ) $classes[] = 'is-peek';
         }
         if ( ! empty( $row['stickyRow'] ) ) $classes[] = 'is-sticky-row';
+        if ( ! empty( $row['stickyBottomOverlay'] ) ) $classes[] = 'is-sticky-bottom-overlay';
         if ( $append_html !== '' ) $classes[] = 'has-score-anchor';
         if ( $align ) {
             $map = [
@@ -7293,6 +7308,84 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-card.is-pinned .vergleich-pin { color: var(--vgl-pin-color-active, #111827); }
         .vergleich-card.is-pinned .vergleich-pin__icon--off { display: none; }
         .vergleich-card.is-pinned .vergleich-pin__icon--on  { display: block; }
+
+        /* ─── Sticky-Bottom-Overlay ───────────────────────────────────────
+           Wird im Frontend von bindStickyBottomOverlay() in den Body geklont,
+           sobald eine Zeile mit `stickyBottomOverlay` markiert ist. Default
+           versteckt unter dem Viewport (translateY 105% — die 5% extra
+           verstecken auch den Box-Shadow). Bei Aktivierung slidet er rein.
+           Vom JS gesetzte CSS-Variablen (--vgl-overlay-label-width,
+           --vgl-overlay-column-width) sorgen dafuer, dass das Overlay
+           pixelgenau wie das Original ueber der Tabelle sitzt — auch wenn
+           Tabellen-Werte pro Element unterschiedlich sind. */
+        .vergleich-bottom-overlay {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 100;
+            background: #ffffff;
+            box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
+            transform: translateY(105%);
+            transition: transform 280ms cubic-bezier(0.22, 0.61, 0.36, 1);
+            pointer-events: none;
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        .vergleich-bottom-overlay.is-active {
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .vergleich-bottom-overlay__inner {
+            display: grid;
+            grid-template-columns: var(--vgl-overlay-label-width, var(--vgl-label-width, 200px)) minmax(0, 1fr);
+            align-items: stretch;
+            max-width: 100%;
+        }
+        .vergleich-bottom-overlay__label {
+            display: flex;
+            align-items: center;
+            padding: 10px var(--vgl-cell-padding, 16px);
+            font-weight: 600;
+            color: #111827;
+            background: var(--vgl-label-bg, #f9fafb);
+            border-right: 1px solid rgba(0, 0, 0, 0.06);
+            min-width: 0;
+        }
+        .vergleich-bottom-overlay__scroll {
+            overflow: hidden; /* horizontal-Sync wird per JS via scrollLeft gemacht */
+            min-width: 0;
+        }
+        .vergleich-bottom-overlay__track {
+            display: flex;
+            align-items: stretch;
+            gap: 0;
+            min-width: 100%;
+        }
+        /* Cell-Klone behalten alle Original-Klassen (.vergleich-zelle, type-
+           Variante etc.) — wir geben ihnen nur die richtige Spalten-Breite,
+           damit sie horizontal sauber in eine Reihe passen. */
+        .vergleich-bottom-overlay__track > .vergleich-zelle {
+            flex: 0 0 var(--vgl-overlay-column-width, var(--vgl-column-width, 200px));
+            width: var(--vgl-overlay-column-width, var(--vgl-column-width, 200px));
+            min-height: auto;
+            padding: 10px var(--vgl-cell-padding, 16px);
+            border-left: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        .vergleich-bottom-overlay__track > .vergleich-zelle:first-child {
+            border-left: none;
+        }
+        /* Im Builder soll der Overlay nicht den Editor blockieren — JS
+           rendert ihn ohnehin nur im Frontend, aber sicherheitshalber. */
+        body.brx-builder .vergleich-bottom-overlay,
+        body.brx-canvas .vergleich-bottom-overlay {
+            display: none !important;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .vergleich-bottom-overlay {
+                transition: none;
+            }
+        }
         </style>';
     }
 

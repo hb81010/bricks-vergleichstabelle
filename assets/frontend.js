@@ -513,6 +513,154 @@
     //     Translation, damit das Label optisch ueber der Card bleibt.
     //   - Keine Persistenz: bei Reload ist die Pinnung bewusst weg.
     // ========================================================================
+    /**
+     * Sticky-Bottom-Overlay: klont jede Zeile mit `.is-sticky-bottom-overlay`
+     * (vom PHP-Repeater-Flag `stickyBottomOverlay`) in einen am Body
+     * befestigten Overlay-Container. IntersectionObserver entscheidet pro
+     * Scroll, ob der Overlay sichtbar sein soll:
+     *   - Original-Zeile NICHT im Viewport (= weit oben oder unten)
+     *   - UND Tabelle generell mind. teilweise im Viewport
+     * Sonst slidet er aus. Horizontaler Scroll wird mit der Original-Tabelle
+     * synchronisiert (sonst rutschen die Karten-Klone bei breiten Tabellen
+     * aus dem sichtbaren Bereich).
+     *
+     * Cleanup via MutationObserver: sobald der Wrapper aus dem DOM ist,
+     * wird der Overlay entfernt (sonst bleiben "Geist-Overlays" stehen
+     * nach Bricks-AJAX-Re-Render im Builder/Canvas).
+     */
+    function bindStickyBottomOverlay(wrapper){
+        if (wrapper._vglBottomOverlayBound) return;
+        wrapper._vglBottomOverlayBound = true;
+
+        var labelCells = wrapper.querySelectorAll(".vergleich-labels .vergleich-label.is-sticky-bottom-overlay");
+        if (!labelCells.length) return;
+
+        var scroll = wrapper.querySelector(".vergleich-scroll");
+        if (!scroll) return;
+
+        var overlays = []; // { el, rowIdx, scrollEl, observer, originalLabel }
+
+        labelCells.forEach(function(labelCell){
+            var rowIdx = labelCell.getAttribute("data-row-index");
+            if (rowIdx === null) return;
+            var cardCells = wrapper.querySelectorAll(
+                ".vergleich-track .vergleich-zelle.is-sticky-bottom-overlay[data-row-index=\"" + rowIdx + "\"]"
+            );
+            if (!cardCells.length) return;
+
+            // ─── Overlay-Container bauen ──────────────────────────────
+            var overlay = document.createElement("div");
+            overlay.className = "vergleich-bottom-overlay";
+            overlay.setAttribute("aria-hidden", "true");
+
+            var inner = document.createElement("div");
+            inner.className = "vergleich-bottom-overlay__inner";
+
+            // Label-Klon (ohne ARIA-IDs, sonst kollidieren sie mit dem Original)
+            var labelClone = labelCell.cloneNode(true);
+            labelClone.removeAttribute("id");
+            labelClone.removeAttribute("role");
+            labelClone.removeAttribute("aria-rowindex");
+            labelClone.classList.remove("vergleich-label");
+            labelClone.classList.add("vergleich-bottom-overlay__label");
+
+            var scrollWrap = document.createElement("div");
+            scrollWrap.className = "vergleich-bottom-overlay__scroll";
+
+            var track = document.createElement("div");
+            track.className = "vergleich-bottom-overlay__track";
+
+            cardCells.forEach(function(cell){
+                var clone = cell.cloneNode(true);
+                clone.removeAttribute("id");
+                clone.removeAttribute("aria-labelledby");
+                clone.removeAttribute("aria-rowindex");
+                clone.removeAttribute("role");
+                track.appendChild(clone);
+            });
+
+            scrollWrap.appendChild(track);
+            inner.appendChild(labelClone);
+            inner.appendChild(scrollWrap);
+            overlay.appendChild(inner);
+
+            // CSS-Vars von Wrapper auf Overlay übertragen, damit Spalten-
+            // breite + Label-Breite des spezifischen Tabellen-Elements
+            // identisch im Overlay ankommen.
+            var styles = getComputedStyle(wrapper);
+            var labelW  = styles.getPropertyValue("--vgl-label-width").trim();
+            var colW    = styles.getPropertyValue("--vgl-column-width").trim();
+            var pad     = styles.getPropertyValue("--vgl-cell-padding").trim();
+            if (labelW) overlay.style.setProperty("--vgl-overlay-label-width", labelW);
+            if (colW)   overlay.style.setProperty("--vgl-overlay-column-width", colW);
+            if (pad)    overlay.style.setProperty("--vgl-cell-padding", pad);
+
+            document.body.appendChild(overlay);
+
+            overlays.push({
+                el: overlay,
+                rowIdx: rowIdx,
+                trackEl: track,
+                scrollWrap: scrollWrap,
+                originalLabel: labelCell,
+                tableInView: false,
+                rowInView: true
+            });
+        });
+
+        if (!overlays.length) return;
+
+        // ─── Visibility-Logik via IntersectionObserver ────────────────
+        function updateVisibility(o){
+            // Aktiv = Tabelle ist im Viewport, aber die Original-Zeile gerade nicht.
+            var shouldShow = o.tableInView && !o.rowInView;
+            o.el.classList.toggle("is-active", shouldShow);
+        }
+
+        var rowObs = new IntersectionObserver(function(entries){
+            entries.forEach(function(entry){
+                var o = overlays.find(function(x){ return x.originalLabel === entry.target; });
+                if (!o) return;
+                o.rowInView = entry.isIntersecting;
+                updateVisibility(o);
+            });
+        }, { threshold: 0, rootMargin: "0px 0px -1px 0px" });
+
+        var tableObs = new IntersectionObserver(function(entries){
+            entries.forEach(function(entry){
+                overlays.forEach(function(o){
+                    o.tableInView = entry.isIntersecting;
+                    updateVisibility(o);
+                });
+            });
+        }, { threshold: 0 });
+
+        overlays.forEach(function(o){ rowObs.observe(o.originalLabel); });
+        tableObs.observe(wrapper);
+
+        // ─── Horizontalen Scroll synchron halten ──────────────────────
+        function syncScroll(){
+            var x = scroll.scrollLeft;
+            overlays.forEach(function(o){
+                o.scrollWrap.scrollLeft = x;
+            });
+        }
+        scroll.addEventListener("scroll", syncScroll, { passive: true });
+        syncScroll();
+
+        // ─── Cleanup, wenn der Wrapper aus dem DOM verschwindet ───────
+        var cleanupObs = new MutationObserver(function(){
+            if (!wrapper.isConnected) {
+                overlays.forEach(function(o){ if (o.el && o.el.parentNode) o.el.parentNode.removeChild(o.el); });
+                rowObs.disconnect();
+                tableObs.disconnect();
+                cleanupObs.disconnect();
+                scroll.removeEventListener("scroll", syncScroll);
+            }
+        });
+        cleanupObs.observe(document.body, { childList: true, subtree: true });
+    }
+
     function bindPin(wrapper){
         if (wrapper._vglPinBound) return;
         if (!wrapper.classList.contains("has-pin")) return;
@@ -781,6 +929,7 @@
         bindRowHover(wrapper);
         bindLabelRowSync(wrapper);
         bindStickyRows(wrapper);
+        bindStickyBottomOverlay(wrapper);
         bindPin(wrapper);
         var burst = 0;
         (function tick(){
