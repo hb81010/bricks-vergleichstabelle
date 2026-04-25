@@ -7286,6 +7286,10 @@ class Element_Vergleich extends \Bricks\Element {
             line-height: 1;
             border-radius: 6px;
             transition: color .15s ease, background-color .15s ease;
+            /* GPU-Layer permanent — Pin wird beim Sticky-Top per JS via
+               translate3d mitgezogen, der Compositor-Layer macht das
+               smooth auch waehrend iOS-Momentum-Scroll. */
+            will-change: transform;
         }
         .vergleich-wrapper.has-pin.can-pin .vergleich-pin { display: inline-flex; }
         .vergleich-pin:hover {

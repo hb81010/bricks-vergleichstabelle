@@ -9,6 +9,28 @@
  * unten fängt dann alle nachfolgenden Canvas-Re-Renders ab.
  */
 (function(){
+    /**
+     * Touch-faehigen Scroll-Trigger binden.
+     *
+     * Auf iOS/Mobile-Safari werden `scroll`-Events waehrend Momentum-Scroll
+     * sporadisch oder gar nicht gefeuert. Unsere RAF-getriebenen Sticky/Pin-
+     * Updates bleiben dann zwischen Frames stehen — bis das Momentum endet
+     * und ein abschliessender scroll-Event kommt. Visuell: kurze Stillstaende,
+     * dann ruckartiges Nachholen.
+     *
+     * Touch-Events (`touchmove`) feuern KONTINUIERLICH waehrend des
+     * Momentum-Scrolls — wir binden sie als zusaetzlichen Trigger.
+     * `scrollend` (Chrome 114+, Safari 18+) liefert einen sauberen finalen
+     * Tick nach Momentum-Ende, falls touch/scroll mal verpasst wurde.
+     * Alle Listener `passive: true`, damit der Native-Scroll nicht
+     * blockiert wird.
+     */
+    function bindScrollSync(target, handler){
+        target.addEventListener("scroll",    handler, { passive: true });
+        target.addEventListener("touchmove", handler, { passive: true });
+        target.addEventListener("scrollend", handler, { passive: true });
+    }
+
     function syncRows(wrapper){
         if (!wrapper || !wrapper.isConnected) return;
         var labels = wrapper.querySelectorAll(".vergleich-labels .vergleich-label");
@@ -280,10 +302,13 @@
         var posHandler = function(){ updateNavPosition(wrapper); };
 
         var scroll = wrapper.querySelector(".vergleich-scroll");
-        if (scroll) scroll.addEventListener("scroll", handler, { passive: true });
+        if (scroll) bindScrollSync(scroll, handler);
         window.addEventListener("resize", handler);
-        document.addEventListener("scroll", posHandler, { passive: true, capture: true });
-        window.addEventListener("scroll", posHandler, { passive: true });
+        // Page-Scroll: scroll + touchmove + scrollend (Mobile-Safari-Momentum-Fix).
+        bindScrollSync(window, posHandler);
+        // Document mit capture damit auch overflow:auto-Container im Pfad triggern.
+        document.addEventListener("scroll",    posHandler, { passive: true, capture: true });
+        document.addEventListener("touchmove", posHandler, { passive: true, capture: true });
 
         // Kein Dauer-RAF-Loop für die Pfeil-Position: die Pfeile müssen nur
         // neu positioniert werden, wenn entweder die Seite scrollt, das Fenster
@@ -507,10 +532,10 @@
         measure();
         update();
 
-        // Nur window.scroll binden — document+capture feuerte zuvor
-        // zusätzlich bei jedem Scroll, ohne neue Information zu liefern
-        // (doppelte Kosten auf Mobile). Page-Scrolls bubblen an window.
-        window.addEventListener("scroll", schedule, { passive: true });
+        // window.scroll + touchmove + scrollend → Mobile-Safari-Momentum-Fix:
+        // scroll-Event allein reicht nicht, weil iOS waehrend Momentum-Scroll
+        // die scroll-Events droppt. touchmove kommt kontinuierlich.
+        bindScrollSync(window, schedule);
         window.addEventListener("resize", remeasure);
         if (typeof ResizeObserver !== "undefined") {
             var ro = new ResizeObserver(remeasure);
@@ -819,7 +844,8 @@
         measure();
         update();
 
-        window.addEventListener("scroll", schedule, { passive: true });
+        // window.scroll + touchmove + scrollend → Mobile-Safari-Momentum-Fix.
+        bindScrollSync(window, schedule);
         window.addEventListener("resize", remeasure);
         if (typeof ResizeObserver !== "undefined") {
             var ro = new ResizeObserver(remeasure);
