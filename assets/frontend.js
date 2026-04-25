@@ -655,26 +655,39 @@
         }
 
         // ─── Visibility-Logik (geometriebasiert) ──────────────────────
-        // Overlay erscheint NUR, wenn die Original-Zeile noch unterhalb
-        // des Viewport-Bereichs liegt, der vom Overlay verdeckt wird
-        // (= User hat sie noch nicht erreicht). Sobald sie im Viewport
-        // ist ODER schon nach oben rausgescrollt — bleibt der Overlay
-        // aus. Verhindert das nervige Wieder-Aufploppen, wenn man unter
-        // die Tabelle weiterscrollt.
-        // Zusatz: Wenn die ganze Tabelle aus dem Viewport ist (oben oder
-        // unten raus) → ebenfalls aus.
+        // Overlay erscheint, wenn die Tabelle im Viewport-Bereich liegt
+        // UND die Original-Zeile gerade NICHT sichtbar ist (egal ob
+        // noch unten oder schon nach oben rausgescrollt). Das ist genau
+        // der Use-Case bei langen/aufgeklappten Tabellen: User liest
+        // weiter unten und soll trotzdem Zugriff auf den CTA haben.
+        //
+        // tableInView: Tabelle muss mit min. 60px in den Viewport
+        // ragen — sonst zaehlt sie als "verlassen" (verhindert, dass
+        // der Overlay nach unten ueber den Footer hinaus stehenbleibt,
+        // wenn der User schon weit drueber hinausgescrollt ist).
+        //
+        // Special-Case Aufklapp/Collapsible: Wenn die Original-Zeile
+        // im noch-nicht-aufgeklappten Bereich liegt, hat sie display:
+        // none → getBoundingClientRect liefert 0/0/0/0. Damit gilt
+        // rowInView = false (richtig: User sieht sie nicht), und der
+        // Overlay zeigt den CTA — genau das, was bei langen Tabellen
+        // mit eingeklapptem Bereich gewuenscht ist.
         function updateVisibility(){
             var wrapperRect = wrapper.getBoundingClientRect();
             var vh = window.innerHeight || document.documentElement.clientHeight;
-            var tableVisible = wrapperRect.bottom > 0 && wrapperRect.top < vh;
+            var minOverlap = 60; // px der Tabelle die im Viewport sein muessen
+            var tableInView = ( wrapperRect.bottom > minOverlap )
+                           && ( wrapperRect.top    < vh - minOverlap );
 
             overlays.forEach(function(o){
-                var rowRect  = o.originalLabel.getBoundingClientRect();
-                var overlayH = o.el.offsetHeight || 0;
-                // 8px Puffer, damit der Overlay schon ausblendet, kurz bevor
-                // sich Original und Klon visuell überlappen.
-                var rowStillBelow = rowRect.top > ( vh - overlayH - 8 );
-                var shouldShow    = tableVisible && rowStillBelow;
+                var rowRect = o.originalLabel.getBoundingClientRect();
+                // Original-Zeile ist genau dann sichtbar, wenn ihre
+                // Bounding-Box den Viewport ueberlappt (UND > 0 hoch
+                // ist, sonst liegt sie versteckt im Aufklapp-Bereich).
+                var rowInView = ( rowRect.height > 0 )
+                             && ( rowRect.bottom > 0 )
+                             && ( rowRect.top    < vh );
+                var shouldShow = tableInView && !rowInView;
                 o.el.classList.toggle("is-active", shouldShow);
             });
         }
