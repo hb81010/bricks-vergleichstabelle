@@ -6779,7 +6779,11 @@ class Element_Vergleich extends \Bricks\Element {
             position: absolute !important;
             top: var(--vgl-rank-offset-y, 8px);
             left: var(--vgl-rank-offset-x, 8px);
-            z-index: 5;
+            /* z-index 6 (statt 5), damit Ranking-Badge ueber Sticky-Top-Cells
+               liegt, die jetzt z-index 5 haben (sonst ueberdeckt die Bild-
+               Cell mit transform-Stacking-Context das Badge bei gleichem
+               z-index 5). */
+            z-index: 6;
             display: inline-flex !important;
             align-items: center;
             justify-content: center;
@@ -6854,7 +6858,8 @@ class Element_Vergleich extends \Bricks\Element {
             position: absolute !important;
             bottom: var(--vgl-score-offset-y, 8px);
             left: var(--vgl-score-offset-x, 8px);
-            z-index: 5;
+            /* z-index 6 (statt 5) — siehe Kommentar bei .vergleich-rank. */
+            z-index: 6;
             display: inline-flex !important;
             align-items: center;
             justify-content: center;

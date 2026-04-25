@@ -425,12 +425,24 @@
             }
         }
 
+        // Pin-Button (.vergleich-pin) und Ranking-Badge (.vergleich-rank)
+        // sitzen position:absolute an der Card — wenn die Card beim Scrollen
+        // nach oben rausrutscht, scrollen sie mit raus, waehrend die Sticky-
+        // Top-Cells per Translate oben gehalten werden. Wir ziehen sie mit
+        // dem Translate der OBERSTEN Sticky-Top-Reihe mit, damit sie an der
+        // gerade oben sichtbaren Top-Cell bleiben. (Score-Badge sitzt direkt
+        // IN der jeweiligen Cell und wandert automatisch mit dem parent-
+        // Translate mit — keine Extra-Behandlung noetig.)
+        var pinEls = wrapper.querySelectorAll(".vergleich-pin, .vergleich-rank");
+        var lastPinTy = -1;
+
         function update(){
             if (!rows.length) return;
             var wrapRect = wrapper.getBoundingClientRect();
             var wrapTop = wrapRect.top;
             var wrapBottom = wrapRect.bottom;
             var topAccum = baseOffset;
+            var firstRowTy = 0; // Translate der obersten sticky-top-Reihe
 
             for (var i = 0; i < rows.length; i++) {
                 var row = rows[i];
@@ -454,7 +466,30 @@
                     }
                     lastTy[i] = tyRounded;
                 }
+                if (i === 0) firstRowTy = tyRounded;
                 if (translateY > 0) topAccum += row.height;
+            }
+
+            // Pin-Buttons + Ranking-Badges mit der obersten sticky-top-Reihe
+            // mitziehen. Wir setzen `!important`, weil das Ranking-Badge
+            // CSS pos-Regeln mit `transform: none !important` ueberschreiben
+            // wuerde sonst (z.B. .has-ranking-pos-top-left). Beim Reset
+            // auf 0 nutzen wir removeProperty, damit das CSS-Default
+            // (transform: none !important fuer Position-Klassen) wieder
+            // greift und Rank an seiner natuerlichen Card-Position sitzt.
+            if (pinEls.length && firstRowTy !== lastPinTy) {
+                for (var p = 0; p < pinEls.length; p++) {
+                    if (firstRowTy > 0) {
+                        pinEls[p].style.setProperty(
+                            "transform",
+                            "translate3d(0," + firstRowTy + "px,0)",
+                            "important"
+                        );
+                    } else {
+                        pinEls[p].style.removeProperty("transform");
+                    }
+                }
+                lastPinTy = firstRowTy;
             }
         }
 
