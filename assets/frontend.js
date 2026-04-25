@@ -514,217 +514,216 @@
     //   - Keine Persistenz: bei Reload ist die Pinnung bewusst weg.
     // ========================================================================
     /**
-     * Sticky-Bottom-Overlay: klont jede Zeile mit `.is-sticky-bottom-overlay`
-     * (vom PHP-Repeater-Flag `stickyBottomOverlay`) in einen am Body
-     * befestigten Overlay-Container. IntersectionObserver entscheidet pro
-     * Scroll, ob der Overlay sichtbar sein soll:
-     *   - Original-Zeile NICHT im Viewport (= weit oben oder unten)
-     *   - UND Tabelle generell mind. teilweise im Viewport
-     * Sonst slidet er aus. Horizontaler Scroll wird mit der Original-Tabelle
-     * synchronisiert (sonst rutschen die Karten-Klone bei breiten Tabellen
-     * aus dem sichtbaren Bereich).
+     * Sticky-Bottom-Zeile: spiegelverkehrtes Pendant zu bindStickyRows.
+     * Pinnt eine Zeile am UNTEREN Rand der sichtbaren Tabelle (statt am
+     * oberen). Identische Mechanik: JS misst die natuerliche Position,
+     * verschiebt die Zellen per transform:translate3d so, dass sie am
+     * unteren Viewport- bzw. Tabellen-Rand bleiben — Zeile bleibt dabei
+     * IMMER innerhalb der Tabellen-Box, nie als floating Overlay
+     * darueber/darunter.
      *
-     * Cleanup via MutationObserver: sobald der Wrapper aus dem DOM ist,
-     * wird der Overlay entfernt (sonst bleiben "Geist-Overlays" stehen
-     * nach Bricks-AJAX-Re-Render im Builder/Canvas).
+     * Algorithmus pro Frame:
+     *   effectiveBottom = min(viewportBottom, wrapBottom)
+     *   translateY      = effectiveBottom - naturalBottom
+     *   clamp innerhalb [wrapTop - naturalTop, wrapBottom - naturalBottom]
+     *
+     * Damit:
+     *   - Tabelle teilweise im Viewport, Tabellen-Ende noch unten raus →
+     *     Zeile klebt am Viewport-Bottom.
+     *   - Tabellen-Ende kommt in Sicht → Zeile klebt am Tabellen-Bottom
+     *     (bleibt INNERHALB der Tabellen-Box).
+     *   - Tabelle nach unten verlassen → Zeile scrollt mit raus.
+     *   - Tabelle noch nicht erreicht → Zeile bleibt am natuerlichen Top.
+     *
+     * Funktioniert mit Aufklapp-Funktion: ResizeObserver am Wrapper
+     * triggert remeasure(), wenn die Tabelle hoeher/niedriger wird.
      */
-    function bindStickyBottomOverlay(wrapper){
-        if (wrapper._vglBottomOverlayBound) return;
-        wrapper._vglBottomOverlayBound = true;
+    function bindStickyBottomRows(wrapper){
+        if (wrapper._vglStickyBottomBound) return;
 
-        var labelCells = wrapper.querySelectorAll(".vergleich-labels .vergleich-label.is-sticky-bottom-overlay");
-        if (!labelCells.length) return;
+        // Sticky-Bottom-Zellen je rowIdx sammeln (Label + alle Card-Zellen).
+        var rowMap = {};
+        wrapper.querySelectorAll(".is-sticky-bottom-overlay").forEach(function(cell){
+            var idx = cell.getAttribute("data-row-index");
+            if (idx === null) return;
+            (rowMap[idx] = rowMap[idx] || []).push(cell);
+        });
+        if (!Object.keys(rowMap).length) return;
+        wrapper._vglStickyBottomBound = true;
 
-        var scroll = wrapper.querySelector(".vergleich-scroll");
-        if (!scroll) return;
-
-        var overlays = []; // { el, rowIdx, scrollEl, observer, originalLabel }
-
-        labelCells.forEach(function(labelCell){
-            var rowIdx = labelCell.getAttribute("data-row-index");
-            if (rowIdx === null) return;
-            var cardCells = wrapper.querySelectorAll(
-                ".vergleich-track .vergleich-zelle.is-sticky-bottom-overlay[data-row-index=\"" + rowIdx + "\"]"
-            );
-            if (!cardCells.length) return;
-
-            // ─── Overlay-Container bauen ──────────────────────────────
-            var overlay = document.createElement("div");
-            overlay.className = "vergleich-bottom-overlay";
-            overlay.setAttribute("aria-hidden", "true");
-
-            var inner = document.createElement("div");
-            inner.className = "vergleich-bottom-overlay__inner";
-
-            // Label-Klon (ohne ARIA-IDs, sonst kollidieren sie mit dem Original)
-            var labelClone = labelCell.cloneNode(true);
-            labelClone.removeAttribute("id");
-            labelClone.removeAttribute("role");
-            labelClone.removeAttribute("aria-rowindex");
-            labelClone.classList.remove("vergleich-label");
-            labelClone.classList.add("vergleich-bottom-overlay__label");
-
-            var scrollWrap = document.createElement("div");
-            scrollWrap.className = "vergleich-bottom-overlay__scroll";
-
-            var track = document.createElement("div");
-            track.className = "vergleich-bottom-overlay__track";
-
-            cardCells.forEach(function(cell){
-                var clone = cell.cloneNode(true);
-                clone.removeAttribute("id");
-                clone.removeAttribute("aria-labelledby");
-                clone.removeAttribute("aria-rowindex");
-                clone.removeAttribute("role");
-                track.appendChild(clone);
-            });
-
-            scrollWrap.appendChild(track);
-            inner.appendChild(labelClone);
-            inner.appendChild(scrollWrap);
-            overlay.appendChild(inner);
-
-            // Cell-Padding-Variable durchreichen (kosmetisch — die echten
-            // Widths werden gleich per measure() vom Original abgegriffen).
-            var styles = getComputedStyle(wrapper);
-            var pad = styles.getPropertyValue("--vgl-cell-padding").trim();
-            if (pad) overlay.style.setProperty("--vgl-cell-padding", pad);
-
-            document.body.appendChild(overlay);
-
-            overlays.push({
-                el: overlay,
-                rowIdx: rowIdx,
-                trackEl: track,
-                scrollWrap: scrollWrap,
-                labelEl: labelClone,
-                originalLabel: labelCell,
-                tableInView: false,
-                rowInView: true
-            });
+        // Sortierung absteigend: Untere Sticky-Bottom-Zeilen zuerst, damit
+        // sie sich von unten her stapeln (analog wie sticky-top von oben).
+        var sortedIdxs = Object.keys(rowMap).sort(function(a, b){
+            return parseInt(b, 10) - parseInt(a, 10);
         });
 
-        if (!overlays.length) return;
+        var rows = []; // { cells, offsetInWrap, height }
+        var lastTy = [];
 
-        // ─── Position + Spaltenbreiten am Original messen ─────────────
-        // position:fixed allein reicht nicht — die Tabelle steht in einem
-        // Bricks-Container, der je nach Layout horizontal versetzt sein
-        // kann. Wir messen den Wrapper-Rect + jede Original-Cell und
-        // tragen die Werte 1:1 auf den Overlay/Klon. Damit sitzen die
-        // Buttons pixelgenau unter ihren jeweiligen Spalten.
-        function measure(){
-            var rect = wrapper.getBoundingClientRect();
-            overlays.forEach(function(o){
-                // Overlay an Tabellen-Position kleben, NICHT viewport-breit.
-                o.el.style.left  = rect.left + "px";
-                o.el.style.right = "auto";
-                o.el.style.width = rect.width + "px";
+        // Container, die Padding-Bottom kriegen muessen, damit die per
+        // transform translierte Cell sichtbar im Padding-Bereich liegt
+        // (nicht durch overflow:hidden / overflow:clip der Container
+        // abgeschnitten wird).
+        var labelsCol = wrapper.querySelector(".vergleich-labels");
+        var cardsList = wrapper.querySelectorAll(".vergleich-card");
 
-                // Label-Spalte: Breite vom Original.
-                var lw = o.originalLabel.offsetWidth;
-                if (lw) {
-                    o.labelEl.style.flex     = "0 0 " + lw + "px";
-                    o.labelEl.style.width    = lw + "px";
-                    o.labelEl.style.minWidth = lw + "px";
-                }
-
-                // Karten-Zellen: Breite + (falls Card breiter ist) Padding-
-                // Override, damit Buttons unter den richtigen Spalten landen.
-                var origCells  = wrapper.querySelectorAll(
-                    ".vergleich-track .vergleich-zelle.is-sticky-bottom-overlay[data-row-index=\"" + o.rowIdx + "\"]"
-                );
-                var cloneCells = o.trackEl.querySelectorAll(".vergleich-zelle");
-                var n = Math.min(origCells.length, cloneCells.length);
-                for (var i = 0; i < n; i++) {
-                    var w = origCells[i].offsetWidth;
-                    if (!w) continue;
-                    cloneCells[i].style.flex     = "0 0 " + w + "px";
-                    cloneCells[i].style.width    = w + "px";
-                    cloneCells[i].style.minWidth = w + "px";
-                }
-            });
+        function setBottomPadding(px){
+            var v = px > 0 ? px + "px" : "";
+            if (labelsCol) labelsCol.style.paddingBottom = v;
+            cardsList.forEach(function(c){ c.style.paddingBottom = v; });
         }
+
+        function measure(){
+            rows = [];
+            lastTy = [];
+            // Transforms + Padding zuerst zuruecksetzen, damit gemessene
+            // Positionen NATUERLICH sind (kein altes Padding hineingerechnet).
+            for (var k = 0; k < sortedIdxs.length; k++) {
+                var cellsK = rowMap[sortedIdxs[k]];
+                for (var i = 0; i < cellsK.length; i++) cellsK[i].style.transform = "";
+            }
+            setBottomPadding(0);
+
+            var wrapRect = wrapper.getBoundingClientRect();
+            var wrapTop = wrapRect.top;
+            var totalPadding = 0;
+            for (var m = 0; m < sortedIdxs.length; m++) {
+                var cellsM = rowMap[sortedIdxs[m]];
+                if (!cellsM.length) continue;
+                var r = cellsM[0].getBoundingClientRect();
+                rows.push({
+                    cells: cellsM,
+                    offsetInWrap: r.top - wrapTop,
+                    height: r.height
+                });
+                lastTy.push(0);
+                totalPadding += r.height;
+            }
+            // Padding-Bottom auf Labels-Spalte UND alle Card-Container.
+            // Der Wrapper selbst kriegt KEIN padding — der Trick ist, dass
+            // jede einzelne Card und die Labels-Spalte am Bottom etwas
+            // Spielraum hat, damit die per translate verschobene Cell
+            // dort sichtbar liegt (nicht durch overflow:hidden der Card
+            // abgeschnitten wird).
+            // Nur wenn Tabelle laenger als Viewport — sonst nutzloser
+            // sichtbarer Leerraum, weil Pin bei kurzen Tabellen nie
+            // aktiv wird (Zeile immer voll sichtbar).
+            var vh = window.innerHeight || document.documentElement.clientHeight;
+            if (totalPadding > 0 && wrapRect.height > vh) {
+                setBottomPadding(totalPadding);
+            }
+        }
+
+        function update(){
+            if (!rows.length) return;
+            var wrapRect = wrapper.getBoundingClientRect();
+            var wrapTop    = wrapRect.top;
+            var wrapBottom = wrapRect.bottom;
+            var vh = window.innerHeight || document.documentElement.clientHeight;
+            // Stapel-Akkumulator: jede aktiv gepinnte Zeile reduziert den
+            // verfuegbaren Bottom-Bereich fuer die naechste.
+            var bottomAccum = 0;
+
+            // Sticky-Top-Reservierung: Cells mit `.is-sticky-row` (von
+            // bindStickyRows verwaltet) belegen den oberen Viewport-Bereich.
+            // Unsere Pin-Cells duerfen nicht in diesen Bereich rutschen,
+            // sonst ueberlagern sie sich mit den oben gepinnten Sticky-Top-
+            // Cells beim Scrollen — der "Zick" am Uebergang.
+            // (Wir messen die Original-Hoehe an der Label-Spalte, weil das
+            // pro Row eine Cell ist; Card-Cells haben fuer dieselbe Row
+            // identische Hoehe.)
+            var stickyTopHeight = 0;
+            var stickyTopCells = wrapper.querySelectorAll(
+                ".vergleich-labels .vergleich-label.is-sticky-row"
+            );
+            for (var st = 0; st < stickyTopCells.length; st++) {
+                stickyTopHeight += stickyTopCells[st].getBoundingClientRect().height;
+            }
+            var baseOffsetRaw = parseFloat(
+                window.getComputedStyle(wrapper).getPropertyValue("--vgl-sticky-row-top")
+            );
+            var baseOffset = isNaN(baseOffsetRaw) ? 0 : baseOffsetRaw;
+            var stickyTopReserved = baseOffset + stickyTopHeight;
+
+            for (var i = 0; i < rows.length; i++) {
+                var row = rows[i];
+                var naturalTop    = wrapTop + row.offsetInWrap;
+                var naturalBottom = naturalTop + row.height;
+                var anchorBottom  = Math.min(vh - bottomAccum, wrapBottom);
+                var anchorTop     = anchorBottom - row.height;
+
+                // Pinning-Regel: pinne IMMER am Anker, AUSSER wenn die
+                // natuerliche Position der Zeile gerade vollstaendig im
+                // Viewport sichtbar ist. Damit:
+                //   - Zeile sichtbar an Reihe 5 → bleibt natuerlich.
+                //   - Zeile noch unten raus (User noch nicht da)  → pinnen
+                //     (Translation positiv = Zeile hoch in den Anker).
+                //   - Zeile bereits oben raus (User schon weiter unten)
+                //     → pinnen (Translation positiv = Zeile runter in
+                //     den Anker, sodass sie wieder am Bottom erscheint).
+                //   - Zeile in collapsed Bereich (height=0)            → pinnen.
+                // Clamp innerhalb wrapper, damit Zeile nie ueber den
+                // Tabellen-Rand hinaus rutscht.
+                var rowFullyVisible = (row.height > 0)
+                                   && (naturalTop    >= 0)
+                                   && (naturalBottom <= vh);
+
+                var translateY = 0;
+                if (!rowFullyVisible) {
+                    translateY = anchorBottom - naturalBottom;
+                    // minT: Pin's Top darf nicht hoeher als wrapTop UND nicht
+                    // hoeher als die Sticky-Top-Reservierung (sonst ueberlappt
+                    // Pin mit den oben gepinnten Sticky-Top-Cells).
+                    var minT = Math.max(
+                        wrapTop - naturalTop,
+                        stickyTopReserved - naturalTop
+                    );
+                    var maxT = wrapBottom - naturalBottom;
+                    // Wenn Sticky-Top + Pin-Hoehe nicht mehr in den verbleibenden
+                    // Tabellen-Bereich passt → kein Pin, Cell scrollt mit raus.
+                    if (minT > maxT) {
+                        translateY = 0;
+                    } else {
+                        if (translateY < minT) translateY = minT;
+                        if (translateY > maxT) translateY = maxT;
+                    }
+                }
+
+                var tyRounded = Math.round(translateY);
+                if (tyRounded !== lastTy[i]) {
+                    var t = tyRounded !== 0 ? "translate3d(0," + tyRounded + "px,0)" : "";
+                    for (var c = 0; c < row.cells.length; c++) {
+                        row.cells[c].style.transform = t;
+                    }
+                    lastTy[i] = tyRounded;
+                }
+                if (tyRounded !== 0) bottomAccum += row.height;
+            }
+        }
+
+        var pending = false;
+        function schedule(){
+            if (pending) return;
+            pending = true;
+            requestAnimationFrame(function(){ update(); pending = false; });
+        }
+        function remeasure(){
+            measure();
+            schedule();
+        }
+
         measure();
-        window.addEventListener("resize", measure);
-        // Bei horizontalem Page-Scroll (selten, aber moeglich) re-measure'n,
-        // damit Overlay an der Tabellen-X-Position bleibt.
-        window.addEventListener("scroll", measure, { passive: true });
+        update();
+
+        window.addEventListener("scroll", schedule, { passive: true });
+        window.addEventListener("resize", remeasure);
         if (typeof ResizeObserver !== "undefined") {
-            var ro = new ResizeObserver(measure);
+            var ro = new ResizeObserver(remeasure);
             ro.observe(wrapper);
         }
-
-        // ─── Visibility-Logik (geometriebasiert) ──────────────────────
-        // Overlay erscheint, wenn die Tabelle im Viewport-Bereich liegt
-        // UND die Original-Zeile gerade NICHT sichtbar ist (egal ob
-        // noch unten oder schon nach oben rausgescrollt). Das ist genau
-        // der Use-Case bei langen/aufgeklappten Tabellen: User liest
-        // weiter unten und soll trotzdem Zugriff auf den CTA haben.
-        //
-        // tableInView: Tabelle muss mit min. 60px in den Viewport
-        // ragen — sonst zaehlt sie als "verlassen" (verhindert, dass
-        // der Overlay nach unten ueber den Footer hinaus stehenbleibt,
-        // wenn der User schon weit drueber hinausgescrollt ist).
-        //
-        // Special-Case Aufklapp/Collapsible: Wenn die Original-Zeile
-        // im noch-nicht-aufgeklappten Bereich liegt, hat sie display:
-        // none → getBoundingClientRect liefert 0/0/0/0. Damit gilt
-        // rowInView = false (richtig: User sieht sie nicht), und der
-        // Overlay zeigt den CTA — genau das, was bei langen Tabellen
-        // mit eingeklapptem Bereich gewuenscht ist.
-        function updateVisibility(){
-            var wrapperRect = wrapper.getBoundingClientRect();
-            var vh = window.innerHeight || document.documentElement.clientHeight;
-            var minOverlap = 60; // px der Tabelle die im Viewport sein muessen
-            var tableInView = ( wrapperRect.bottom > minOverlap )
-                           && ( wrapperRect.top    < vh - minOverlap );
-
-            overlays.forEach(function(o){
-                var rowRect = o.originalLabel.getBoundingClientRect();
-                // Original-Zeile ist genau dann sichtbar, wenn ihre
-                // Bounding-Box den Viewport ueberlappt (UND > 0 hoch
-                // ist, sonst liegt sie versteckt im Aufklapp-Bereich).
-                var rowInView = ( rowRect.height > 0 )
-                             && ( rowRect.bottom > 0 )
-                             && ( rowRect.top    < vh );
-                var shouldShow = tableInView && !rowInView;
-                o.el.classList.toggle("is-active", shouldShow);
-            });
-        }
-
-        var visTick = 0;
-        function scheduleUpdate(){
-            if (visTick) return;
-            visTick = requestAnimationFrame(function(){
-                visTick = 0;
-                updateVisibility();
-            });
-        }
-        window.addEventListener("scroll", scheduleUpdate, { passive: true });
-        window.addEventListener("resize", scheduleUpdate);
-        scheduleUpdate();
-
-        // ─── Horizontalen Scroll synchron halten ──────────────────────
-        function syncScroll(){
-            var x = scroll.scrollLeft;
-            overlays.forEach(function(o){
-                o.scrollWrap.scrollLeft = x;
-            });
-        }
-        scroll.addEventListener("scroll", syncScroll, { passive: true });
-        syncScroll();
-
-        // ─── Cleanup, wenn der Wrapper aus dem DOM verschwindet ───────
-        var cleanupObs = new MutationObserver(function(){
-            if (!wrapper.isConnected) {
-                overlays.forEach(function(o){ if (o.el && o.el.parentNode) o.el.parentNode.removeChild(o.el); });
-                cleanupObs.disconnect();
-                window.removeEventListener("scroll", scheduleUpdate);
-                window.removeEventListener("resize", scheduleUpdate);
-                scroll.removeEventListener("scroll", syncScroll);
-            }
-        });
-        cleanupObs.observe(document.body, { childList: true, subtree: true });
+        // Layout-Settling: Aufklapp-Buttons, Bilder, Fonts.
+        setTimeout(remeasure, 100);
+        setTimeout(remeasure, 500);
     }
 
     function bindPin(wrapper){
@@ -995,7 +994,7 @@
         bindRowHover(wrapper);
         bindLabelRowSync(wrapper);
         bindStickyRows(wrapper);
-        bindStickyBottomOverlay(wrapper);
+        bindStickyBottomRows(wrapper);
         bindPin(wrapper);
         var burst = 0;
         (function tick(){

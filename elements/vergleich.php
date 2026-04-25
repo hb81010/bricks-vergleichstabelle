@@ -3025,9 +3025,9 @@ class Element_Vergleich extends \Bricks\Element {
                 'description' => esc_html__( 'Diese Zeile (Label + alle Produktspalten) bleibt beim vertikalen Scrollen am oberen Viewport-Rand hängen. Bei mehreren sticky Zeilen stapeln sie sich — bei Bedarf Sticky-Abstand auf Element-Ebene anpassen.', 'bricks-vergleich' ),
             ],
             'stickyBottomOverlay' => [
-                'label'       => esc_html__( 'Sticky am unteren Rand (Overlay)', 'bricks-vergleich' ),
+                'label'       => esc_html__( 'Sticky am unteren Tabellen-Rand', 'bricks-vergleich' ),
                 'type'        => 'checkbox',
-                'description' => esc_html__( 'Klont diese Zeile in einen Overlay am unteren Viewport-Rand (Finanzfluss-Style). Wenn die Original-Zeile beim Scrollen aus dem Viewport rutscht, slidet der Overlay von unten ein — sobald die Original-Zeile wieder sichtbar wird (oder die Tabelle komplett oberhalb/unterhalb), slidet er aus. Ideal für die Angebot-/CTA-Zeile bei langen Tabellen.', 'bricks-vergleich' ),
+                'description' => esc_html__( 'Pinnt diese Zeile (Label + alle Karten-Zellen + Buttons) am unteren Rand der sichtbaren Tabelle — analog zum „Sticky beim Scrollen" am oberen Rand, nur unten. Solange die Tabelle teilweise im Viewport ist und das Tabellen-Ende noch nicht erreicht, klebt die Zeile am unteren Viewport-Rand. Sobald das Tabellen-Ende in Sicht kommt, klebt sie am Tabellen-Ende — bleibt also IMMER innerhalb der Tabelle. Ideal für die Angebot-/CTA-Zeile bei langen oder aufklappbaren Tabellen.', 'bricks-vergleich' ),
             ],
             'cellAlign' => [
                 'label'   => esc_html__( 'Inhalt ausrichten', 'bricks-vergleich' ),
@@ -6620,8 +6620,11 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-zelle.is-sticky-row {
             /* Während Sticky aktiv ist: z-index + Hintergrund, damit die Zelle
                über dem Rest schwebt und nicht transparent wird. Das Transform
-               selbst kommt aus JS. */
-            z-index: 4;
+               selbst kommt aus JS. z-index 5 (statt 4) damit Sticky-Top
+               IMMER über Sticky-Bottom-Pin liegt — sonst kann der Pin im
+               Uebergangsframe (zwischen scroll + Sticky-Top-RAF-Update) kurz
+               sichtbar in den Top-Bereich rutschen. */
+            z-index: 5;
             /* will-change: transform → Browser hebt die Zelle auf einen eigenen
                Compositor-Layer (GPU). Ohne das würden die Sticky-Zellen auf
                Mobile (insbesondere iOS Safari) bei jedem Scroll-Frame neu
@@ -7309,89 +7312,31 @@ class Element_Vergleich extends \Bricks\Element {
         .vergleich-card.is-pinned .vergleich-pin__icon--off { display: none; }
         .vergleich-card.is-pinned .vergleich-pin__icon--on  { display: block; }
 
-        /* ─── Sticky-Bottom-Overlay ───────────────────────────────────────
-           Wird im Frontend von bindStickyBottomOverlay() in den Body geklont,
-           sobald eine Zeile mit `stickyBottomOverlay` markiert ist. Default
-           versteckt unter dem Viewport (translateY 105% — die 5% extra
-           verstecken auch den Box-Shadow). Bei Aktivierung slidet er rein.
-           Vom JS gesetzte CSS-Variablen (--vgl-overlay-label-width,
-           --vgl-overlay-column-width) sorgen dafuer, dass das Overlay
-           pixelgenau wie das Original ueber der Tabelle sitzt — auch wenn
-           Tabellen-Werte pro Element unterschiedlich sind. */
-        .vergleich-bottom-overlay {
-            position: fixed;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            z-index: 100;
-            background: #ffffff;
-            box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.08);
-            transform: translateY(105%);
-            transition: transform 280ms cubic-bezier(0.22, 0.61, 0.36, 1);
-            pointer-events: none;
-            padding-bottom: env(safe-area-inset-bottom, 0px);
-            border-top: 1px solid rgba(0, 0, 0, 0.06);
+        /* ─── Sticky-Bottom-Zeile ─────────────────────────────────────────
+           Genau wie .is-sticky-row (Sticky am oberen Rand), nur dass die
+           Zeile am UNTEREN Tabellen-/Viewport-Rand klebt. Mechanik via JS
+           (bindStickyBottomRows in frontend.js) per transform:translate3d,
+           weil position:sticky auf CSS-Grid-Children in Chrome nicht
+           zuverlaessig ist (siehe gleicher Kommentar bei is-sticky-row).
+           Wichtig: Hintergrund + z-index, sonst schimmern die scrollenden
+           Zellen darueber durch waehrend der Sticky-Phase. */
+        .vergleich-label.is-sticky-bottom-overlay,
+        .vergleich-zelle.is-sticky-bottom-overlay {
+            z-index: 4;
+            will-change: transform;
+            position: relative; /* z-index wirkt nur auf positioned elements */
         }
-        .vergleich-bottom-overlay.is-active {
-            transform: translateY(0);
-            pointer-events: auto;
+        .vergleich-root .vergleich-label.is-sticky-bottom-overlay {
+            background-color: #f3f4f6;
         }
-        /* __inner = horizontaler Flex (Label + Scroll-Bereich). Die echten
-           Breiten werden vom JS per measure() inline auf Label und Cells
-           gesetzt — basierend auf den Original-Cell-Widths der Tabelle.
-           Damit sitzen die Klone pixelgenau unter den jeweiligen Spalten,
-           auch wenn der Tabellen-Container nicht viewport-breit ist. */
-        .vergleich-bottom-overlay__inner {
-            display: flex;
-            align-items: stretch;
-            width: 100%;
-            min-width: 0;
+        .vergleich-root .vergleich-zelle.is-sticky-bottom-overlay {
+            background-color: #fff;
         }
-        .vergleich-bottom-overlay__label {
-            display: flex;
-            align-items: center;
-            padding: 10px var(--vgl-cell-padding, 16px);
-            font-weight: 600;
-            color: #111827;
-            background: var(--vgl-label-bg, #f9fafb);
-            border-right: 1px solid rgba(0, 0, 0, 0.06);
-            box-sizing: border-box;
-            flex: 0 0 auto; /* JS setzt explizite Breite */
-        }
-        .vergleich-bottom-overlay__scroll {
-            overflow: hidden; /* horizontal-Sync wird per JS via scrollLeft gemacht */
-            flex: 1 1 0;
-            min-width: 0;
-        }
-        .vergleich-bottom-overlay__track {
-            display: flex;
-            align-items: stretch;
-            gap: 0;
-        }
-        /* Cell-Klone behalten alle Original-Klassen (.vergleich-zelle, type-
-           Variante etc.). Width/flex wird per JS auf den exakten Wert der
-           Original-Cell gesetzt — kein CSS-Fallback noetig, weil ohne
-           measure() das ganze Konzept eh nicht funktioniert. */
-        .vergleich-bottom-overlay__track > .vergleich-zelle {
-            min-height: auto;
-            padding: 10px var(--vgl-cell-padding, 16px);
-            border-left: 1px solid rgba(0, 0, 0, 0.06);
-            box-sizing: border-box;
-            flex: 0 0 auto;
-        }
-        .vergleich-bottom-overlay__track > .vergleich-zelle:first-child {
-            border-left: none;
-        }
-        /* Im Builder soll der Overlay nicht den Editor blockieren — JS
-           rendert ihn ohnehin nur im Frontend, aber sicherheitshalber. */
-        body.brx-builder .vergleich-bottom-overlay,
-        body.brx-canvas .vergleich-bottom-overlay {
-            display: none !important;
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .vergleich-bottom-overlay {
-                transition: none;
-            }
+        /* Optionaler Schatten an der Oberkante, damit man visuell
+           erkennt, dass die Zeile gepinnt ist. */
+        .vergleich-label.is-sticky-bottom-overlay,
+        .vergleich-zelle.is-sticky-bottom-overlay {
+            box-shadow: 0 -4px 12px -6px rgba(0, 0, 0, 0.12);
         }
         </style>';
     }
