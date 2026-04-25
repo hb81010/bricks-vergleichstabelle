@@ -42,6 +42,16 @@ class Element_Vergleich extends \Bricks\Element {
     /** Zähler für eindeutige Lightbox-Dialog-IDs im aktuellen Render-Durchlauf. */
     public $_lightbox_counter = 0;
 
+    /**
+     * Set von Zeilen-Indices, die im aktuellen Render-Durchlauf komplett ueber-
+     * sprungen werden — befüllt vom Pre-Pass (compute_hidden_rows) für Zeilen,
+     * deren `hideIfAllEmpty` aktiv ist und für die ALLE Loop-Iterationen leeren
+     * Cell-Output produzieren. Wird sowohl von der Label-Spalte als auch von
+     * der Card-Render-Schleife respektiert, damit Label, Zelle UND der ganze
+     * Grid-Track verschwinden — kein leerer Platzhalter zurückbleibt.
+     */
+    public $_hide_rows = [];
+
     public function get_label() {
         return esc_html__( 'Produkt-Vergleichstabelle', 'bricks-vergleich' );
     }
@@ -3004,6 +3014,11 @@ class Element_Vergleich extends \Bricks\Element {
                 'content'  => '',
                 'required' => [ 'collapsible', '=', true ],
             ],
+            'hideIfAllEmpty' => [
+                'label'       => esc_html__( 'Zeile verbergen, wenn alle Spalten leer', 'bricks-vergleich' ),
+                'type'        => 'checkbox',
+                'description' => esc_html__( 'Wenn KEIN Produkt im Loop einen Inhalt für diese Zelle liefert, wird die ganze Zeile (Label + alle Karten-Zellen + Button) komplett ausgeblendet — ohne leeren Platzhalter im Grid. Bei Gutschein-Zeilen (coupon) standardmäßig aktiv, bei anderen Zellentypen aus Sicherheit erst manuell aktivieren.', 'bricks-vergleich' ),
+            ],
             'stickyRow' => [
                 'label'       => esc_html__( 'Sticky beim Scrollen', 'bricks-vergleich' ),
                 'type'        => 'checkbox',
@@ -3217,10 +3232,46 @@ class Element_Vergleich extends \Bricks\Element {
 
         // Rows
         $rows = $this->get_rows();
-        $row_count = max( 1, count( $rows ) );
+
+        // Query VORZEITIG erzeugen — vorgezogen aus dem ursprünglichen Block
+        // weiter unten, weil (a) der Hide-If-All-Empty-Pre-Pass gleich
+        // darunter den echten Loop-Kontext braucht und (b) die Produkt-
+        // Anzahl für Ranking + Produkt-Label-Leiste verfügbar sein muss.
+        // Dasselbe Query-Objekt wird unten beim eigentlichen Card-Render
+        // wiederverwendet — KEINE zweite Instanz aufmachen.
+        $has_loop       = ! empty( $settings['hasLoop'] );
+        $prepared_query = null;
+        $prepared_count = 0;
+        if ( $has_loop && class_exists( '\Bricks\Query' ) ) {
+            try {
+                $element_for_query = [
+                    'id'       => $this->id,
+                    'name'     => $this->name,
+                    'settings' => $this->settings,
+                ];
+                $prepared_query = new \Bricks\Query( $element_for_query );
+                $prepared_count = (int) ( $prepared_query->count ?? 0 );
+                if ( is_array( $this->_ranking_runtime ) ) {
+                    $this->_ranking_runtime['total'] = $prepared_count;
+                }
+            } catch ( \Throwable $e ) {
+                $prepared_query = null;
+            }
+        }
+
+        // Pre-Pass: bestimmt Zeilen, deren Spalten ALLE leer wären (Coupon-
+        // Code überall raus, Score-Wert nirgends gesetzt etc.). Diese Zeilen
+        // werden im Label-Loop UND im Card-Loop übersprungen, damit kein
+        // leerer Grid-Track zurückbleibt. Auto-Default: für `coupon`-Zeilen
+        // ohne explizites Setting aktiv, sonst muss `hideIfAllEmpty` per
+        // Repeater-Checkbox gesetzt werden.
+        $this->_hide_rows = $this->compute_hidden_rows( $rows, $prepared_query );
+
+        $row_count = max( 1, count( $rows ) - count( $this->_hide_rows ) );
         $visible_row_count = 0;
         $first_collapsible_idx = -1;
         foreach ( $rows as $ri => $r ) {
+            if ( ! empty( $this->_hide_rows[ $ri ] ) ) continue;
             if ( empty( $r['collapsible'] ) ) {
                 $visible_row_count++;
             } elseif ( $first_collapsible_idx === -1 ) {
@@ -3331,28 +3382,9 @@ class Element_Vergleich extends \Bricks\Element {
         // Bei "labelrow" wird der Zaehler weiter unten im Spacer der
         // Produkt-Label-Zeile inline gerendert — nicht oberhalb/unterhalb.
 
-        // Query bereits hier erzeugen (statt erst unten), damit die Anzahl
-        // Produkte fuer die Produkt-Label-Leiste verfuegbar ist. Dasselbe
-        // Query-Objekt wird weiter unten fuer das Rendern der Cards benutzt.
-        $has_loop       = ! empty( $settings['hasLoop'] );
-        $prepared_query = null;
-        $prepared_count = 0;
-        if ( $has_loop && class_exists( '\Bricks\Query' ) ) {
-            try {
-                $element_for_query = [
-                    'id'       => $this->id,
-                    'name'     => $this->name,
-                    'settings' => $this->settings,
-                ];
-                $prepared_query = new \Bricks\Query( $element_for_query );
-                $prepared_count = (int) ( $prepared_query->count ?? 0 );
-                if ( is_array( $this->_ranking_runtime ) ) {
-                    $this->_ranking_runtime['total'] = $prepared_count;
-                }
-            } catch ( \Throwable $e ) {
-                $prepared_query = null;
-            }
-        }
+        // (Query wurde bereits ganz oben in render_inner() erzeugt — siehe
+        // dort. $prepared_query / $prepared_count sind hier garantiert
+        // definiert und werden weiter unten beim Card-Render wiederverwendet.)
 
         // ─── PRODUKT-LABELS (oberhalb des Wrappers) ────────────────────────
         // Wird als eigene Leiste vor dem Wrapper gerendert — sieht damit aus
@@ -3473,6 +3505,10 @@ class Element_Vergleich extends \Bricks\Element {
                 . '</div>';
         }
         foreach ( $rows as $idx => $row ) {
+            // Komplette Zeile verbergen, wenn alle Spalten im Loop leer
+            // wären (Pre-Pass-Resultat aus compute_hidden_rows).
+            if ( ! empty( $this->_hide_rows[ $idx ] ) ) continue;
+
             $label       = isset( $row['label'] ) ? trim( (string) $row['label'] ) : '';
             $highlight   = ! empty( $row['highlight'] );
             $collapsible = ! empty( $row['collapsible'] );
@@ -3621,6 +3657,113 @@ class Element_Vergleich extends \Bricks\Element {
         }
 
         echo '</div>'; // .vergleich-root
+    }
+
+    // ==========================================================================
+    // PRE-PASS: HIDE-IF-ALL-EMPTY
+    // ==========================================================================
+
+    /**
+     * Bestimmt, welche Zeilen im aktuellen Render-Durchlauf komplett ueber-
+     * sprungen werden, weil alle Spalten leeren Cell-Inhalt liefern wuerden.
+     *
+     * Nur Zeilen mit aktivem `hideIfAllEmpty` werden geprüft. Auto-Default:
+     * `coupon`-Zeilen ohne explizites Setting gelten als aktiv (wer einen
+     * Gutschein-Slot in der Tabelle hat, will fast nie einen leeren Platz-
+     * halter sehen, wenn der Code abgelaufen / entfernt ist).
+     *
+     * Iteriert das bereits aufgebaute $prepared_query mit einem No-Op-
+     * Callback "trocken" einmal durch — `Bricks\Query::render()` setzt dabei
+     * pro Iteration den korrekten Loop-Kontext (post + product), den
+     * unsere Cell-Renderer für Dynamic-Data-Auflösung brauchen. Sobald
+     * irgendeine Spalte non-empty Output liefert, wird diese Zeile aus den
+     * Kandidaten entfernt (frühes Early-Exit über `isset($non_empty[$idx])`).
+     *
+     * Side-effects:
+     *  - Lightbox-Counter wird vom echten Render im Anschluss überschrieben
+     *    (in render_inner zaehlen wir _lightbox_counter wieder auf 0).
+     *  - Schema-Items werden NUR in render_card_inner() befüllt — der
+     *    Pre-Pass-Callback ruft NICHT render_card_inner(), nur direkt die
+     *    Cell-Renderer.
+     */
+    private function compute_hidden_rows( $rows, $prepared_query ) {
+        if ( ! is_array( $rows ) || empty( $rows ) ) return [];
+
+        // 1) Kandidaten sammeln (Zeilen mit aktivem hideIfAllEmpty).
+        $candidates = [];
+        foreach ( $rows as $idx => $row ) {
+            if ( ! is_array( $row ) ) continue;
+            $type    = $row['type'] ?? 'text';
+            $enabled = array_key_exists( 'hideIfAllEmpty', $row )
+                ? ! empty( $row['hideIfAllEmpty'] )
+                : ( $type === 'coupon' );
+            if ( $enabled ) $candidates[ $idx ] = $row;
+        }
+
+        if ( empty( $candidates ) ) return [];
+
+        // 2) Ohne Loop koennen wir nichts pruefen — ein Cell-Renderer-Aufruf
+        //    ohne Loop-Kontext liefert genau das, was im Bricks-Builder
+        //    Vorschau-Modus auch laeuft. In dem Fall einfach NICHTS verstecken
+        //    (Builder darf nicht plötzlich Zeilen wegblenden, sonst kann
+        //    der Nutzer sie nicht mehr konfigurieren).
+        if ( ! ( $prepared_query instanceof \Bricks\Query ) ) {
+            return [];
+        }
+
+        // 3) Pre-Pass: einmal "trocken" iterieren, pro Spalte unsere Renderer
+        //    aufrufen und mitschreiben, welche Zeile mindestens 1× non-empty
+        //    war.
+        $non_empty = [];
+        try {
+            $prepared_query->render( function () use ( $candidates, &$non_empty ) {
+                foreach ( $candidates as $idx => $row ) {
+                    if ( isset( $non_empty[ $idx ] ) ) continue;
+                    $type    = $row['type'] ?? 'text';
+                    $content = '';
+                    try {
+                        switch ( $type ) {
+                            case 'image':    $content = $this->render_cell_image( $row );   break;
+                            case 'icon':     $content = $this->render_cell_icon( $row );    break;
+                            case 'button':   $content = $this->render_cell_button( $row, $idx ); break;
+                            case 'rating':   $content = $this->render_cell_rating( $row );  break;
+                            case 'bool':     $content = $this->render_cell_bool( $row );    break;
+                            case 'score':    $content = $this->render_cell_score( $row );   break;
+                            case 'list':     $content = $this->render_cell_list( $row );    break;
+                            case 'manual':   $content = $this->render_cell_manual( $row );  break;
+                            case 'html':     $content = $this->render_cell_html( $row );    break;
+                            case 'dynamic':  $content = $this->render_cell_dynamic( $row ); break;
+                            case 'lightbox': $content = $this->render_cell_lightbox( $row ); break;
+                            case 'coupon':   $content = $this->render_cell_coupon( $row );  break;
+                            case 'heading':  $content = $this->render_cell_heading( $row ); break;
+                            case 'text':
+                            default:         $content = $this->render_cell_text( $row );    break;
+                        }
+                    } catch ( \Throwable $e ) {
+                        $content = '';
+                    }
+                    if ( trim( (string) $content ) !== '' ) {
+                        $non_empty[ $idx ] = true;
+                    }
+                }
+                return ''; // Pre-Pass darf nichts ausgeben (sonst doppelter Output)
+            }, [] );
+        } catch ( \Throwable $e ) {
+            error_log( '[Bricks Vergleich] Pre-Pass-Fehler: ' . $e->getMessage() );
+            return []; // im Zweifel nichts verstecken
+        }
+
+        // 4) Lightbox-Counter zuruecksetzen, weil der Pre-Pass-Aufruf u.U.
+        //    auch Lightbox-Renderer angesprochen hat. render_inner setzt das
+        //    weiter oben bereits auf 0 — sicherheitshalber hier nochmal.
+        $this->_lightbox_counter = 0;
+
+        // 5) Aus Kandidaten alle herausnehmen, die irgendwo non-empty waren.
+        $hidden = [];
+        foreach ( $candidates as $idx => $row ) {
+            if ( empty( $non_empty[ $idx ] ) ) $hidden[ $idx ] = true;
+        }
+        return $hidden;
     }
 
     // ==========================================================================
@@ -3817,6 +3960,11 @@ class Element_Vergleich extends \Bricks\Element {
         echo $pin_html;
 
         foreach ( $rows as $idx => $row ) {
+            // Komplette Zeile verbergen — muss synchron zur Label-Spalte
+            // laufen, sonst kollabiert das Grid (Card-Spalte hätte mehr
+            // Zellen als Label-Spalte).
+            if ( ! empty( $this->_hide_rows[ $idx ] ) ) continue;
+
             $inject = ( $idx === $score_anchor_idx ) ? $score_html : '';
             echo $this->render_cell( $row, $idx, $default_align, $inject );
         }
