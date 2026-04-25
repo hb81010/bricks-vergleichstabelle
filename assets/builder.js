@@ -94,6 +94,36 @@
         lastRowsJson = snapshotKey;
     }
 
+    /**
+     * Auto-Enable für `hideIfAllEmpty` bei Coupon-Zeilen.
+     *
+     * Sobald eine Zeile den Type `coupon` hat UND `hideIfAllEmpty` noch NIE
+     * explizit gesetzt wurde (also `undefined`), setzen wir es auf `true`.
+     * Das spiegelt das PHP-Render-Verhalten (Auto-Default in
+     * compute_hidden_rows): Coupon-Zellen verbergen sich automatisch, wenn
+     * kein Produkt einen Code liefert. Im Builder wird die Checkbox damit
+     * gleich sichtbar als aktiv angezeigt — kein „warum greift das nicht?"-
+     * Moment für den User.
+     *
+     * Wichtig: Wir setzen nur, wenn der Wert `undefined` ist. Sobald der
+     * User den Toggle einmal anfasst (auch zum Ausschalten → `false`),
+     * respektieren wir das und überschreiben nicht.
+     */
+    function autoEnableHideForCoupon() {
+        var active = getActiveElement();
+        if ( ! active || active.name !== 'vergleich' ) return;
+        var rows = ( active.settings && active.settings.rows ) || [];
+        if ( ! Array.isArray( rows ) ) return;
+        for ( var i = 0; i < rows.length; i++ ) {
+            var r = rows[ i ];
+            if ( ! r || typeof r !== 'object' ) continue;
+            if ( r.type === 'coupon' && r.hideIfAllEmpty === undefined ) {
+                r.hideIfAllEmpty = true;
+                log( 'Auto-Enable hideIfAllEmpty für coupon-Zeile', i );
+            }
+        }
+    }
+
     // ─── Manuell-Badge im Repeater ────────────────────────────────────
     // Nur für Zeilen mit type === 'manual' ein kleines Badge direkt hinter
     // dem Label-Text. Alles andere bleibt unmarkiert.
@@ -249,12 +279,14 @@
                 rafId = 0;
                 try {
                     checkRepeaterGrowth();
+                    autoEnableHideForCoupon();
                     annotateRows();
                 } catch ( e ) { log( 'check-Fehler', e ); }
             } );
         } );
         obs.observe( document.body, { childList: true, subtree: true } );
         checkRepeaterGrowth();
+        autoEnableHideForCoupon();
         annotateRows();
     }
 
