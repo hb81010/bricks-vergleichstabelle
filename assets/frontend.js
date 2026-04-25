@@ -694,13 +694,33 @@
             // liegt (nicht durch overflow:hidden der Card abgeschnitten
             // wird).
             //
-            // Nur aktivieren, wenn die Tabelle laenger als der Viewport
-            // ist — sonst ist das Padding nutzloser sichtbarer Leerraum
-            // (z.B. im kollabierten Aufklapp-Zustand: Pin ist voll
-            // sichtbar an Reihe 5, kein Pinning aktiv, der leere Bereich
-            // am Tabellen-Ende waere reines visuelles Rauschen).
+            // Aktivieren wenn EINE der beiden Bedingungen erfuellt ist:
+            //  1) Tabelle laenger als Viewport → Pin koennte nach oben
+            //     gepinned werden, braucht Pad-Bereich am Tabellen-Ende.
+            //  2) Es gibt sichtbare Cells NACH der hoechsten sticky-bottom-
+            //     Row → Pin wuerde diese sonst beim Translate ueberdecken.
+            //     Wichtig fuer den Fall: Tabelle kuerzer als Viewport,
+            //     aber sticky-bottom nicht die letzte Cell (z.B. "Top Deal"
+            //     in der Mitte, "Apps" oder "Info" danach).
+            // Wenn keine der Bedingungen → kein Padding (kein nutzloser
+            // Leerraum am Tabellen-Ende, z.B. im kollabierten Aufklapp-
+            // Zustand).
             var vh = window.innerHeight || document.documentElement.clientHeight;
-            if (totalPadding > 0 && wrapRect.height > vh) {
+            var hasVisibleTrailing = false;
+            if (sortedIdxs.length && labelsCol) {
+                var maxStickyIdx = parseInt(sortedIdxs[0], 10); // absteigend → [0] = hoechster
+                var allLabels = labelsCol.querySelectorAll(".vergleich-label[data-row-index]");
+                for (var ai = 0; ai < allLabels.length; ai++) {
+                    var idx = parseInt(allLabels[ai].getAttribute("data-row-index"), 10);
+                    // offsetParent === null → Cell ist display:none oder ein Vorfahre ist es.
+                    // Damit ueberspringen wir collapsed-Cells im Aufklapp-Modus.
+                    if (!isNaN(idx) && idx > maxStickyIdx && allLabels[ai].offsetParent !== null) {
+                        hasVisibleTrailing = true;
+                        break;
+                    }
+                }
+            }
+            if (totalPadding > 0 && (wrapRect.height > vh || hasVisibleTrailing)) {
                 setBottomPadding(totalPadding);
             }
         }
