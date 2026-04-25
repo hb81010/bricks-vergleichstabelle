@@ -608,6 +608,23 @@
             cardsList.forEach(function(c){ c.style.paddingBottom = v; });
         }
 
+        // Hintergrund von Spalten/Cards lesen, damit wir ihn beim Pinning
+        // auf die Sticky-Bottom-Cells uebertragen koennen — sonst sind
+        // sie transparent und User sieht beim Scrollen die anderen
+        // Spalten-Inhalte durchscheinen.
+        var labelsBg = "";
+        var cardsBg = [];
+        function readBackgrounds(){
+            function clean(bg){
+                return (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent") ? bg : "";
+            }
+            if (labelsCol) labelsBg = clean(window.getComputedStyle(labelsCol).backgroundColor);
+            cardsBg = [];
+            for (var i = 0; i < cardsList.length; i++) {
+                cardsBg.push(clean(window.getComputedStyle(cardsList[i]).backgroundColor));
+            }
+        }
+
         function measure(){
             rows = [];
             lastTy = [];
@@ -634,6 +651,10 @@
                 lastTy.push(0);
                 totalPadding += r.height;
             }
+            // Hintergruende neu lesen (kann sich beim Aufklappen / Resize
+            // aendern, falls User-Styles dynamisch sind).
+            readBackgrounds();
+
             // Padding-Bottom auf Labels-Spalte UND alle Card-Container.
             // Der Wrapper selbst kriegt KEIN padding — der Trick ist, dass
             // jede einzelne Card und die Labels-Spalte am Bottom etwas
@@ -725,10 +746,58 @@
                 }
 
                 var tyRounded = Math.round(translateY);
+                var wasActive = (lastTy[i] !== 0);
+                var isActive  = (tyRounded !== 0);
+                var justActivated   = isActive  && !wasActive;
+                var justDeactivated = !isActive &&  wasActive;
+
                 if (tyRounded !== lastTy[i]) {
-                    var t = tyRounded !== 0 ? "translate3d(0," + tyRounded + "px,0)" : "";
+                    var t = isActive ? "translate3d(0," + tyRounded + "px,0)" : "";
                     for (var c = 0; c < row.cells.length; c++) {
-                        row.cells[c].style.transform = t;
+                        var cell = row.cells[c];
+
+                        if (justActivated) {
+                            // Solider Hintergrund von der jeweiligen
+                            // Spalte/Card uebertragen — verhindert, dass
+                            // beim Scrollen andere Cells durch die gepinnte
+                            // Cell durchscheinen.
+                            var bg = "";
+                            if (cell.classList.contains("vergleich-label")) {
+                                bg = labelsBg;
+                            } else {
+                                var card = cell.closest(".vergleich-card");
+                                if (card) {
+                                    var ci = Array.prototype.indexOf.call(cardsList, card);
+                                    if (ci >= 0) bg = cardsBg[ci];
+                                }
+                            }
+                            if (bg) cell.style.backgroundColor = bg;
+
+                            // Slide-In-Animation: Cell startet "row.height"
+                            // Pixel UNTER ihrer Pin-Zielposition, animiert
+                            // smooth nach oben rein. Erst inital ohne
+                            // transition setzen, dann reflow erzwingen,
+                            // dann transition aktivieren — Browser
+                            // animiert nun zur Zielposition.
+                            cell.style.transition = "transform 0s";
+                            cell.style.transform =
+                                "translate3d(0," + (tyRounded + row.height) + "px,0)";
+                            // eslint-disable-next-line no-unused-expressions
+                            cell.offsetHeight; // force reflow
+                            cell.style.transition =
+                                "transform 280ms cubic-bezier(0.22, 0.61, 0.36, 1)";
+                            // Nach der Animation transition wieder loswerden,
+                            // damit die nachfolgenden Scroll-Updates
+                            // wieder instant sind (ohne Lag).
+                            (function(c2){
+                                setTimeout(function(){ c2.style.transition = ""; }, 320);
+                            })(cell);
+                        } else if (justDeactivated) {
+                            cell.style.backgroundColor = "";
+                            cell.style.transition = "";
+                        }
+
+                        cell.style.transform = t;
                     }
                     lastTy[i] = tyRounded;
                 }
