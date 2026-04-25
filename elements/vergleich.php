@@ -7331,12 +7331,11 @@ class Element_Vergleich extends \Bricks\Element {
             will-change: transform;
             position: relative; /* z-index wirkt nur auf positioned elements */
         }
-        .vergleich-root .vergleich-label.is-sticky-bottom-overlay {
-            background-color: #f3f4f6;
-        }
-        .vergleich-root .vergleich-zelle.is-sticky-bottom-overlay {
-            background-color: #fff;
-        }
+        /* Bewusst KEIN background-color-Override — die Cells sind transparent
+           und uebernehmen damit den User-definierten Spalten-Background von
+           .vergleich-labels bzw. der Card. Sonst wuerde mein Hardcode den
+           User-Style schlagen (z.B. wenn User die Label-Spalte rosa
+           gefaerbt hat, wuerde die Sticky-Bottom-Zeile davon abweichen). */
         /* Optionaler Schatten an der Oberkante, damit man visuell
            erkennt, dass die Zeile gepinnt ist. */
         .vergleich-label.is-sticky-bottom-overlay,
