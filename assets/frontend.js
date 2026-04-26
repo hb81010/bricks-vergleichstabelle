@@ -634,25 +634,10 @@
         var labelsCol = wrapper.querySelector(".vergleich-labels");
         var cardsList = wrapper.querySelectorAll(".vergleich-card");
 
-        // Pin-Padding: in measure() berechnet (Summe der sticky-bottom-Cell-
-        // Hoehen), in update() je nach aktiver Pin-Aktivitaet ein- oder
-        // ausgeschaltet. Damit kein Leerraum am Tabellen-Ende solange kein
-        // Pin aktiv ist, aber voller Pad-Bereich sobald translate'd wird.
-        var totalPadding = 0;
-        var paddingActive = false;
-
         function setBottomPadding(px){
             var v = px > 0 ? px + "px" : "";
             if (labelsCol) labelsCol.style.paddingBottom = v;
             cardsList.forEach(function(c){ c.style.paddingBottom = v; });
-        }
-
-        function applyPadding(needed){
-            // Idempotent: nur DOM anfassen wenn sich der Zustand wirklich
-            // aendert (vermeidet Layout-Thrash bei jedem Scroll-Frame).
-            if (needed === paddingActive) return;
-            setBottomPadding(needed && totalPadding > 0 ? totalPadding : 0);
-            paddingActive = needed;
         }
 
         // Hintergrund von Spalten/Cards lesen, damit wir ihn beim Pinning
@@ -682,11 +667,10 @@
                 for (var i = 0; i < cellsK.length; i++) cellsK[i].style.transform = "";
             }
             setBottomPadding(0);
-            paddingActive = false;
 
             var wrapRect = wrapper.getBoundingClientRect();
             var wrapTop = wrapRect.top;
-            totalPadding = 0;
+            var totalPadding = 0;
             for (var m = 0; m < sortedIdxs.length; m++) {
                 var cellsM = rowMap[sortedIdxs[m]];
                 if (!cellsM.length) continue;
@@ -703,12 +687,44 @@
             // aendern, falls User-Styles dynamisch sind).
             readBackgrounds();
 
-            // KEIN setBottomPadding hier — update() entscheidet jeden Frame
-            // anhand der tatsaechlichen Pin-Aktivitaet, ob Padding noetig ist.
-            // Vorteil: kein sichtbarer Leerraum am Tabellen-Ende solange kein
-            // Pin aktiv ist (Tabelle voll im Viewport). Sobald gepinnt wird,
-            // schaltet applyPadding() ein und gibt der translate'd Pin-Cell
-            // Platz, damit sie nicht durch overflow:clip abgeschnitten wird.
+            // Padding-Bottom auf Labels-Spalte UND alle Card-Container.
+            // Der Wrapper selbst kriegt KEIN padding — der Trick ist, dass
+            // jede einzelne Card und die Labels-Spalte am Bottom Spielraum
+            // hat, damit die per translate verschobene Cell dort sichtbar
+            // liegt (nicht durch overflow:hidden der Card abgeschnitten
+            // wird).
+            //
+            // Aktivieren wenn EINE der beiden Bedingungen erfuellt ist:
+            //  1) Tabelle laenger als Viewport → Pin koennte nach oben
+            //     gepinned werden, braucht Pad-Bereich am Tabellen-Ende.
+            //  2) Es gibt sichtbare Cells NACH der hoechsten sticky-bottom-
+            //     Row → Pin wuerde diese sonst beim Translate ueberdecken.
+            //     Wichtig fuer den Fall: Tabelle kuerzer als Viewport,
+            //     aber sticky-bottom nicht die letzte Cell (z.B. "Top Deal"
+            //     in der Mitte, "Apps" oder "Info" danach).
+            // Sichtbarer Leerraum durch das reservierte Padding wird per
+            // CSS (background-clip: content-box auf .vergleich-card und
+            // .vergleich-labels) unterdrueckt — der Padding-Bereich bleibt
+            // vorhanden, aber transparent, damit nur die translate'd Pin-
+            // Cell mit ihrem readBackgrounds-Background sichtbar wird.
+            var vh = window.innerHeight || document.documentElement.clientHeight;
+            var hasVisibleTrailing = false;
+            if (sortedIdxs.length && labelsCol) {
+                var maxStickyIdx = parseInt(sortedIdxs[0], 10); // absteigend → [0] = hoechster
+                var allLabels = labelsCol.querySelectorAll(".vergleich-label[data-row-index]");
+                for (var ai = 0; ai < allLabels.length; ai++) {
+                    var idx = parseInt(allLabels[ai].getAttribute("data-row-index"), 10);
+                    // offsetParent === null → Cell ist display:none oder ein Vorfahre ist es.
+                    // Damit ueberspringen wir collapsed-Cells im Aufklapp-Modus.
+                    if (!isNaN(idx) && idx > maxStickyIdx && allLabels[ai].offsetParent !== null) {
+                        hasVisibleTrailing = true;
+                        break;
+                    }
+                }
+            }
+            if (totalPadding > 0 && (wrapRect.height > vh || hasVisibleTrailing)) {
+                setBottomPadding(totalPadding);
+            }
         }
 
         function update(){
@@ -720,9 +736,6 @@
             // Stapel-Akkumulator: jede aktiv gepinnte Zeile reduziert den
             // verfuegbaren Bottom-Bereich fuer die naechste.
             var bottomAccum = 0;
-            // Pin-Padding wird unten dynamisch ein-/ausgeschaltet, sobald
-            // mindestens eine Cell tatsaechlich translate'd ist.
-            var anyPinned = false;
 
             // Sticky-Top-Reservierung: Cells mit `.is-sticky-row` (von
             // bindStickyRows verwaltet) belegen den oberen Viewport-Bereich.
@@ -790,19 +803,6 @@
                 }
 
                 var tyRounded = Math.round(translateY);
-
-                // Sobald die ERSTE Row in dieser Runde tatsaechlich pinnt,
-                // Padding aktivieren — bevor der Transform unten gesetzt
-                // wird. Sonst rutscht die Cell durch translateY in einen
-                // Bereich, den die Card mit overflow:clip noch abschneidet
-                // (Slide-In-Animation startet im unsichtbaren Bereich).
-                // applyPadding ist idempotent: bei mehreren gepinnten Rows
-                // wird nur beim ersten Mal das DOM angefasst.
-                if (tyRounded !== 0 && !anyPinned) {
-                    applyPadding(true);
-                    anyPinned = true;
-                }
-
                 var wasActive = (lastTy[i] !== 0);
                 var isActive  = (tyRounded !== 0);
                 var justActivated   = isActive  && !wasActive;
@@ -860,11 +860,6 @@
                 }
                 if (tyRounded !== 0) bottomAccum += row.height;
             }
-            // Padding deaktivieren wenn in dieser Runde keine Cell mehr
-            // gepinnt war. Aktivierung passiert oben beim ersten Pin
-            // (vor der Transform-Setzung), damit die Slide-In-Animation
-            // nicht durch overflow:clip der Card abgeschnitten wird.
-            if (!anyPinned) applyPadding(false);
         }
 
         var pending = false;

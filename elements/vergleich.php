@@ -6128,6 +6128,9 @@ class Element_Vergleich extends \Bricks\Element {
             grid-row: 1 / -1 !important;
             grid-template-rows: subgrid !important;
             background: #f3f4f6;
+            /* Siehe .vergleich-card: Padding-Bottom (Pin-Reserve) soll
+               keinen sichtbaren Background-Block am Ende erzeugen. */
+            background-clip: content-box;
             z-index: 3;
         }
         .vergleich-wrapper.has-sticky-labels .vergleich-labels {
@@ -6709,6 +6712,16 @@ class Element_Vergleich extends \Bricks\Element {
             grid-row: 1 / -1 !important;
             border-left: 1px solid #e5e7eb;
             background: #fff;
+            /* Background nur im Content-Bereich rendern, nicht im Padding.
+               Hintergrund: bindStickyBottomRows() reserviert padding-bottom
+               in Pixelhoehe der sticky-bottom-Zelle, damit der per translate
+               verschobene Pin nicht durch overflow:clip abgeschnitten wird.
+               Ohne content-box wuerde dieses Padding als sichtbarer weisser
+               Block am Tabellen-Ende erscheinen, auch wenn die Tabelle ins
+               Viewport passt und gar nicht gepinnt wird. Die Pin-Cell selbst
+               bekommt ihren Background per JS (readBackgrounds), bleibt also
+               sichtbar wenn sie ins Padding rutscht. */
+            background-clip: content-box;
             min-width: 0;
             max-width: var(--vgl-column-width, 200px);
             width: var(--vgl-column-width, 200px);

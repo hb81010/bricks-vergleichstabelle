@@ -3,7 +3,7 @@
  * Plugin Name: BricksTable
  * Plugin URI: https://example.com
  * Description: Custom Bricks Element für Produktvergleichstabellen mit Produkten als Spalten.
- * Version: 1.9.13
+ * Version: 1.9.14
  * Author: BricksTable
  * Text Domain: bricks-vergleich
  * Requires at least: 6.0
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'BRICKS_VERGLEICH_VERSION', '1.9.13' );
+define( 'BRICKS_VERGLEICH_VERSION', '1.9.14' );
 define( 'BRICKS_VERGLEICH_PATH', plugin_dir_path( __FILE__ ) );
 define( 'BRICKS_VERGLEICH_URL', plugin_dir_url( __FILE__ ) );
 
