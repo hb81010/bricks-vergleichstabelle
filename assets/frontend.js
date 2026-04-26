@@ -417,6 +417,30 @@
         if (!Object.keys(rowMap).length) return;
         wrapper._vglStickyBound = true;
 
+        // Ranking-Badge in die erste Sticky-Row-Cell der Card moven.
+        // Hintergrund: .vergleich-rank sitzt per Default position:absolute
+        // direkt am .vergleich-card. Beim Sticky-Top transformiert JS aber
+        // nur die CELL — die Card-Box bleibt am natuerlichen Layout-Platz.
+        // Auf Desktop kompensiert die untere update()-Logik das Card-vs-Cell-
+        // Delta per setProperty('transform', ..., 'important') — das ist auf
+        // Mobile (iOS Safari, Chrome Android) unzuverlaessig (Compositor-
+        // Layer-Reihenfolge laesst das Transform relativ zur bereits
+        // scrollenden Card-Box greifen, Rank wandert nicht mit der
+        // gepinnten Cell mit). DOM-Move in die Cell macht das Badge zu
+        // einem Cell-Child — Cell-Transform zieht es automatisch ueber den
+        // Compositor-Thread mit, browser- und device-uebergreifend stabil.
+        // Pin-Button (.vergleich-pin) bleibt am Card und wird unten weiter
+        // per pinEls-Translate gehandhabt — der Pin-Click-Handler erwartet
+        // den Button als Card-Child fuer die DOM-Move-Logik beim Pinnen.
+        wrapper.querySelectorAll(".vergleich-card").forEach(function(card){
+            var rank = card.querySelector(":scope > .vergleich-rank");
+            if (!rank) return;
+            var firstStickyCell = card.querySelector(":scope > .vergleich-zelle.is-sticky-row");
+            if (!firstStickyCell) return; // Card hat keine sticky-row → Rank bleibt am Card
+            firstStickyCell.style.position = "relative"; // Anchor fuer absolute Children
+            firstStickyCell.appendChild(rank);
+        });
+
         var sortedIdxs = Object.keys(rowMap).sort(function(a, b){
             return parseInt(a, 10) - parseInt(b, 10);
         });
@@ -457,15 +481,14 @@
             }
         }
 
-        // Pin-Button (.vergleich-pin) und Ranking-Badge (.vergleich-rank)
-        // sitzen position:absolute an der Card — wenn die Card beim Scrollen
-        // nach oben rausrutscht, scrollen sie mit raus, waehrend die Sticky-
-        // Top-Cells per Translate oben gehalten werden. Wir ziehen sie mit
-        // dem Translate der OBERSTEN Sticky-Top-Reihe mit, damit sie an der
-        // gerade oben sichtbaren Top-Cell bleiben. (Score-Badge sitzt direkt
-        // IN der jeweiligen Cell und wandert automatisch mit dem parent-
-        // Translate mit — keine Extra-Behandlung noetig.)
-        var pinEls = wrapper.querySelectorAll(".vergleich-pin, .vergleich-rank");
+        // Pin-Button und Ranking-Badge die NICHT in eine sticky-row Cell
+        // gemovet wurden (= Cards ohne sticky-row, oder Pin/Rank fehlt
+        // dort): per JS-Translate dem Top-Sticky-Frame folgen lassen.
+        // Pin/Rank in sticky-row-Cells fahren automatisch ueber Cell-
+        // Transform mit — keine Extra-Behandlung noetig.
+        var pinEls = wrapper.querySelectorAll(
+            ".vergleich-card > .vergleich-pin, .vergleich-card > .vergleich-rank"
+        );
         var lastPinTy = -1;
 
         function update(){

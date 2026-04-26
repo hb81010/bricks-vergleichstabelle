@@ -384,27 +384,69 @@
         { toggleKey: 'schemaEnabled', groupKey: 'a11y', kind: 'jsonld' }
     ];
 
+    // Cache: zuletzt bekannter Toggle-Wert pro controlKey. Wird nur
+    // genutzt wenn weder Vue-State noch DOM erreichbar sind (extremer
+    // Edge-Case: Element gerade neu selektiert + Group eingeklappt).
+    var toggleStateCache = {};
+
     function isControlToggleActive( controlKey ) {
-        // Bricks-Inkonsistenz: Element-Sidebar nutzt data-controlkey (ohne
-        // Bindestrich), Repeater data-control-key (mit). Beide probieren.
+        // Strategy 1: Vue-State des Element-Settings-Objekts. Funktioniert
+        // AUCH wenn die Group eingeklappt ist — Bricks rendert Group-Children
+        // per v-if, der State des kompletten Element-Settings-Objekts liegt
+        // aber im Vue-Tree des umschliessenden Settings-Panels. Wir crawlen
+        // vom irgendwo greifbaren Group-Container nach oben durch props/ctx/
+        // setupState bis wir ein settings-Object finden, das unseren Key
+        // enthaelt.
+        var anyGroup = document.querySelector( '[data-control-group]' );
+        if ( anyGroup && anyGroup.__vueParentComponent ) {
+            var comp = anyGroup.__vueParentComponent;
+            for ( var d = 0; d < 12 && comp; d++ ) {
+                var probes = [ comp.props, comp.ctx, comp.setupState, comp.data, comp.attrs ];
+                for ( var p = 0; p < probes.length; p++ ) {
+                    var box = probes[ p ];
+                    if ( ! box ) continue;
+                    if ( box.settings && typeof box.settings[ controlKey ] !== 'undefined' ) {
+                        var v1 = !! box.settings[ controlKey ];
+                        toggleStateCache[ controlKey ] = v1;
+                        return v1;
+                    }
+                    if ( box.element && box.element.settings && typeof box.element.settings[ controlKey ] !== 'undefined' ) {
+                        var v2 = !! box.element.settings[ controlKey ];
+                        toggleStateCache[ controlKey ] = v2;
+                        return v2;
+                    }
+                }
+                comp = comp.parent;
+            }
+        }
+        // Strategy 2: DOM-Lookup auf das Toggle-Control selbst (greift nur
+        // wenn die Group aufgeklappt ist). Bricks-Inkonsistenz: Sidebar
+        // nutzt data-controlkey, Repeater data-control-key — beides probieren.
         var ctrl = document.querySelector( '[data-controlkey="' + controlKey + '"]' )
                 || document.querySelector( '[data-control-key="' + controlKey + '"]' );
-        if ( ! ctrl ) return false;
-        // Try 1: nativer checkbox-Input
-        var input = ctrl.querySelector( 'input[type="checkbox"]' );
-        if ( input ) return !! input.checked;
-        // Try 2: Vue-State direkt (Vue 3) — komplexere Toggles ohne native input
-        var comp = ctrl.__vueParentComponent;
-        for ( var d = 0; d < 5 && comp; d++ ) {
-            var probes = [ comp.props, comp.ctx, comp.setupState ];
-            for ( var p = 0; p < probes.length; p++ ) {
-                var box = probes[ p ];
-                if ( ! box ) continue;
-                if ( typeof box.modelValue === 'boolean' ) return box.modelValue;
-                if ( typeof box.checked === 'boolean' ) return box.checked;
-                if ( typeof box.value === 'boolean' ) return box.value;
+        if ( ctrl ) {
+            var input = ctrl.querySelector( 'input[type="checkbox"]' );
+            if ( input ) {
+                toggleStateCache[ controlKey ] = !! input.checked;
+                return toggleStateCache[ controlKey ];
             }
-            comp = comp.parent;
+            var compCtrl = ctrl.__vueParentComponent;
+            for ( var d2 = 0; d2 < 5 && compCtrl; d2++ ) {
+                var probesC = [ compCtrl.props, compCtrl.ctx, compCtrl.setupState ];
+                for ( var pc = 0; pc < probesC.length; pc++ ) {
+                    var boxC = probesC[ pc ];
+                    if ( ! boxC ) continue;
+                    if ( typeof boxC.modelValue === 'boolean' ) { toggleStateCache[ controlKey ] = boxC.modelValue; return boxC.modelValue; }
+                    if ( typeof boxC.checked === 'boolean' )    { toggleStateCache[ controlKey ] = boxC.checked;    return boxC.checked; }
+                    if ( typeof boxC.value === 'boolean' )      { toggleStateCache[ controlKey ] = boxC.value;      return boxC.value; }
+                }
+                compCtrl = compCtrl.parent;
+            }
+        }
+        // Strategy 3: Letzter bekannter Wert. Korrekt solange das Element
+        // nicht gewechselt wurde — sonst ggf. Stale-Read fuer einen Frame.
+        if ( typeof toggleStateCache[ controlKey ] !== 'undefined' ) {
+            return toggleStateCache[ controlKey ];
         }
         return false;
     }
@@ -431,8 +473,60 @@
         }
     }
 
+    // Auto-Probe: Beim ersten Mount jeder Group, deren Children noch nicht
+    // im DOM sind (= eingeklappt), einmal kurz aufklappen (mit visibility:
+    // hidden, damit der User keinen Flicker sieht), den Toggle-Status lesen,
+    // wieder einklappen. Damit ist der Cache gefuellt und das Badge erscheint
+    // sofort — auch beim allerersten Page-Load, ohne dass der User die
+    // Group aktiv aufklappen muss.
+    //
+    // Hintergrund: Bricks rendert Group-Children per v-if (komplett aus DOM
+    // entfernt wenn eingeklappt). Vue-State des schemaEnabled-Toggle ist im
+    // Pinia/Vue-Store eines schwer erreichbaren Komponenten-Pfads — ohne den
+    // exakten Pfad zu kennen, ist DOM-Lookup die einzige robuste Option.
+    var probedGroups = {};
+
+    function probeGroupOnce( groupKey ) {
+        if ( probedGroups[ groupKey ] ) return;
+        var group = document.querySelector( '[data-control-group="' + groupKey + '"]' );
+        if ( ! group ) return;
+        var title = group.querySelector( '.control-group-title' );
+        if ( ! title ) return;
+        // Schon offen? (= mind. ein Child-Control im DOM)
+        if ( group.querySelector( '[data-controlkey], [data-control-key]' ) ) {
+            probedGroups[ groupKey ] = true;
+            return;
+        }
+        probedGroups[ groupKey ] = true;
+        // Group-Inhalt unsichtbar machen, damit der User waehrend des
+        // Probings keinen Layout-Sprung sieht. Visibility statt display,
+        // damit das Layout-Resultat (Render der Children) trotzdem auftritt.
+        var prevVis = group.style.visibility;
+        group.style.visibility = 'hidden';
+        // Erster Klick: Group aufklappen → Bricks rendert Children
+        title.click();
+        // Zwei rAF abwarten (Bricks-Vue-Reactivity braucht ggf. 1-2 Frames),
+        // dann State lesen + wieder schliessen.
+        requestAnimationFrame( function () {
+            requestAnimationFrame( function () {
+                annotateGroups(); // jetzt sind die Children im DOM, Cache wird gefuellt
+                title.click();    // wieder einklappen
+                group.style.visibility = prevVis || '';
+                // Nochmal annotate, damit das Badge auch nach dem Schliessen sichtbar bleibt
+                requestAnimationFrame( annotateGroups );
+            } );
+        } );
+    }
+
+    function probeAllGroups() {
+        for ( var i = 0; i < GROUP_BADGE_CONFIGS.length; i++ ) {
+            probeGroupOnce( GROUP_BADGE_CONFIGS[ i ].groupKey );
+        }
+    }
+
     function boot() {
         var rafId = 0;
+        var lastSidebarSignature = '';
         var obs = new MutationObserver( function () {
             if ( rafId ) return;
             rafId = requestAnimationFrame( function () {
@@ -442,6 +536,21 @@
                     autoEnableHideForCoupon();
                     annotateRows();
                     annotateGroups();
+                    // Element-Wechsel-Erkennung: wenn sich der Set der
+                    // sichtbaren Group-Container aendert (= anderes Element
+                    // selektiert oder Sidebar erstmals befuellt), Cache
+                    // zuruecksetzen + probe neu starten. Sonst wuerde das
+                    // Badge eines vorigen Elements hartnaeckig haengen.
+                    var sig = '';
+                    document.querySelectorAll( '[data-control-group]' ).forEach( function ( g ) {
+                        sig += g.getAttribute( 'data-control-group' ) + '|';
+                    } );
+                    if ( sig && sig !== lastSidebarSignature ) {
+                        lastSidebarSignature = sig;
+                        probedGroups = {};
+                        toggleStateCache = {};
+                        probeAllGroups();
+                    }
                 } catch ( e ) { log( 'check-Fehler', e ); }
             } );
         } );
@@ -450,6 +559,7 @@
         autoEnableHideForCoupon();
         annotateRows();
         annotateGroups();
+        probeAllGroups();
     }
 
     if ( document.readyState === 'loading' ) {
