@@ -3024,10 +3024,25 @@ class Element_Vergleich extends \Bricks\Element {
                 'type'        => 'checkbox',
                 'description' => esc_html__( 'Diese Zeile (Label + alle Produktspalten) bleibt beim vertikalen Scrollen am oberen Viewport-Rand hängen. Bei mehreren sticky Zeilen stapeln sie sich — bei Bedarf Sticky-Abstand auf Element-Ebene anpassen.', 'bricks-vergleich' ),
             ],
+            // Marker für Builder-Badge "ST" (Sticky-Top), siehe assets/builder.js.
+            // Gleiches Muster wie _markerCollapsible: info-Control mit required-
+            // Bedingung — Bricks rendert es nur wenn stickyRow=true, builder.js
+            // checkt style.display und setzt das Badge im Repeater-Title.
+            '_markerStickyTop' => [
+                'type'     => 'info',
+                'content'  => '',
+                'required' => [ 'stickyRow', '=', true ],
+            ],
             'stickyBottomOverlay' => [
                 'label'       => esc_html__( 'Sticky am unteren Tabellen-Rand', 'bricks-vergleich' ),
                 'type'        => 'checkbox',
                 'description' => esc_html__( 'Pinnt diese Zeile (Label + alle Karten-Zellen + Buttons) am unteren Rand der sichtbaren Tabelle — analog zum „Sticky beim Scrollen" am oberen Rand, nur unten. Solange die Tabelle teilweise im Viewport ist und das Tabellen-Ende noch nicht erreicht, klebt die Zeile am unteren Viewport-Rand. Sobald das Tabellen-Ende in Sicht kommt, klebt sie am Tabellen-Ende — bleibt also IMMER innerhalb der Tabelle. Ideal für die Angebot-/CTA-Zeile bei langen oder aufklappbaren Tabellen.', 'bricks-vergleich' ),
+            ],
+            // Marker für Builder-Badge "SB" (Sticky-Bottom), siehe assets/builder.js.
+            '_markerStickyBottom' => [
+                'type'     => 'info',
+                'content'  => '',
+                'required' => [ 'stickyBottomOverlay', '=', true ],
             ],
             'cellAlign' => [
                 'label'   => esc_html__( 'Inhalt ausrichten', 'bricks-vergleich' ),
@@ -3055,6 +3070,16 @@ class Element_Vergleich extends \Bricks\Element {
                     'negativeNotes' => esc_html__( 'Nachteile (Cons)', 'bricks-vergleich' ),
                 ],
                 'description' => esc_html__( 'Verknüpft diese Zeile mit einem Schema.org-Feld. Nur aktiv, wenn "JSON-LD Schema.org ausgeben" auf Element-Ebene aktiviert ist.', 'bricks-vergleich' ),
+            ],
+            // Marker für Builder-Badge "SEO" (Schema.org-Rolle gesetzt), siehe
+            // assets/builder.js. Array-Variante der required-Bedingung listet
+            // alle nicht-leeren Rollen explizit — robuster als '!=' '' weil
+            // ein nicht-gesetztes Feld in Bricks oft als undefined statt '' im
+            // State liegt und '!=' '' dann ungewollt true liefert.
+            '_markerSchema' => [
+                'type'     => 'info',
+                'content'  => '',
+                'required' => [ 'schemaRole', '=', [ 'name', 'image', 'url', 'price', 'ratingValue', 'brand', 'description', 'positiveNotes', 'negativeNotes' ] ],
             ],
         ];
     }

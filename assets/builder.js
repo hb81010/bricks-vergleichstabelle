@@ -256,10 +256,14 @@
      * Item eingeklappt ist (Bricks behält Sub-Feld-Wrappers mit inline-display-
      * Toggle bei — genau wie bei manualColumns).
      */
-    function isRowCollapsible( item ) {
-        var marker = item.querySelector( '[data-control-key="_markerCollapsible"]' );
+    function hasMarker( item, markerKey ) {
+        var marker = item.querySelector( '[data-control-key="' + markerKey + '"]' );
         return !! ( marker && marker.style.display !== 'none' );
     }
+    function isRowCollapsible( item ) { return hasMarker( item, '_markerCollapsible' ); }
+    function isRowStickyTop( item )    { return hasMarker( item, '_markerStickyTop' ); }
+    function isRowStickyBottom( item ) { return hasMarker( item, '_markerStickyBottom' ); }
+    function isRowSchema( item )       { return hasMarker( item, '_markerSchema' ); }
 
     var BADGE_STYLES = {
         manual: {
@@ -273,10 +277,28 @@
             color: '#93c5fd',       // subtiler Blau-Ton
             bg:    'rgba(59,130,246,.14)',
             border:'rgba(59,130,246,.3)'
+        },
+        stickyTop: {
+            text: 'ST',
+            color: '#86efac',       // subtiler Gruen-Ton
+            bg:    'rgba(34,197,94,.14)',
+            border:'rgba(34,197,94,.3)'
+        },
+        stickyBottom: {
+            text: 'SB',
+            color: '#fdba74',       // subtiler Orange-Ton
+            bg:    'rgba(249,115,22,.14)',
+            border:'rgba(249,115,22,.3)'
+        },
+        schema: {
+            text: 'SEO',
+            color: '#fde047',       // subtiler Gold-/Gelb-Ton
+            bg:    'rgba(234,179,8,.14)',
+            border:'rgba(234,179,8,.3)'
         }
     };
 
-    function ensureBadge( title, kind ) {
+    function ensureBadge( title, kind, opts ) {
         var cls = 'vergleich-badge--' + kind;
         if ( title.querySelector( '.' + cls ) ) return;
         var s = BADGE_STYLES[ kind ];
@@ -296,6 +318,23 @@
             'color:' + s.color + ';' +
             'background:' + s.bg + ';' +
             'border:1px solid ' + s.border + ';';
+
+        // Optional: Badge LINKS vom letzten Nicht-Badge-Child einfuegen
+        // (z.B. links vom Aufklapp-Pfeil bei Group-Headers). Bei Repeater-
+        // Items (kein Pfeil im Title) wird append wie gewohnt verwendet.
+        if ( opts && opts.beforeLast ) {
+            var anchor = null;
+            for ( var i = title.children.length - 1; i >= 0; i-- ) {
+                if ( ! title.children[ i ].classList.contains( 'vergleich-badge' ) ) {
+                    anchor = title.children[ i ];
+                    break;
+                }
+            }
+            if ( anchor ) {
+                title.insertBefore( badge, anchor );
+                return;
+            }
+        }
         title.appendChild( badge );
     }
 
@@ -318,7 +357,78 @@
 
             if ( isRowCollapsible( item ) ) ensureBadge( title, 'collapsible' );
             else                            removeBadge( item, 'collapsible' );
+
+            if ( isRowStickyTop( item ) ) ensureBadge( title, 'stickyTop' );
+            else                          removeBadge( item, 'stickyTop' );
+
+            if ( isRowStickyBottom( item ) ) ensureBadge( title, 'stickyBottom' );
+            else                             removeBadge( item, 'stickyBottom' );
+
+            if ( isRowSchema( item ) ) ensureBadge( title, 'schema' );
+            else                       removeBadge( item, 'schema' );
         } );
+    }
+
+    // ─── Group-Header-Badges (Element-Settings-Sidebar, nicht Repeater) ───
+    // Beispiel: "Zugänglichkeit & SEO" Group-Header bekommt ein "JSON-LD"-
+    // Badge wenn das schemaEnabled-Toggle in der Group aktiv ist. Hilft
+    // dem User, ohne die Group aufzuklappen zu sehen ob Schema an ist.
+    //
+    // DOM-Strategie: Bricks rendert Groups mit Wrapper [data-control-group="<key>"]
+    // und klickbarem Header .control-group-title. Den Toggle-Status lesen wir
+    // direkt aus dem checkbox-Input innerhalb des [data-controlkey="<toggleKey>"]-
+    // Containers. Marker-Strategie wie bei Repeater-Items (info-Control mit
+    // required-Bedingung) funktioniert hier NICHT — Bricks rendert info-Controls
+    // mit leerem content immer, unabhaengig vom required-Result.
+    var GROUP_BADGE_CONFIGS = [
+        { toggleKey: 'schemaEnabled', groupKey: 'a11y', kind: 'jsonld' }
+    ];
+
+    function isControlToggleActive( controlKey ) {
+        // Bricks-Inkonsistenz: Element-Sidebar nutzt data-controlkey (ohne
+        // Bindestrich), Repeater data-control-key (mit). Beide probieren.
+        var ctrl = document.querySelector( '[data-controlkey="' + controlKey + '"]' )
+                || document.querySelector( '[data-control-key="' + controlKey + '"]' );
+        if ( ! ctrl ) return false;
+        // Try 1: nativer checkbox-Input
+        var input = ctrl.querySelector( 'input[type="checkbox"]' );
+        if ( input ) return !! input.checked;
+        // Try 2: Vue-State direkt (Vue 3) — komplexere Toggles ohne native input
+        var comp = ctrl.__vueParentComponent;
+        for ( var d = 0; d < 5 && comp; d++ ) {
+            var probes = [ comp.props, comp.ctx, comp.setupState ];
+            for ( var p = 0; p < probes.length; p++ ) {
+                var box = probes[ p ];
+                if ( ! box ) continue;
+                if ( typeof box.modelValue === 'boolean' ) return box.modelValue;
+                if ( typeof box.checked === 'boolean' ) return box.checked;
+                if ( typeof box.value === 'boolean' ) return box.value;
+            }
+            comp = comp.parent;
+        }
+        return false;
+    }
+
+    BADGE_STYLES.jsonld = {
+        text: 'JSON-LD',
+        color: '#fde047',       // Gold/Gelb (gleiche Farbe wie Repeater-SEO-Badge)
+        bg:    'rgba(234,179,8,.14)',
+        border:'rgba(234,179,8,.3)'
+    };
+
+    function annotateGroups() {
+        for ( var i = 0; i < GROUP_BADGE_CONFIGS.length; i++ ) {
+            var cfg = GROUP_BADGE_CONFIGS[ i ];
+            var groupContainer = document.querySelector( '[data-control-group="' + cfg.groupKey + '"]' );
+            if ( ! groupContainer ) continue;
+            var title = groupContainer.querySelector( '.control-group-title' );
+            if ( ! title ) continue;
+            title.style.overflow = 'visible';
+
+            var active = isControlToggleActive( cfg.toggleKey );
+            if ( active ) ensureBadge( title, cfg.kind, { beforeLast: true } );
+            else          removeBadge( groupContainer, cfg.kind );
+        }
     }
 
     function boot() {
@@ -331,6 +441,7 @@
                     checkRepeaterGrowth();
                     autoEnableHideForCoupon();
                     annotateRows();
+                    annotateGroups();
                 } catch ( e ) { log( 'check-Fehler', e ); }
             } );
         } );
@@ -338,6 +449,7 @@
         checkRepeaterGrowth();
         autoEnableHideForCoupon();
         annotateRows();
+        annotateGroups();
     }
 
     if ( document.readyState === 'loading' ) {
