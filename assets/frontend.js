@@ -785,8 +785,20 @@
                                    && (naturalTop    >= 0)
                                    && (naturalBottom <= vh);
 
+                // Pin nur aktivieren wenn die Cell ueberhaupt schon ins
+                // Viewport hineinragt (naturalTop < vh) ODER schon nach
+                // oben rausgescrollt ist (naturalBottom < 0). Solange die
+                // Cell-natural komplett UNTER dem Viewport sitzt (User
+                // hat die Tabelle noch nicht erreicht), darf kein Pin
+                // greifen. Sonst zieht der minT-Clamp (wrapTop - naturalTop)
+                // die Cell an wrapTop, sobald der Wrapper-Top ins Viewport
+                // einscrollt — Pin haengt vor Bild/Produkt der Tabelle, weil
+                // er weiter unten im Wrapper steht. Tritt vor allem bei
+                // mehreren Tabellen auf einer Seite auf.
+                var cellHasEnteredViewport = (naturalTop < vh) || (naturalBottom < 0);
+
                 var translateY = 0;
-                if (!rowFullyVisible) {
+                if (!rowFullyVisible && cellHasEnteredViewport) {
                     translateY = anchorBottom - naturalBottom;
                     // minT: Pin's Top darf nicht hoeher als wrapTop UND nicht
                     // hoeher als die Sticky-Top-Reservierung (sonst ueberlappt
