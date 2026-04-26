@@ -702,9 +702,11 @@
             //     Wichtig fuer den Fall: Tabelle kuerzer als Viewport,
             //     aber sticky-bottom nicht die letzte Cell (z.B. "Top Deal"
             //     in der Mitte, "Apps" oder "Info" danach).
-            // Wenn keine der Bedingungen → kein Padding (kein nutzloser
-            // Leerraum am Tabellen-Ende, z.B. im kollabierten Aufklapp-
-            // Zustand).
+            // Sichtbarer Leerraum durch das reservierte Padding wird per
+            // CSS (background-clip: content-box auf .vergleich-card und
+            // .vergleich-labels) unterdrueckt — der Padding-Bereich bleibt
+            // vorhanden, aber transparent, damit nur die translate'd Pin-
+            // Cell mit ihrem readBackgrounds-Background sichtbar wird.
             var vh = window.innerHeight || document.documentElement.clientHeight;
             var hasVisibleTrailing = false;
             if (sortedIdxs.length && labelsCol) {

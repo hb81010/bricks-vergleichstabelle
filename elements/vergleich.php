@@ -4093,7 +4093,7 @@ class Element_Vergleich extends \Bricks\Element {
      * (z.B. Bild-IDs, Multi-Select-ACF). Für Text-Rendering müssen wir das zu
      * einem String reduzieren, sonst crasht `strpos`/`wp_kses_post`/`strip_tags`.
      */
-    private function dd_string( $value ) {
+    private function dd_string( $value, $context = 'text' ) {
         if ( ! is_string( $value ) ) {
             return '';
         }
@@ -4101,7 +4101,7 @@ class Element_Vergleich extends \Bricks\Element {
             return $value;
         }
         try {
-            $resolved = bricks_render_dynamic_data( $value );
+            $resolved = bricks_render_dynamic_data( $value, 0, $context );
         } catch ( \Throwable $e ) {
             error_log( '[Bricks Vergleich] DD-Fehler: ' . $e->getMessage() );
             return $value;
@@ -4113,6 +4113,21 @@ class Element_Vergleich extends \Bricks\Element {
             }, $resolved ) );
         }
         return is_scalar( $resolved ) ? (string) $resolved : '';
+    }
+
+    /**
+     * URL aus Dynamic-Data auflösen — wählt Context 'link' für reine Tags
+     * wie {woo_add_to_cart}, sonst 'text' für zusammengesetzte Strings.
+     * Heuristik 1:1 wie Bricks selbst (base.php:2513): nur ein einzelnes
+     * {tag} ohne weitere Zeichen drumherum bekommt 'link', alles andere
+     * (z.B. "{post_url}?x=y" oder "https://…") bleibt 'text'.
+     */
+    private function dd_url( $value ) {
+        if ( ! is_string( $value ) || $value === '' ) {
+            return '';
+        }
+        $is_single_tag = strpos( $value, '{' ) === 0 && substr_count( $value, '}' ) === 1;
+        return $this->dd_string( $value, $is_single_tag ? 'link' : 'text' );
     }
 
     private function render_cell_text( $row ) {
@@ -4306,20 +4321,20 @@ class Element_Vergleich extends \Bricks\Element {
             if ( $link_type === 'internal' && ! empty( $link['postId'] ) ) {
                 $url = (string) ( get_permalink( (int) $link['postId'] ) ?: '' );
                 if ( $url !== '' && ! empty( $link['urlParams'] ) ) {
-                    $url .= $this->dd_string( (string) $link['urlParams'] );
+                    $url .= $this->dd_url( (string) $link['urlParams'] );
                 }
             }
             // External: URL (kann DD-Tags wie "{post_url}?x=y" enthalten)
             elseif ( $link_type === 'external' && ! empty( $link['url'] ) ) {
                 $raw = (string) $link['url'];
-                $url = $this->dd_string( $raw );
+                $url = $this->dd_url( $raw );
             }
             // Dynamic Data (Bricks-Link-Typ "meta"): nur ein DD-Tag wie {post_url}
             elseif ( $link_type === 'meta' && ! empty( $link['useDynamicData'] ) ) {
                 $dd_tag = is_array( $link['useDynamicData'] )
                     ? (string) ( $link['useDynamicData']['name'] ?? '' )
                     : (string) $link['useDynamicData'];
-                $url = $this->dd_string( $dd_tag );
+                $url = $this->dd_url( $dd_tag );
             }
             // Taxonomy
             elseif ( $link_type === 'taxonomy' && ! empty( $link['term'] ) ) {
@@ -4338,7 +4353,7 @@ class Element_Vergleich extends \Bricks\Element {
             }
             // Fallback für ältere Datenstrukturen
             elseif ( ! empty( $link['url'] ) ) {
-                $url = $this->dd_string( (string) $link['url'] );
+                $url = $this->dd_url( (string) $link['url'] );
             }
 
             if ( ! empty( $link['newTab'] ) )   $target = '_blank';
@@ -4347,7 +4362,7 @@ class Element_Vergleich extends \Bricks\Element {
             if ( ! empty( $link['ariaLabel'] ) ) $aria_label = $this->dd_string( (string) $link['ariaLabel'] );
             if ( ! empty( $link['title'] ) )    $title_attr = $this->dd_string( (string) $link['title'] );
         } elseif ( is_string( $link ) ) {
-            $url = $this->dd_string( $link );
+            $url = $this->dd_url( $link );
         }
 
         // Native Bricks-Button-Klassen → optisch 1:1 wie ein echtes Button-Element.
@@ -5376,7 +5391,7 @@ class Element_Vergleich extends \Bricks\Element {
         if ( empty( $link ) ) return $out;
 
         if ( is_string( $link ) ) {
-            $out['url'] = $this->dd_string( $link );
+            $out['url'] = $this->dd_url( $link );
             return $out;
         }
         if ( ! is_array( $link ) ) return $out;
@@ -5385,15 +5400,15 @@ class Element_Vergleich extends \Bricks\Element {
         if ( $type === 'internal' && ! empty( $link['postId'] ) ) {
             $out['url'] = (string) ( get_permalink( (int) $link['postId'] ) ?: '' );
             if ( $out['url'] !== '' && ! empty( $link['urlParams'] ) ) {
-                $out['url'] .= $this->dd_string( (string) $link['urlParams'] );
+                $out['url'] .= $this->dd_url( (string) $link['urlParams'] );
             }
         } elseif ( $type === 'external' && ! empty( $link['url'] ) ) {
-            $out['url'] = $this->dd_string( (string) $link['url'] );
+            $out['url'] = $this->dd_url( (string) $link['url'] );
         } elseif ( $type === 'meta' && ! empty( $link['useDynamicData'] ) ) {
             $dd_tag = is_array( $link['useDynamicData'] )
                 ? (string) ( $link['useDynamicData']['name'] ?? '' )
                 : (string) $link['useDynamicData'];
-            $out['url'] = $this->dd_string( $dd_tag );
+            $out['url'] = $this->dd_url( $dd_tag );
         } elseif ( $type === 'taxonomy' && ! empty( $link['term'] ) ) {
             $parts = explode( '::', (string) $link['term'] );
             if ( count( $parts ) === 2 ) {
@@ -5407,7 +5422,7 @@ class Element_Vergleich extends \Bricks\Element {
             $out['url'] = (string) ( wp_get_attachment_url( (int) $link['mediaData']['id'] ) ?: '' );
         } elseif ( ! empty( $link['url'] ) ) {
             // Fallback für ältere Datenstrukturen
-            $out['url'] = $this->dd_string( (string) $link['url'] );
+            $out['url'] = $this->dd_url( (string) $link['url'] );
         }
 
         if ( ! empty( $link['newTab'] ) )    $out['target'] = '_blank';
@@ -5685,21 +5700,21 @@ class Element_Vergleich extends \Bricks\Element {
 
     private function resolve_button_url( $row ) {
         $link = $row['btnLink'] ?? [];
-        if ( ! is_array( $link ) ) return is_string( $link ) ? $this->dd_string( $link ) : '';
+        if ( ! is_array( $link ) ) return is_string( $link ) ? $this->dd_url( $link ) : '';
         $type = $link['type'] ?? '';
         if ( $type === 'internal' && ! empty( $link['postId'] ) ) {
             return (string) ( get_permalink( (int) $link['postId'] ) ?: '' );
         }
         if ( $type === 'external' && ! empty( $link['url'] ) ) {
-            return $this->dd_string( (string) $link['url'] );
+            return $this->dd_url( (string) $link['url'] );
         }
         if ( $type === 'meta' && ! empty( $link['useDynamicData'] ) ) {
             $dd = is_array( $link['useDynamicData'] )
                 ? (string) ( $link['useDynamicData']['name'] ?? '' )
                 : (string) $link['useDynamicData'];
-            return $this->dd_string( $dd );
+            return $this->dd_url( $dd );
         }
-        if ( ! empty( $link['url'] ) ) return $this->dd_string( (string) $link['url'] );
+        if ( ! empty( $link['url'] ) ) return $this->dd_url( (string) $link['url'] );
         return '';
     }
 
@@ -6113,6 +6128,9 @@ class Element_Vergleich extends \Bricks\Element {
             grid-row: 1 / -1 !important;
             grid-template-rows: subgrid !important;
             background: #f3f4f6;
+            /* Siehe .vergleich-card: Padding-Bottom (Pin-Reserve) soll
+               keinen sichtbaren Background-Block am Ende erzeugen. */
+            background-clip: content-box;
             z-index: 3;
         }
         .vergleich-wrapper.has-sticky-labels .vergleich-labels {
@@ -6694,6 +6712,16 @@ class Element_Vergleich extends \Bricks\Element {
             grid-row: 1 / -1 !important;
             border-left: 1px solid #e5e7eb;
             background: #fff;
+            /* Background nur im Content-Bereich rendern, nicht im Padding.
+               Hintergrund: bindStickyBottomRows() reserviert padding-bottom
+               in Pixelhoehe der sticky-bottom-Zelle, damit der per translate
+               verschobene Pin nicht durch overflow:clip abgeschnitten wird.
+               Ohne content-box wuerde dieses Padding als sichtbarer weisser
+               Block am Tabellen-Ende erscheinen, auch wenn die Tabelle ins
+               Viewport passt und gar nicht gepinnt wird. Die Pin-Cell selbst
+               bekommt ihren Background per JS (readBackgrounds), bleibt also
+               sichtbar wenn sie ins Padding rutscht. */
+            background-clip: content-box;
             min-width: 0;
             max-width: var(--vgl-column-width, 200px);
             width: var(--vgl-column-width, 200px);
